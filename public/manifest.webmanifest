@@ -1,0 +1,17 @@
+{
+  "name": "Relay — free peer tutoring",
+  "short_name": "Relay",
+  "description": "Free live peer tutoring in Python & AI — by students, for students. The only fee: pass it on.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#faf6ef",
+  "theme_color": "#faf6ef",
+  "icons": [
+    {
+      "src": "relay.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
