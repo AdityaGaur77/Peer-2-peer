@@ -1,40 +1,47 @@
 /* ═══════════════════════════════════════════════════════════
    RELAY — design system
-   Concept: knowledge as a relay baton. Warm paper, ink type,
-   one ember accent that always means "the handoff".
+   Concept: knowledge as a relay baton, drawn on graph paper.
+   Cool porcelain surfaces, blue ink, and ONE green accent —
+   the baton — that always means "go / the handoff". Live and
+   urgent states burn rose. No cream, no terracotta.
    Type: Bricolage Grotesque (voice) · Instrument Serif italic
    (the human aside) · JetBrains Mono (the log/telemetry).
    ═══════════════════════════════════════════════════════════ */
 
 :root {
-  /* surfaces */
-  --paper: #faf6ef;
-  --paper-2: #f4eee1;
-  --card: #fffdf8;
-  --ink: #1c1b17;
-  --ink-2: #46433a;
-  --muted: #6f6a5c;
+  /* surfaces — cool notebook paper, easy on the eyes */
+  --paper: #f1f4f9;
+  --paper-2: #e8edf5;
+  --card: #fbfcfe;
+  --ink: #212b40;
+  --ink-2: #46536e;
+  --muted: #6e7d99;
 
-  /* the baton */
-  --ember: #e4572e;
-  --ember-deep: #bd431d;
-  --ember-soft: #fbe5da;
-  --baton-g: linear-gradient(90deg, #f2a03d, #e4572e);
+  /* the baton — green means go */
+  --ember: #29a55c;
+  --ember-deep: #1e7e46;
+  --ember-soft: #ddf2e4;
+  --baton-g: linear-gradient(90deg, #a3e655, #2fbe6e);
+
+  /* live / urgent / destructive — rose, never green */
+  --hot: #e14f72;
+  --hot-deep: #b92b4b;
+  --hot-soft: #fce4ea;
 
   /* subjects */
-  --py: #1f7a58;
-  --py-soft: #ddefe5;
-  --ai: #6d4ae0;
-  --ai-soft: #e9e4fb;
-  --gold: #a8811c;
-  --gold-soft: #f5ecd2;
+  --py: #2e6fa7;
+  --py-soft: #ddeaf6;
+  --ai: #7048e8;
+  --ai-soft: #e9e2fb;
+  --gold: #a87b18;
+  --gold-soft: #f6edcf;
 
   /* lines + depth */
-  --border: #e9e0cd;
-  --border-strong: #d8cdb2;
-  --shadow-sm: 0 1px 2px rgba(28, 27, 23, 0.05);
-  --shadow-md: 0 2px 4px rgba(28, 27, 23, 0.04), 0 14px 34px -14px rgba(28, 27, 23, 0.16);
-  --shadow-lg: 0 4px 8px rgba(28, 27, 23, 0.05), 0 28px 60px -20px rgba(28, 27, 23, 0.24);
+  --border: #d7dee9;
+  --border-strong: #bfcadb;
+  --shadow-sm: 0 1px 2px rgba(33, 43, 64, 0.05);
+  --shadow-md: 0 2px 4px rgba(33, 43, 64, 0.04), 0 14px 34px -14px rgba(33, 43, 64, 0.16);
+  --shadow-lg: 0 4px 8px rgba(33, 43, 64, 0.05), 0 28px 60px -20px rgba(33, 43, 64, 0.24);
 
   --font-sans: 'Bricolage Grotesque Variable', system-ui, sans-serif;
   --font-serif: 'Instrument Serif', georgia, serif;
@@ -45,68 +52,71 @@
   --r-xl: 24px;
 
   /* the dark bands (footer, CTA) — identical in both themes */
-  --band-bg: #1c1b17;
-  --band-fg: #f6f1e5;
+  --band-bg: #101828;
+  --band-fg: #edf2fb;
 }
 
-/* ── night track ───────────────────────────────────────────── */
+/* ── night meet — the track under floodlights ──────────────── */
 
 [data-theme='dark'] {
-  --paper: #16130e;
-  --paper-2: #1c1812;
-  --card: #211d15;
-  --ink: #f0e9d8;
-  --ink-2: #cdc4ae;
-  --muted: #99917c;
+  --paper: #0f1522;
+  --paper-2: #141b2b;
+  --card: #182136;
+  --ink: #dfe7f6;
+  --ink-2: #aab8d0;
+  --muted: #7889a6;
 
-  --ember: #ef6a3e;
-  --ember-deep: #f5906a;
-  --ember-soft: rgba(228, 87, 46, 0.16);
+  --ember: #46c97d;
+  --ember-deep: #7bdda4;
+  --ember-soft: rgba(70, 201, 125, 0.15);
 
-  --py: #57c393;
-  --py-soft: rgba(63, 170, 122, 0.15);
-  --ai: #a78ff2;
-  --ai-soft: rgba(140, 115, 235, 0.16);
-  --gold: #d9b465;
+  --hot: #ff6d92;
+  --hot-deep: #ff92ae;
+  --hot-soft: rgba(255, 109, 146, 0.15);
+
+  --py: #64a9e0;
+  --py-soft: rgba(55, 118, 171, 0.2);
+  --ai: #a78bfa;
+  --ai-soft: rgba(140, 115, 235, 0.17);
+  --gold: #dcbc6a;
   --gold-soft: rgba(200, 160, 60, 0.14);
 
-  --border: #36301f;
-  --border-strong: #4d4531;
+  --border: #232e47;
+  --border-strong: #35425f;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.25), 0 14px 34px -14px rgba(0, 0, 0, 0.55);
   --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.3), 0 28px 60px -20px rgba(0, 0, 0, 0.65);
 
-  --band-bg: #100e0a;
+  --band-bg: #0a0f1b;
 }
 
 [data-theme='dark'] .island {
-  background: rgba(24, 20, 14, 0.72);
+  background: rgba(13, 18, 30, 0.72);
 }
 
 [data-theme='dark'] .island.scrolled {
-  background: rgba(24, 20, 14, 0.92);
+  background: rgba(13, 18, 30, 0.92);
 }
 
 [data-theme='dark'] .nav-link:hover {
-  background: rgba(240, 233, 216, 0.07);
+  background: rgba(223, 231, 246, 0.07);
 }
 
 [data-theme='dark'] .hero::before {
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0 88px,
-    rgba(240, 233, 216, 0.05) 88px 89.5px
-  );
+  background:
+    linear-gradient(to right, rgba(223, 231, 246, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(223, 231, 246, 0.05) 1px, transparent 1px);
+  background-size: 26px 26px;
 }
 
 [data-theme='dark'] .avatar {
-  background: hsl(var(--h) 34% 21%);
-  color: hsl(var(--h) 55% 78%);
-  border-color: hsl(var(--h) 28% 36%);
+  background: hsl(var(--h) 32% 22%);
+  color: hsl(var(--h) 58% 79%);
+  border-color: hsl(var(--h) 28% 38%);
 }
 
 [data-theme='dark'] .modal-backdrop {
-  background: rgba(6, 5, 3, 0.6);
+  background: rgba(3, 6, 12, 0.65);
 }
 
 /* ── reset / base ──────────────────────────────────────────── */
@@ -353,7 +363,7 @@ button {
 }
 
 .btn-primary:hover {
-  background: #2b2a24;
+  background: #2b3650;
   box-shadow: var(--shadow-md);
 }
 
@@ -377,7 +387,7 @@ button {
 }
 
 .btn-soft:hover {
-  background: #f8d9c9;
+  background: #cbebd6;
 }
 
 .btn-sm {
@@ -398,16 +408,16 @@ button {
 /* buttons that live on the dark bands — identical in both themes */
 .btn-band-light {
   background: var(--band-fg);
-  color: #1c1b17;
+  color: #101828;
 }
 
 .btn-band-light:hover {
-  background: #fffdf6;
+  background: #ffffff;
   box-shadow: var(--shadow-md);
 }
 
 .btn-band-ghost {
-  border-color: rgba(246, 241, 229, 0.4);
+  border-color: rgba(237, 242, 251, 0.38);
   color: var(--band-fg);
 }
 
@@ -534,7 +544,7 @@ button {
   inset: 0;
   background: radial-gradient(
     260px circle at var(--mx, 50%) var(--my, -20%),
-    rgba(228, 87, 46, 0.09),
+    rgba(47, 190, 110, 0.1),
     transparent 68%
   );
   opacity: 0;
@@ -559,9 +569,9 @@ button {
   font-weight: 700;
   font-size: 15px;
   letter-spacing: 0.02em;
-  background: hsl(var(--h) 58% 90%);
-  color: hsl(var(--h) 45% 27%);
-  border: 1.5px solid hsl(var(--h) 40% 74%);
+  background: hsl(var(--h) 44% 88%);
+  color: hsl(var(--h) 42% 30%);
+  border: 1.5px solid hsl(var(--h) 34% 72%);
 }
 
 .avatar-lg {
@@ -597,7 +607,7 @@ button {
   gap: 4px;
   padding: 8px 10px 8px 18px;
   border-radius: 999px;
-  background: rgba(253, 250, 243, 0.72);
+  background: rgba(247, 250, 253, 0.72);
   border: 1.5px solid var(--border);
   backdrop-filter: blur(16px) saturate(1.3);
   -webkit-backdrop-filter: blur(16px) saturate(1.3);
@@ -606,7 +616,7 @@ button {
 }
 
 .island.scrolled {
-  background: rgba(253, 250, 243, 0.92);
+  background: rgba(247, 250, 253, 0.92);
   box-shadow: var(--shadow-md);
 }
 
@@ -641,7 +651,7 @@ button {
 }
 
 .nav-link:hover {
-  background: rgba(28, 27, 23, 0.05);
+  background: rgba(33, 43, 64, 0.06);
   color: var(--ink);
 }
 
@@ -737,16 +747,15 @@ button {
   overflow: hidden;
 }
 
-/* faint track lanes */
+/* faint graph-paper grid — the notebook the plan was drawn in */
 .hero::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0 88px,
-    rgba(28, 27, 23, 0.033) 88px 89.5px
-  );
+  background:
+    linear-gradient(to right, rgba(33, 43, 64, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(33, 43, 64, 0.05) 1px, transparent 1px);
+  background-size: 26px 26px;
   mask-image: radial-gradient(120% 90% at 50% 0%, #000 30%, transparent 78%);
   pointer-events: none;
 }
@@ -1092,7 +1101,7 @@ button {
 
 .kudos-meta::before {
   content: '♥';
-  color: var(--ember);
+  color: var(--hot);
   font-size: 13px;
 }
 
@@ -1210,12 +1219,12 @@ button {
 }
 
 .spots-label.tight {
-  color: var(--ember-deep);
+  color: var(--hot-deep);
   font-weight: 700;
 }
 
 .going-tag {
-  color: var(--py);
+  color: var(--ember-deep);
   font-weight: 700;
 }
 
@@ -1366,9 +1375,9 @@ button {
 }
 
 .q-code {
-  background: #23211b;
-  border: 1px solid #3a352a;
-  color: #f2ecdd;
+  background: #101827;
+  border: 1px solid #26334d;
+  color: #e3eaf6;
   font-family: var(--font-mono);
   font-size: 13.5px;
   line-height: 1.7;
@@ -1434,11 +1443,11 @@ button {
 }
 
 .review-item.good {
-  border-left-color: var(--py);
+  border-left-color: var(--ember);
 }
 
 .review-item.bad {
-  border-left-color: var(--ember);
+  border-left-color: var(--hot);
 }
 
 .verdict {
@@ -1449,8 +1458,8 @@ button {
   text-transform: uppercase;
 }
 
-.review-item.good .verdict { color: var(--py); }
-.review-item.bad .verdict { color: var(--ember-deep); }
+.review-item.good .verdict { color: var(--ember-deep); }
+.review-item.bad .verdict { color: var(--hot-deep); }
 
 .score-ring {
   font-family: var(--font-mono);
@@ -1465,7 +1474,7 @@ button {
   position: fixed;
   inset: 0;
   z-index: 110;
-  background: rgba(28, 27, 23, 0.44);
+  background: rgba(13, 19, 32, 0.5);
   backdrop-filter: blur(3px);
   display: grid;
   place-items: center;
@@ -1518,7 +1527,7 @@ button {
 }
 
 .modal-x:hover {
-  background: rgba(28, 27, 23, 0.06);
+  background: rgba(33, 43, 64, 0.07);
   color: var(--ink);
 }
 
@@ -1617,15 +1626,15 @@ button {
 }
 
 .status-pending { background: var(--gold-soft); color: var(--gold); }
-.status-approved { background: var(--py-soft); color: var(--py); }
+.status-approved { background: var(--ember-soft); color: var(--ember-deep); }
 .status-declined { background: var(--border); color: var(--muted); }
 
 /* ── footer ────────────────────────────────────────────────── */
 
 .footer {
   background: var(--band-bg);
-  color: #cfc9b8;
-  border-top: 1px solid rgba(246, 241, 229, 0.06);
+  color: #b6c2d8;
+  border-top: 1px solid rgba(237, 242, 251, 0.06);
   margin-top: clamp(60px, 9vw, 110px);
   position: relative;
   overflow: hidden;
@@ -1643,7 +1652,7 @@ button {
   font-style: italic;
   font-size: clamp(3rem, 9vw, 6.4rem);
   line-height: 1;
-  color: #f6f1e5;
+  color: #edf2fb;
   letter-spacing: -0.02em;
 }
 
@@ -1669,18 +1678,18 @@ button {
   font-size: 11px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: #8d8776;
+  color: #75849f;
   margin-bottom: 4px;
 }
 
 .footer-col a {
   font-size: 14.5px;
-  color: #cfc9b8;
+  color: #b6c2d8;
   transition: color 0.2s;
 }
 
 .footer-col a:hover {
-  color: #f6f1e5;
+  color: #edf2fb;
 }
 
 .footer-base {
@@ -1688,11 +1697,11 @@ button {
   justify-content: space-between;
   gap: 14px;
   flex-wrap: wrap;
-  border-top: 1px dashed rgba(246, 241, 229, 0.18);
+  border-top: 1px dashed rgba(237, 242, 251, 0.14);
   padding-top: 22px;
   font-family: var(--font-mono);
   font-size: 12px;
-  color: #8d8776;
+  color: #75849f;
 }
 
 /* ── CTA band ──────────────────────────────────────────────── */
@@ -1717,7 +1726,7 @@ button {
   background: repeating-linear-gradient(
     to bottom,
     transparent 0 44px,
-    rgba(246, 241, 229, 0.05) 44px 45.5px
+    rgba(237, 242, 251, 0.05) 44px 45.5px
   );
 }
 
@@ -1772,11 +1781,11 @@ button {
     --paper: #fff;
     --paper-2: #fff;
     --card: #fff;
-    --ink: #1c1b17;
-    --ink-2: #46433a;
-    --muted: #6f6a5c;
-    --border: #ddd6c6;
-    --border-strong: #c4bba4;
+    --ink: #212b40;
+    --ink-2: #46536e;
+    --muted: #6e7d99;
+    --border: #d9dfe9;
+    --border-strong: #b9c4d5;
   }
 
   .island-wrap, .footer, .no-print, .toast-host {
@@ -1937,11 +1946,11 @@ details.faq .faq-a {
 
 /* ── ship polish ───────────────────────────────────────────── */
 
-/* live-now chip with a pulsing ember dot */
+/* live-now chip with a pulsing on-air dot */
 .chip-live {
-  background: var(--ember-soft);
-  border-color: color-mix(in srgb, var(--ember) 40%, transparent);
-  color: var(--ember-deep);
+  background: var(--hot-soft);
+  border-color: color-mix(in srgb, var(--hot) 40%, transparent);
+  color: var(--hot-deep);
 }
 
 .chip-live::before {
@@ -1949,7 +1958,7 @@ details.faq .faq-a {
   width: 7px;
   height: 7px;
   border-radius: 99px;
-  background: var(--ember);
+  background: var(--hot);
   animation: livepulse 1.6s ease-in-out infinite;
 }
 

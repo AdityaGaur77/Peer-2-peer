@@ -63,7 +63,7 @@ export function SignInModal() {
           <span className="hint">tutors: use the email on your tutor card to unlock your dashboard</span>
         </label>
         {err && (
-          <p className="small" style={{ color: 'var(--ember-deep)' }}>
+          <p className="small" style={{ color: 'var(--hot-deep)' }}>
             {err}
           </p>
         )}

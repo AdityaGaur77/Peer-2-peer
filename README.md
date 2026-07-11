@@ -5,10 +5,12 @@ Modeled on [schoolhouse.world](https://schoolhouse.world): no fees, ever — you
 repay your education by teaching the next person. This is the free-platform
 successor to the old paid *Peer2Peer* app.
 
-**Concept:** knowledge as a relay baton. Warm paper, ink type, one ember accent
-that always means "the handoff." The hero's signature piece is an animated relay
-chain where each learner lights up as they become the next tutor. A one-click
-"night track" dark mode ships too — it follows your system preference by default.
+**Concept:** knowledge as a relay baton, drawn on graph paper. Cool notebook
+surfaces, blue ink, and one green accent — the baton — that always means "go /
+pass it on" (live and urgent states burn rose instead). The hero's signature
+piece is an animated relay chain where each learner lights up as they become
+the next tutor. A "night meet" dark mode ships too — it follows your system
+preference by default.
 
 ## Run it
 

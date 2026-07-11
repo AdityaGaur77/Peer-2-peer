@@ -272,7 +272,7 @@ export function Home() {
                     <span style={{ fontSize: 15 }}>{name}</span>
                     <span className="mono" style={{ fontSize: 14 }}>
                       <s className="muted">{price}</s>{' '}
-                      <b style={{ color: 'var(--py)' }}>$0</b>
+                      <b style={{ color: 'var(--ember-deep)' }}>$0</b>
                     </span>
                   </div>
                 ))}
@@ -290,7 +290,7 @@ export function Home() {
         <div className="container">
           <Reveal>
             <div className="cta-band">
-              <span className="eyebrow" style={{ color: '#a29b87' }}>
+              <span className="eyebrow" style={{ color: '#90a0bc' }}>
                 the anchor leg is yours
               </span>
               <h2 className="h2" style={{ maxWidth: 560 }}>

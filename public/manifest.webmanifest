@@ -4,8 +4,8 @@
   "description": "Free live peer tutoring in Python & AI — by students, for students. The only fee: pass it on.",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#faf6ef",
-  "theme_color": "#faf6ef",
+  "background_color": "#f1f4f9",
+  "theme_color": "#f1f4f9",
   "icons": [
     {
       "src": "relay.svg",

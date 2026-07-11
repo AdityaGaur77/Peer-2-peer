@@ -66,7 +66,7 @@ export function Teach() {
     if (alreadyTutor) {
       return (
         <div className="stack" style={{ gap: 14, textAlign: 'center', padding: '20px 0' }}>
-          <span className="serif-i" style={{ fontSize: 26, color: 'var(--py)' }}>
+          <span className="serif-i" style={{ fontSize: 26, color: 'var(--ember-deep)' }}>
             You're already on the crew.
           </span>
           <p className="muted">
@@ -117,7 +117,7 @@ export function Teach() {
               <span className={cx('status-pill', 'status-approved')} style={{ margin: '0 auto' }}>
                 approved
               </span>
-              <span className="serif-i" style={{ fontSize: 26, color: 'var(--py)' }}>
+              <span className="serif-i" style={{ fontSize: 26, color: 'var(--ember-deep)' }}>
                 You're in — welcome to the crew.
               </span>
               <p className="muted">

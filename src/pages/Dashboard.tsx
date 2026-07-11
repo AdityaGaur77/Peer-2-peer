@@ -224,7 +224,7 @@ export function Dashboard() {
         {!tutor && (
           <Reveal delay={0.2}>
             <div className="cta-band">
-              <span className="eyebrow" style={{ color: '#a29b87' }}>
+              <span className="eyebrow" style={{ color: '#90a0bc' }}>
                 ready for the next leg?
               </span>
               <h3 className="h3" style={{ maxWidth: 480 }}>

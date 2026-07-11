@@ -67,7 +67,7 @@ export function QuizEngine({ quiz, onExit }: { quiz: Quiz; onExit: () => void })
               {score}
               <span className="muted">/{total}</span>
             </div>
-            <p className="mono small" style={{ color: passed ? 'var(--py)' : 'var(--ember-deep)' }}>
+            <p className="mono small" style={{ color: passed ? 'var(--ember-deep)' : 'var(--hot-deep)' }}>
               {passed
                 ? '✓ certified — the baton is officially yours'
                 : `needs ${quiz.passNeeded}/${total} — review below and run it back`}

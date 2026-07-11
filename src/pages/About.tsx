@@ -122,7 +122,7 @@ export function About() {
                   small, Python-and-AI-shaped take on the same idea, built for our own community.
                 </p>
               </div>
-              <span className="serif-i" style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', color: 'var(--ember)', flex: 'none' }}>
+              <span className="serif-i" style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', color: 'var(--hot)', flex: 'none' }}>
                 ♥
               </span>
             </div>

@@ -62,7 +62,7 @@ export function SessionCard({ session }: { session: Session }) {
         <p className="ticket-desc">{session.description}</p>
 
         <div className="ticket-meta">
-          <span style={live ? { color: 'var(--ember-deep)', fontWeight: 700 } : undefined}>
+          <span style={live ? { color: 'var(--hot-deep)', fontWeight: 700 } : undefined}>
             {live
               ? `happening now — until ${fmtTime(new Date(sessionEnd(session)).toISOString())}`
               : `${fmtRelativeDay(session.startISO)} · ${fmtTime(session.startISO)} · ${session.durationMin}min`}

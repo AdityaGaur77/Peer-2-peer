@@ -405,7 +405,7 @@ function CrewPanel({
                   <>
                     <button
                       className="btn btn-sm"
-                      style={{ background: 'var(--ember)', color: '#fff' }}
+                      style={{ background: 'var(--hot)', color: '#fff' }}
                       onClick={() => {
                         removeTutor(t.id);
                         setRemovingId(null);
@@ -529,7 +529,7 @@ function DataPanel({
               <>
                 <button
                   className="btn btn-sm"
-                  style={{ background: 'var(--ember)', color: '#fff' }}
+                  style={{ background: 'var(--hot)', color: '#fff' }}
                   onClick={() => {
                     resetData();
                     setConfirmReset(false);
