@@ -8,13 +8,13 @@ import {
   sessionEnd,
 } from '../lib/util';
 
-export function SessionCard({ session }: { session: Session }) {
+export function SessionCard({ session, preview }: { session: Session; preview?: boolean }) {
   const { db, profile, requireProfile, toggleRsvp, toggleWaitlist, toast } = useStore();
   const tutor = tutorById(db, session.tutorId);
   const past = isPastSession(session);
   const now = Date.now();
   const live =
-    !past && new Date(session.startISO).getTime() <= now && now <= sessionEnd(session);
+    !preview && !past && new Date(session.startISO).getTime() <= now && now <= sessionEnd(session);
   const going = !!profile && session.attendees.some((a) => a.email === profile.email);
   const waitPos = profile
     ? session.waitlist.findIndex((a) => a.email === profile.email) + 1
@@ -77,7 +77,11 @@ export function SessionCard({ session }: { session: Session }) {
           )}
         </div>
 
-        {past ? (
+        {preview ? (
+          <div className="spots-label">
+            draft preview · {session.capacity} spots · goes live on the board when you post it
+          </div>
+        ) : past ? (
           <div className="spots-label">
             completed · {session.attendees.length} learners · counts toward volunteer hours
           </div>

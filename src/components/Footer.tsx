@@ -21,11 +21,13 @@ export function Footer() {
             <h4>Explore</h4>
             <Link to="/sessions">Upcoming sessions</Link>
             <Link to="/tutors">Meet the tutors</Link>
+            <Link to="/guide/student">New here? Start guide</Link>
             <Link to="/about">Why it's free</Link>
           </div>
           <div className="footer-col">
             <h4>For tutors</h4>
             <Link to="/teach">Become a tutor</Link>
+            <Link to="/guide/tutor">Post your first class</Link>
             <Link to="/dashboard">Your dashboard</Link>
             <Link to="/certificate">Volunteer certificate</Link>
           </div>

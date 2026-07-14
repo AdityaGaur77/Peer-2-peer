@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { KudosMarquee } from '../components/KudosMarquee';
 import { RelayChain } from '../components/RelayChain';
@@ -9,6 +10,11 @@ import { fmtRelativeDay, fmtTime, plural } from '../lib/util';
 export function Home() {
   const { db } = useStore();
   const stats = globalStats(db);
+  const [toured, setToured] = useState(() => localStorage.getItem('relay.toured') === '1');
+  const dismissTour = () => {
+    localStorage.setItem('relay.toured', '1');
+    setToured(true);
+  };
 
   return (
     <>
@@ -47,6 +53,21 @@ export function Home() {
                 <Link to="/about">here's why we stopped</Link>
               </p>
             </Reveal>
+            {!toured && (
+              <Reveal delay={0.32}>
+                <div className="welcome-card">
+                  <span>
+                    <b>First time here?</b> Learn Relay by doing it —{' '}
+                    <Link to="/guide/student">the 2-minute student tour</Link>
+                    {' '}· or{' '}
+                    <Link to="/guide/tutor">build your first class</Link>
+                  </span>
+                  <button className="welcome-x" onClick={dismissTour} aria-label="Dismiss">
+                    ✕ dismiss
+                  </button>
+                </div>
+              </Reveal>
+            )}
           </div>
 
           <Reveal delay={0.3}>

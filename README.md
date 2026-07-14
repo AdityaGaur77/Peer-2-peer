@@ -47,6 +47,11 @@ Before sharing publicly: set your real contact email and a new admin passcode in
   that posts to the kudos wall.
 - **Teach** — the two-step tutor path: pass a certification quiz (options shuffle
   each attempt), then apply. Unlimited retakes.
+- **Interactive onboarding** — `/#/guide/student` teaches the platform by doing
+  (sandbox RSVP card, real topic voting); `/#/guide/tutor` is a class-builder
+  wizard that walks new tutors through naming, pitching, structuring, scheduling,
+  and actually posting their first class (drafts autosave; approved tutors publish
+  straight to the board).
 - **Dashboard** — saved sessions, certifications, and (for tutors) live volunteer
   stats.
 - **Certificate** — a printable certificate of service generated from the tutor's

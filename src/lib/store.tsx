@@ -53,7 +53,7 @@ interface StoreValue {
   voteRequest: (id: string, email: string) => void;
   approveApplication: (id: string) => void;
   declineApplication: (id: string) => void;
-  createSession: (s: Omit<Session, 'id' | 'attendees' | 'waitlist' | 'status'>) => void;
+  createSession: (s: Omit<Session, 'id' | 'attendees' | 'waitlist' | 'status'>) => string;
   cancelSession: (id: string) => void;
   updateTutor: (id: string, patch: Partial<Pick<Tutor, 'tagline' | 'grade' | 'subjects'>>) => void;
   removeTutor: (id: string) => void;
@@ -345,14 +345,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const createSession = useCallback(
     (s: Omit<Session, 'id' | 'attendees' | 'waitlist' | 'status'>) => {
+      const id = uid('session');
       setDb((prev) => ({
         ...prev,
         sessions: [
           ...prev.sessions,
-          { ...s, id: uid('session'), attendees: [], waitlist: [], status: 'scheduled' },
+          { ...s, id, attendees: [], waitlist: [], status: 'scheduled' },
         ],
       }));
       toast("Session published — it's live on the board.");
+      return id;
     },
     [toast],
   );

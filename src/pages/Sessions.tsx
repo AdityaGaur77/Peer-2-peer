@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Reveal } from '../components/Reveal';
 import { SessionCard } from '../components/SessionCard';
 import { pastSessions, tutorById, upcomingSessions, useStore } from '../lib/store';
@@ -168,7 +168,11 @@ export function Sessions() {
                   Nothing on the board for that filter — yet.
                 </p>
                 <p className="muted small" style={{ marginTop: 8 }}>
-                  Request the topic on the right and a tutor will pick it up.
+                  Request the topic on the right and a tutor will pick it up. New here?{' '}
+                  <Link to="/guide/student" style={{ color: 'var(--ember-deep)', borderBottom: '1.5px dotted' }}>
+                    Take the 2-minute tour
+                  </Link>
+                  .
                 </p>
               </div>
             )}

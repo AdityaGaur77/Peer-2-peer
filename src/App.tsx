@@ -10,6 +10,8 @@ import { About } from './pages/About';
 import { Admin } from './pages/Admin';
 import { Certificate } from './pages/Certificate';
 import { Dashboard } from './pages/Dashboard';
+import { GuideStudent } from './pages/GuideStudent';
+import { GuideTutor } from './pages/GuideTutor';
 import { Home } from './pages/Home';
 import { NotFound } from './pages/NotFound';
 import { Sessions } from './pages/Sessions';
@@ -25,6 +27,8 @@ const TITLES: Record<string, string> = {
   '/dashboard': 'Your dashboard — Relay',
   '/certificate': 'Volunteer certificate — Relay',
   '/admin': 'Founder console — Relay',
+  '/guide/tutor': 'Post your first class — Relay',
+  '/guide/student': 'How Relay works — Relay',
 };
 
 function RouteMeta() {
@@ -54,6 +58,8 @@ export default function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/certificate" element={<Certificate />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/guide/tutor" element={<GuideTutor />} />
+            <Route path="/guide/student" element={<GuideStudent />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </ErrorBoundary>

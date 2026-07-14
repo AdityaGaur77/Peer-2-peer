@@ -14,6 +14,14 @@ export function Dashboard() {
   const { db, profile, openSignIn, signOut } = useStore();
   const navigate = useNavigate();
   const [thanking, setThanking] = useState<Tutor | null>(null);
+  const hasDraft = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('relay.classdraft');
+      return !!raw && !!(JSON.parse(raw) as { draft?: { title?: string } })?.draft;
+    } catch {
+      return false;
+    }
+  }, []);
 
   const tutor = profile ? tutorByEmail(db, profile.email) : undefined;
   const certs = profile ? certsFor(db, profile.email) : [];
@@ -76,6 +84,18 @@ export function Dashboard() {
           </div>
         </Reveal>
 
+        {/* unfinished class draft */}
+        {hasDraft && (
+          <Reveal delay={0.04}>
+            <div className="welcome-card" style={{ marginBottom: 24 }}>
+              <span>
+                <b>You have an unposted class draft.</b> It's saved right where you left it.
+              </span>
+              <Link to="/guide/tutor">finish and post it →</Link>
+            </div>
+          </Reveal>
+        )}
+
         {/* tutor stats band */}
         {tutor && stats && (
           <Reveal delay={0.06}>
@@ -104,9 +124,14 @@ export function Dashboard() {
                     ? `tutoring since ${fmtLongDate(stats.firstISO)}`
                     : 'your teaching journey starts with your first session'}
                 </span>
-                <Link to="/certificate" className="btn btn-primary btn-sm">
-                  Get volunteer certificate
-                </Link>
+                <div className="row">
+                  <Link to="/guide/tutor" className="btn btn-primary btn-sm">
+                    Host a session
+                  </Link>
+                  <Link to="/certificate" className="btn btn-ghost btn-sm">
+                    Volunteer certificate
+                  </Link>
+                </div>
               </div>
             </div>
           </Reveal>

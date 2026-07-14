@@ -181,6 +181,16 @@ export function Teach() {
           </Reveal>
         </div>
 
+        <Reveal delay={0.11}>
+          <div className="welcome-card" style={{ marginBottom: 20 }}>
+            <span>
+              <b>Prefer a guided walkthrough?</b> Build your first class step by step — name it,
+              shape it, schedule it, post it.
+            </span>
+            <Link to="/guide/tutor">open the class builder →</Link>
+          </div>
+        </Reveal>
+
         {/* step 1 — certify */}
         <Reveal delay={0.12}>
           <div className="card card-pad" style={{ marginBottom: 20 }}>
