@@ -19,6 +19,7 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build    # production build → dist/
 npm run preview  # serve the production build locally
+npm run smoke    # SSR-render every route and assert key content
 ```
 
 ## Ship it
