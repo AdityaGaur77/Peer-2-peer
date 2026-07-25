@@ -38,9 +38,19 @@ export function Tutors() {
           </Reveal>
           <Reveal delay={0.1}>
             <p className="lede">
-              Every tutor here passed a certification quiz and shows up for free. Together they've
-              volunteered <b>{stats.volunteerHours} hours</b> across <b>{stats.sessionsHosted} sessions</b>.
-              Say thanks — it's the only payment they get.
+              Every tutor here passed a certification quiz and shows up for free.{' '}
+              {stats.sessionsHosted > 0 ? (
+                <>
+                  Together they've volunteered <b>{stats.volunteerHours} hours</b> across{' '}
+                  <b>{stats.sessionsHosted} sessions</b>. Say thanks — it's the only payment they
+                  get.
+                </>
+              ) : (
+                <>
+                  The first sessions are on the board now — say thanks afterwards, because it's the
+                  only payment they get.
+                </>
+              )}
             </p>
           </Reveal>
         </div>
@@ -64,13 +74,30 @@ export function Tutors() {
           </div>
         </Reveal>
 
-        <div className="grid-3">
-          {tutors.map((t, i) => (
-            <Reveal key={t.id} delay={Math.min(i * 0.05, 0.3)}>
-              <TutorCard tutor={t} onThank={setThanking} />
-            </Reveal>
-          ))}
-        </div>
+        {tutors.length === 0 ? (
+          <div className="card card-pad" style={{ textAlign: 'center', padding: 48 }}>
+            <p className="serif-i" style={{ fontSize: 22, color: 'var(--ink-2)' }}>
+              {filter === 'all'
+                ? 'The crew is just forming.'
+                : 'Nobody teaching that subject — yet.'}
+            </p>
+            <p className="muted small" style={{ marginTop: 8 }}>
+              Certification takes about ten minutes.{' '}
+              <Link to="/teach" style={{ color: 'var(--ember-deep)', borderBottom: '1.5px dotted' }}>
+                Be the first
+              </Link>
+              .
+            </p>
+          </div>
+        ) : (
+          <div className="grid-3">
+            {tutors.map((t, i) => (
+              <Reveal key={t.id} delay={Math.min(i * 0.05, 0.3)}>
+                <TutorCard tutor={t} onThank={setThanking} />
+              </Reveal>
+            ))}
+          </div>
+        )}
       </div>
 
       {thanking && <KudosModal tutor={thanking} onClose={() => setThanking(null)} />}

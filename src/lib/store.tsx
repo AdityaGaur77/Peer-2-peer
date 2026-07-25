@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 import { SEED_VERSION } from './config';
+import type { DecodedInvite } from './invite';
 import { buildSeed } from './seed';
 import type {
   Application,
@@ -59,6 +60,8 @@ interface StoreValue {
   removeTutor: (id: string) => void;
   importData: (state: RelayState) => void;
   resetData: () => void;
+  goLive: () => void;
+  acceptInvite: (d: DecodedInvite) => string;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -417,6 +420,78 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     toast('Fresh demo data seeded.');
   }, [toast]);
 
+  /**
+   * Launch state: drop every seeded placeholder — invented tutors, their
+   * sessions, the sample kudos and learner records — and keep only the
+   * founder. Nothing on the site claims history that didn't happen.
+   * Anything genuinely created (approved tutors, published sessions, kudos
+   * people actually sent) is preserved.
+   */
+  const goLive = useCallback(() => {
+    setDb((prev) => {
+      const ids = seededIds();
+      const founderEmail = prev.tutors.find((t) => t.isFounder)?.email.toLowerCase() ?? '';
+
+      const keptTutors = prev.tutors.filter((t) => t.isFounder || !ids.tutors.has(t.id));
+      const keptTutorIds = new Set(keptTutors.map((t) => t.id));
+
+      return {
+        tutors: keptTutors,
+        // seeded sessions carry fabricated attendance; real ones stay
+        sessions: prev.sessions.filter(
+          (s) => !ids.sessions.has(s.id) && keptTutorIds.has(s.tutorId),
+        ),
+        // sample thank-you notes are not real testimonials
+        kudos: prev.kudos.filter((k) => !ids.kudos.has(k.id) && keptTutorIds.has(k.tutorId)),
+        // keep the founder's own certifications, drop the placeholder crew's
+        certifications: prev.certifications.filter(
+          (c) =>
+            c.email.toLowerCase() === founderEmail ||
+            !ids.emails.has(c.email.toLowerCase()),
+        ),
+        // seeded requests have invented askers; real ones stay
+        requests: prev.requests.filter((r) => !ids.requests.has(r.id)),
+        applications: prev.applications,
+      };
+    });
+    toast('You are live. Every number on the site is real from here on.');
+  }, [toast]);
+
+  /**
+   * Take a session out of an invite link and put it on this board. The tutor
+   * comes along so their name and avatar render; matching is by email so the
+   * same tutor's second invite doesn't create a duplicate.
+   */
+  const acceptInvite = useCallback(
+    (d: DecodedInvite) => {
+      const newId = uid('session');
+      setDb((prev) => {
+        const existing = d.tutor.email
+          ? prev.tutors.find((t) => t.email.toLowerCase() === d.tutor.email.toLowerCase())
+          : undefined;
+        const tutorId = existing?.id ?? uid('tutor');
+        const tutors = existing ? prev.tutors : [...prev.tutors, { ...d.tutor, id: tutorId }];
+
+        // same class arriving twice (forwarded link) — don't double it up
+        const dupe = prev.sessions.find(
+          (s) => s.title === d.session.title && s.startISO === d.session.startISO,
+        );
+        if (dupe) return { ...prev, tutors };
+
+        return {
+          ...prev,
+          tutors,
+          sessions: [
+            ...prev.sessions,
+            { ...d.session, tutorId, id: newId, attendees: [], waitlist: [], status: 'scheduled' },
+          ],
+        };
+      });
+      return newId;
+    },
+    [],
+  );
+
   const value = useMemo<StoreValue>(
     () => ({
       db,
@@ -444,13 +519,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       removeTutor,
       importData,
       resetData,
+      goLive,
+      acceptInvite,
     }),
     [
       db, profile, toasts, signInOpen,
       openSignIn, closeSignIn, completeSignIn, signOut, requireProfile, toast,
       toggleRsvp, toggleWaitlist, submitApplication, saveCertification, addKudos, addRequest,
       voteRequest, approveApplication, declineApplication, createSession,
-      cancelSession, updateTutor, removeTutor, importData, resetData,
+      cancelSession, updateTutor, removeTutor, importData, resetData, goLive, acceptInvite,
     ],
   );
 
@@ -546,6 +623,46 @@ export function globalStats(db: RelayState): GlobalStats {
     volunteerHours: Math.round(minutes / 60),
     tutorCount: db.tutors.length,
   };
+}
+
+/**
+ * Exact ids the seed generates. Matching on these — never on id prefixes —
+ * is what keeps real content safe: uid('kudos') produces `kudos_<base36>`,
+ * the same prefix the seeded notes use, so prefix matching would delete
+ * thank-you notes people actually sent.
+ */
+let _seededIds: {
+  tutors: Set<string>; sessions: Set<string>; kudos: Set<string>;
+  requests: Set<string>; emails: Set<string>;
+} | null = null;
+
+function seededIds() {
+  if (!_seededIds) {
+    const s = buildSeed();
+    _seededIds = {
+      tutors: new Set(s.tutors.filter((t) => !t.isFounder).map((t) => t.id)),
+      sessions: new Set(s.sessions.map((x) => x.id)),
+      kudos: new Set(s.kudos.map((k) => k.id)),
+      requests: new Set(s.requests.map((r) => r.id)),
+      emails: new Set(s.tutors.filter((t) => !t.isFounder).map((t) => t.email.toLowerCase())),
+    };
+  }
+  return _seededIds;
+}
+
+/** True while any seeded placeholder content is still on the site. */
+export function hasDemoData(db: RelayState): boolean {
+  const ids = seededIds();
+  return (
+    db.tutors.some((t) => ids.tutors.has(t.id)) ||
+    db.sessions.some((s) => ids.sessions.has(s.id)) ||
+    db.kudos.some((k) => ids.kudos.has(k.id))
+  );
+}
+
+/** No real history yet — used to keep day-one copy honest. */
+export function isDayOne(db: RelayState): boolean {
+  return pastSessions(db).length === 0;
 }
 
 export function levelLabel(l: Level): string {

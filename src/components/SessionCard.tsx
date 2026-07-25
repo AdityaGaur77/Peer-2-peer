@@ -1,5 +1,7 @@
 import type { CSSProperties } from 'react';
-import { downloadSessionICS } from '../lib/ics';
+import { Link } from 'react-router-dom';
+import { downloadSessionICS, googleCalUrl } from '../lib/ics';
+import { inviteUrl } from '../lib/invite';
 import { levelLabel, tutorById, useStore } from '../lib/store';
 import type { Session } from '../lib/types';
 import { subjectMeta } from '../lib/types';
@@ -8,7 +10,16 @@ import {
   sessionEnd,
 } from '../lib/util';
 
-export function SessionCard({ session, preview }: { session: Session; preview?: boolean }) {
+export function SessionCard({
+  session,
+  preview,
+  previewNote,
+}: {
+  session: Session;
+  preview?: boolean;
+  /** Overrides the preview footer — an invite recipient isn't drafting. */
+  previewNote?: string;
+}) {
   const { db, profile, requireProfile, toggleRsvp, toggleWaitlist, toast } = useStore();
   const tutor = tutorById(db, session.tutorId);
   const past = isPastSession(session);
@@ -22,9 +33,19 @@ export function SessionCard({ session, preview }: { session: Session; preview?: 
   const spotsLeft = session.capacity - session.attendees.length;
   const full = spotsLeft <= 0;
   const meta = subjectMeta(session.subject);
+  // the tutor running it gets the recruiting tools
+  const isMine =
+    !!profile && !!tutor && tutor.email.toLowerCase() === profile.email.toLowerCase();
 
+  // An invite link carries the whole class inside the URL, so it works even
+  // for someone who has never opened Relay before (see lib/invite.ts).
   const share = async () => {
-    const url = `${window.location.origin}${window.location.pathname}#/sessions?s=${session.id}`;
+    let url: string;
+    try {
+      url = await inviteUrl(session, tutor);
+    } catch {
+      url = `${window.location.origin}${window.location.pathname}#/sessions?s=${session.id}`;
+    }
     try {
       await navigator.clipboard.writeText(url);
     } catch {
@@ -35,7 +56,7 @@ export function SessionCard({ session, preview }: { session: Session; preview?: 
       document.execCommand('copy');
       ta.remove();
     }
-    toast('Link copied — bring a friend.');
+    toast('Invite link copied — it works for anyone, even first-timers.');
   };
 
   return (
@@ -79,7 +100,8 @@ export function SessionCard({ session, preview }: { session: Session; preview?: 
 
         {preview ? (
           <div className="spots-label">
-            draft preview · {session.capacity} spots · goes live on the board when you post it
+            {previewNote ??
+              `draft preview · ${session.capacity} spots · goes live on the board when you post it`}
           </div>
         ) : past ? (
           <div className="spots-label">
@@ -112,6 +134,14 @@ export function SessionCard({ session, preview }: { session: Session; preview?: 
                   <button className="btn btn-ghost btn-sm" onClick={() => downloadSessionICS(session, tutor)}>
                     Add to calendar
                   </button>
+                  <a
+                    className="btn-quiet"
+                    href={googleCalUrl(session, tutor)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    google cal
+                  </a>
                   <button
                     className="btn-quiet"
                     onClick={() => requireProfile((p) => toggleRsvp(session.id, p))}
@@ -146,9 +176,14 @@ export function SessionCard({ session, preview }: { session: Session; preview?: 
                   Save my spot — free
                 </button>
               )}
-              <button className="btn-quiet" onClick={share}>
-                copy link
+              <button className="btn-quiet" onClick={share} title="Copies a link that carries this class inside it">
+                copy invite
               </button>
+              {isMine && (
+                <Link className="btn-quiet" to={`/flyer/${session.id}`}>
+                  flyer
+                </Link>
+              )}
             </div>
           </>
         )}

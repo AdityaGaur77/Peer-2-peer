@@ -16,6 +16,8 @@ const ROUTES: Array<[string, string[]]> = [
   ['/admin', ['Restricted to founders']],
   ['/guide/tutor', ['Build your first class', 'The subject', 'live preview', 'draft preview']],
   ['/guide/student', ['by doing it', 'Pick your track', 'student starter guide']],
+  ['/join', ['invite']], // no payload → the friendly error state
+  ['/flyer/nope', ['No such session']], // unknown id → graceful fallback
   ['/definitely-not-a-page', ['Dropped the']],
 ];
 

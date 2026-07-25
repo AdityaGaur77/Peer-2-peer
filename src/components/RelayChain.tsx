@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { cx } from '../lib/util';
+import { FOUNDER_NAME } from '../lib/config';
+import { cx, firstName } from '../lib/util';
+
+const FOUNDER_FIRST = firstName(FOUNDER_NAME);
 
 // The signature piece: one baton travelling through the people it changed.
 // Everything Relay is, in one loop.
@@ -13,22 +16,28 @@ interface Beat {
   caption: ReactNode;
 }
 
+// Roles, not invented people — this is the model, not a claimed history.
 const BEATS: Beat[] = [
   {
-    frac: 0.04, initials: 'AG', name: 'Aditya', when: 'may',
-    caption: <><strong>Aditya</strong> hosts the first free session — five kids, one video call.</>,
+    frac: 0.04, initials: 'AG', name: FOUNDER_FIRST, when: 'leg 01',
+    caption: (
+      <>
+        <strong>{FOUNDER_FIRST}</strong> hosts one free session — a few kids, one video call, no
+        invoice.
+      </>
+    ),
   },
   {
-    frac: 0.28, initials: 'MK', name: 'Maya', when: 'may',
-    caption: <><strong>Maya</strong> learns loops, passes the tutor quiz, starts teaching.</>,
+    frac: 0.28, initials: '+1', name: 'a learner', when: 'leg 02',
+    caption: <>Someone finally gets it, passes the tutor quiz, and <strong>grabs the baton</strong>.</>,
   },
   {
-    frac: 0.52, initials: 'R', name: 'Riya', when: 'jun',
-    caption: <><strong>Riya</strong> joins Maya's session and ships her first game.</>,
+    frac: 0.52, initials: '+1', name: 'who teaches', when: 'leg 03',
+    caption: <>They run the next session. Now someone else has the lightbulb moment.</>,
   },
   {
-    frac: 0.75, initials: '9+', name: 'her students', when: 'jul',
-    caption: <>Riya certifies — <strong>nine students</strong> show up to her first session.</>,
+    frac: 0.75, initials: '+n', name: 'a full room', when: 'leg 04',
+    caption: <>That person certifies too — and <strong>the room keeps doubling</strong>.</>,
   },
   {
     frac: 0.97, initials: '?', name: 'you', when: 'next', dashed: true,

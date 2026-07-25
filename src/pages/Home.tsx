@@ -3,13 +3,15 @@ import { Link } from 'react-router-dom';
 import { KudosMarquee } from '../components/KudosMarquee';
 import { RelayChain } from '../components/RelayChain';
 import { Reveal } from '../components/Reveal';
-import { globalStats, subjectSessions, useStore } from '../lib/store';
+import { globalStats, isDayOne, subjectSessions, upcomingSessions, useStore } from '../lib/store';
 import { SUBJECTS, UPCOMING_SUBJECTS } from '../lib/types';
 import { fmtRelativeDay, fmtTime, plural } from '../lib/util';
 
 export function Home() {
   const { db } = useStore();
   const stats = globalStats(db);
+  const dayOne = isDayOne(db);
+  const upcomingCount = upcomingSessions(db).length;
   const [toured, setToured] = useState(() => localStorage.getItem('relay.toured') === '1');
   const dismissTour = () => {
     localStorage.setItem('relay.toured', '1');
@@ -76,29 +78,56 @@ export function Home() {
         </div>
       </header>
 
-      {/* ── live stats ── */}
+      {/* ── live stats — real counts, or honest day-one framing ── */}
       <section className="section-tight">
         <div className="container">
           <Reveal>
             <div className="stat-strip">
-              <div className="stat">
-                <span className="stat-num">{stats.sessionsHosted}</span>
-                <span className="stat-label">sessions hosted</span>
-              </div>
-              <div className="stat">
-                <span className="stat-num">{stats.learnersHelped}</span>
-                <span className="stat-label">learners helped</span>
-              </div>
-              <div className="stat">
-                <span className="stat-num">{stats.volunteerHours}h</span>
-                <span className="stat-label">hours volunteered</span>
-              </div>
-              <div className="stat">
-                <span className="stat-num">
-                  $0<sup>*</sup>
-                </span>
-                <span className="stat-label">*ever. that's the point</span>
-              </div>
+              {dayOne ? (
+                <>
+                  <div className="stat">
+                    <span className="stat-num">{upcomingCount}</span>
+                    <span className="stat-label">sessions on the board</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-num">{stats.tutorCount}</span>
+                    <span className="stat-label">
+                      {plural(stats.tutorCount, 'tutor')} ready to teach
+                    </span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-num">
+                      $0<sup>*</sup>
+                    </span>
+                    <span className="stat-label">*ever. that's the point</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-num">day 01</span>
+                    <span className="stat-label">and you're early</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="stat">
+                    <span className="stat-num">{stats.sessionsHosted}</span>
+                    <span className="stat-label">sessions hosted</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-num">{stats.learnersHelped}</span>
+                    <span className="stat-label">learners helped</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-num">{stats.volunteerHours}h</span>
+                    <span className="stat-label">hours volunteered</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-num">
+                      $0<sup>*</sup>
+                    </span>
+                    <span className="stat-label">*ever. that's the point</span>
+                  </div>
+                </>
+              )}
             </div>
           </Reveal>
         </div>
@@ -234,22 +263,24 @@ export function Home() {
         </div>
       </section>
 
-      {/* ── kudos ── */}
-      <section className="section paper-2" style={{ overflow: 'hidden' }}>
-        <div className="container section-head" style={{ marginBottom: 26 }}>
-          <Reveal>
-            <span className="eyebrow">passed back down the track</span>
+      {/* ── kudos — the whole band waits until there's something real to show ── */}
+      {db.kudos.length > 0 && (
+        <section className="section paper-2" style={{ overflow: 'hidden' }}>
+          <div className="container section-head" style={{ marginBottom: 26 }}>
+            <Reveal>
+              <span className="eyebrow">passed back down the track</span>
+            </Reveal>
+            <Reveal delay={0.06}>
+              <h2 className="h2">
+                The wall of <em>thank you.</em>
+              </h2>
+            </Reveal>
+          </div>
+          <Reveal delay={0.1}>
+            <KudosMarquee />
           </Reveal>
-          <Reveal delay={0.06}>
-            <h2 className="h2">
-              The wall of <em>thank you.</em>
-            </h2>
-          </Reveal>
-        </div>
-        <Reveal delay={0.1}>
-          <KudosMarquee />
-        </Reveal>
-      </section>
+        </section>
+      )}
 
       {/* ── the story ── */}
       <section className="section">

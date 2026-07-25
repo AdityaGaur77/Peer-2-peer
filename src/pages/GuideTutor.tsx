@@ -57,6 +57,80 @@ const STEPS: GuideStepDef[] = [
   { id: 'post', label: 'Post it' },
 ];
 
+/**
+ * Starter classes. A blank page is the main reason a new tutor stalls, so we
+ * offer three proven shapes per subject — they're editable the moment they land.
+ */
+interface Template {
+  label: string;
+  title: string;
+  description: string;
+  level: Level;
+  durationMin: number;
+  capacity: number;
+}
+
+const TEMPLATES: Record<SubjectId, Template[]> = {
+  python: [
+    {
+      label: 'Absolute beginners',
+      title: 'Python from zero — your first program',
+      description:
+        "We'll install nothing, open one browser tab, and write a program that talks back to you. Variables, print(), and why the computer is so painfully literal. Zero experience needed — genuinely zero.",
+      level: 'intro',
+      durationMin: 60,
+      capacity: 8,
+    },
+    {
+      label: 'Build-along',
+      title: 'Build a number-guessing game, start to finish',
+      description:
+        "One session, one finished game you can send your friends. We'll wire up loops, conditionals and random numbers, break it on purpose, then fix it together. Bring a laptop and a competitive streak.",
+      level: 'intro',
+      durationMin: 90,
+      capacity: 8,
+    },
+    {
+      label: 'Open clinic',
+      title: 'Debugging clinic — bring your broken code',
+      description:
+        "Your bug goes on the shared screen and we solve it as a room. No prep, no slides — just whatever is currently ruining your evening. Everyone leaves having learned from somebody else's crime scene.",
+      level: 'all',
+      durationMin: 75,
+      capacity: 6,
+    },
+  ],
+  ai: [
+    {
+      label: 'No-math intro',
+      title: 'What *is* AI, actually?',
+      description:
+        "No math, no hype, no sci-fi. What machine learning genuinely is, what it definitely isn't, and why your feed knows you better than your friends do. Come with questions you think are too basic.",
+      level: 'intro',
+      durationMin: 60,
+      capacity: 12,
+    },
+    {
+      label: 'Hands-on',
+      title: 'Train your first model — no math required',
+      description:
+        "We'll train an image classifier live, watch it fail hilariously, feed it better data, and watch it get smart. If you can drag files into a folder you're qualified. You leave with a working model.",
+      level: 'intro',
+      durationMin: 75,
+      capacity: 10,
+    },
+    {
+      label: 'Discussion',
+      title: "AI ethics: when the model is wrong, who's responsible?",
+      description:
+        'A discussion, not a lecture. Real cases — biased hiring tools, invented citations, deepfakes — and what we would have done differently. Strong opinions welcome, certainty optional.',
+      level: 'all',
+      durationMin: 60,
+      capacity: 14,
+    },
+  ],
+};
+
 const QUIPS = [
   'nice try.',
   "we don't do that here.",
@@ -261,6 +335,34 @@ export function GuideTutor() {
           <p style={{ color: 'var(--ink-2)', fontSize: 15 }}>
             Learners scroll past topics. They stop for the thing they'll walk away with.
           </p>
+
+          {draft.subject && (
+            <div className="stack" style={{ gap: 8 }}>
+              <span className="mono small muted">
+                or start from a class that already works — everything stays editable:
+              </span>
+              <div className="row" style={{ gap: 8 }}>
+                {TEMPLATES[draft.subject].map((t) => (
+                  <button
+                    key={t.label}
+                    className="optchip"
+                    onClick={() => {
+                      patch({
+                        title: t.title,
+                        description: t.description,
+                        level: t.level,
+                        durationMin: t.durationMin,
+                        capacity: t.capacity,
+                      });
+                      toast(`"${t.label}" loaded — make it yours.`);
+                    }}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <label className="field">
             <span className="label">Class title</span>
             <input

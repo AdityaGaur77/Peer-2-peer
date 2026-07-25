@@ -1,8 +1,10 @@
 import { useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { Reveal } from '../components/Reveal';
-import { ADMIN_CODE, SEED_VERSION } from '../lib/config';
 import {
-  globalStats, pastSessions, tutorById, tutorStats, upcomingSessions, useStore,
+  ADMIN_CODE, CONTACT_EMAIL, IS_DEFAULT_ADMIN_CODE, IS_PLACEHOLDER_EMAIL, SEED_VERSION,
+} from '../lib/config';
+import {
+  globalStats, hasDemoData, pastSessions, tutorById, tutorStats, upcomingSessions, useStore,
 } from '../lib/store';
 import { SUBJECTS, type Level, type RelayState, type SubjectId } from '../lib/types';
 import { cx, downloadText, fmtDate, fmtTime, initials, plural } from '../lib/util';
@@ -21,7 +23,7 @@ export function Admin() {
   const store = useStore();
   const {
     db, approveApplication, declineApplication, cancelSession, toast,
-    updateTutor, removeTutor, importData, resetData,
+    updateTutor, removeTutor, importData, resetData, goLive,
   } = store;
   const [authed, setAuthed] = useState(() => sessionStorage.getItem('relay.admin') === '1');
   const [code, setCode] = useState('');
@@ -70,7 +72,12 @@ export function Admin() {
                 Enter console
               </button>
             </form>
-            <p className="hint">demo passcode: {ADMIN_CODE} — change it in src/lib/config.ts</p>
+            {IS_DEFAULT_ADMIN_CODE && (
+              <p className="hint" style={{ color: 'var(--hot-deep)' }}>
+                ⚠ still the shipped default — change ADMIN_CODE in src/lib/config.ts before you
+                publish
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -123,6 +130,8 @@ export function Admin() {
         {tab === 'overview' && (
           <Reveal>
             <div className="stack" style={{ gap: 20 }}>
+              <LaunchChecklist db={db} onGoLive={() => setTab('data')} />
+
               <div className="card" style={{ overflow: 'hidden' }}>
                 <div className="stat-strip" style={{ borderBlock: 'none' }}>
                   <div className="stat">
@@ -296,10 +305,99 @@ export function Admin() {
 
         {tab === 'data' && (
           <Reveal>
-            <DataPanel db={db} importData={importData} resetData={resetData} toast={toast} />
+            <DataPanel
+              db={db}
+              importData={importData}
+              resetData={resetData}
+              goLive={goLive}
+              toast={toast}
+            />
           </Reveal>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── launch readiness ─────────────────────────────────────────
+
+function LaunchChecklist({ db, onGoLive }: { db: RelayState; onGoLive: () => void }) {
+  const demo = hasDemoData(db);
+  const items = [
+    {
+      ok: !demo,
+      label: 'Placeholder demo content cleared',
+      detail: demo
+        ? 'Invented tutors, sample thank-you notes, and fabricated session history are still live — visitors would read them as real.'
+        : 'Every tutor, session, and number on the site is real.',
+      action: demo ? { label: 'Go to Data → Go live', run: onGoLive } : null,
+    },
+    {
+      ok: !IS_DEFAULT_ADMIN_CODE,
+      label: 'Founder passcode changed',
+      detail: IS_DEFAULT_ADMIN_CODE
+        ? 'Still the shipped default. Edit ADMIN_CODE in src/lib/config.ts and rebuild.'
+        : 'Custom passcode in place.',
+      action: null,
+    },
+    {
+      ok: !IS_PLACEHOLDER_EMAIL,
+      label: 'Real contact email',
+      detail: IS_PLACEHOLDER_EMAIL
+        ? `${CONTACT_EMAIL} is a placeholder — mail sent there vanishes. Set CONTACT_EMAIL in src/lib/config.ts.`
+        : `${CONTACT_EMAIL} is live in the footer and on About.`,
+      action: null,
+    },
+    {
+      ok: upcomingSessions(db).length > 0,
+      label: 'At least one session on the board',
+      detail:
+        upcomingSessions(db).length > 0
+          ? `${plural(upcomingSessions(db).length, 'session')} scheduled — visitors have something to join.`
+          : 'An empty board on launch day is a bounce. Publish one before you share the link.',
+      action: null,
+    },
+  ];
+  const blocking = items.filter((i) => !i.ok).length;
+
+  return (
+    <div className="card card-pad">
+      <div className="row between" style={{ marginBottom: 6 }}>
+        <h3 className="h3">Launch readiness</h3>
+        <span className={cx('status-pill', blocking === 0 ? 'status-approved' : 'status-pending')}>
+          {blocking === 0 ? 'ready to publish' : `${blocking} to fix`}
+        </span>
+      </div>
+      <p className="muted small" style={{ marginBottom: 12 }}>
+        Checked live against the site as it stands right now.
+      </p>
+      {items.map((i) => (
+        <div key={i.label} className="line-item" style={{ alignItems: 'flex-start' }}>
+          <div className="row" style={{ gap: 11, minWidth: 0, flex: 1, alignItems: 'flex-start' }}>
+            <span
+              className="mono"
+              style={{
+                flex: 'none',
+                fontWeight: 800,
+                color: i.ok ? 'var(--ember-deep)' : 'var(--hot-deep)',
+              }}
+            >
+              {i.ok ? '✓' : '!'}
+            </span>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 14.5, fontWeight: 600 }}>{i.label}</div>
+              <div className="small muted" style={{ maxWidth: '62ch' }}>
+                {i.detail}
+              </div>
+            </div>
+          </div>
+          {i.action && (
+            <button className="btn btn-ghost btn-sm" style={{ flex: 'none' }} onClick={i.action.run}>
+              {i.action.label}
+            </button>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -437,15 +535,19 @@ function DataPanel({
   db,
   importData,
   resetData,
+  goLive,
   toast,
 }: {
   db: RelayState;
   importData: ReturnType<typeof useStore>['importData'];
   resetData: ReturnType<typeof useStore>['resetData'];
+  goLive: ReturnType<typeof useStore>['goLive'];
   toast: ReturnType<typeof useStore>['toast'];
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [confirmLive, setConfirmLive] = useState(false);
+  const demo = hasDemoData(db);
 
   const onExport = () => {
     downloadText(
@@ -477,6 +579,46 @@ function DataPanel({
 
   return (
     <div className="stack" style={{ gap: 16 }}>
+      {demo && (
+        <div className="card card-pad stack" style={{ gap: 12, borderColor: 'var(--hot)' }}>
+          <div className="row between">
+            <h3 className="h3">Go live</h3>
+            <span className="status-pill status-pending">demo content on site</span>
+          </div>
+          <p style={{ fontSize: 14.5, color: 'var(--ink-2)', maxWidth: '64ch' }}>
+            The site is still showing seeded placeholders: invented tutors, sample thank-you notes,
+            and a fabricated session history that feeds the counters on the homepage. Visitors read
+            all of that as real. Going live deletes it and keeps only{' '}
+            <b>you and anything genuinely created</b> — real tutors you approved, sessions you
+            published, kudos people actually sent.
+          </p>
+          <p className="hint">export a backup first if you want the demo content back later</p>
+          <div className="row">
+            {confirmLive ? (
+              <>
+                <button
+                  className="btn btn-sm"
+                  style={{ background: 'var(--hot)', color: '#fff' }}
+                  onClick={() => {
+                    goLive();
+                    setConfirmLive(false);
+                  }}
+                >
+                  Yes — clear the placeholders
+                </button>
+                <button className="btn-quiet" onClick={() => setConfirmLive(false)}>
+                  not yet
+                </button>
+              </>
+            ) : (
+              <button className="btn btn-primary btn-sm" onClick={() => setConfirmLive(true)}>
+                Clear demo content & go live
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <p className="muted small">
         Relay's pilot keeps everything in <b>this browser's storage</b> — {db.tutors.length} tutors,{' '}
         {db.sessions.length} sessions, {db.kudos.length} kudos, {db.applications.length} applications.

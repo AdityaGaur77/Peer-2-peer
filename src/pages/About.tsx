@@ -129,27 +129,29 @@ export function About() {
           </div>
         </Reveal>
 
-        {/* stats */}
-        <Reveal>
-          <div className="stat-strip" style={{ marginBottom: 'clamp(40px, 7vw, 72px)' }}>
-            <div className="stat">
-              <span className="stat-num">{stats.tutorCount}</span>
-              <span className="stat-label">volunteer tutors</span>
+        {/* stats — only once there's a real record to show */}
+        {stats.sessionsHosted > 0 && (
+          <Reveal>
+            <div className="stat-strip" style={{ marginBottom: 'clamp(40px, 7vw, 72px)' }}>
+              <div className="stat">
+                <span className="stat-num">{stats.tutorCount}</span>
+                <span className="stat-label">volunteer tutors</span>
+              </div>
+              <div className="stat">
+                <span className="stat-num">{stats.sessionsHosted}</span>
+                <span className="stat-label">sessions hosted</span>
+              </div>
+              <div className="stat">
+                <span className="stat-num">{stats.learnersHelped}</span>
+                <span className="stat-label">learners helped</span>
+              </div>
+              <div className="stat">
+                <span className="stat-num">{stats.volunteerHours}h</span>
+                <span className="stat-label">hours given back</span>
+              </div>
             </div>
-            <div className="stat">
-              <span className="stat-num">{stats.sessionsHosted}</span>
-              <span className="stat-label">sessions hosted</span>
-            </div>
-            <div className="stat">
-              <span className="stat-num">{stats.learnersHelped}</span>
-              <span className="stat-label">learners helped</span>
-            </div>
-            <div className="stat">
-              <span className="stat-num">{stats.volunteerHours}h</span>
-              <span className="stat-label">hours given back</span>
-            </div>
-          </div>
-        </Reveal>
+          </Reveal>
+        )}
 
         {/* faq */}
         <div className="section-head" style={{ marginBottom: 20 }}>

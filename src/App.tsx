@@ -10,9 +10,11 @@ import { About } from './pages/About';
 import { Admin } from './pages/Admin';
 import { Certificate } from './pages/Certificate';
 import { Dashboard } from './pages/Dashboard';
+import { Flyer } from './pages/Flyer';
 import { GuideStudent } from './pages/GuideStudent';
 import { GuideTutor } from './pages/GuideTutor';
 import { Home } from './pages/Home';
+import { Join } from './pages/Join';
 import { NotFound } from './pages/NotFound';
 import { Sessions } from './pages/Sessions';
 import { Teach } from './pages/Teach';
@@ -29,12 +31,17 @@ const TITLES: Record<string, string> = {
   '/admin': 'Founder console — Relay',
   '/guide/tutor': 'Post your first class — Relay',
   '/guide/student': 'How Relay works — Relay',
+  '/join': "You're invited — Relay",
 };
 
 function RouteMeta() {
   const { pathname } = useLocation();
   useEffect(() => {
-    document.title = TITLES[pathname] ?? 'Relay — free peer tutoring';
+    document.title =
+      TITLES[pathname] ??
+      (pathname.startsWith('/flyer/')
+        ? 'Session flyer — Relay'
+        : 'Relay — free peer tutoring');
   }, [pathname]);
   return null;
 }
@@ -45,8 +52,11 @@ export default function App() {
     <>
       <ScrollTop />
       <RouteMeta />
+      <a href="#main" className="skip-link">
+        Skip to content
+      </a>
       <Nav />
-      <main>
+      <main id="main">
         {/* keyed by path so a crash on one page never strands the next */}
         <ErrorBoundary key={location.pathname}>
           <Routes>
@@ -60,6 +70,8 @@ export default function App() {
             <Route path="/admin" element={<Admin />} />
             <Route path="/guide/tutor" element={<GuideTutor />} />
             <Route path="/guide/student" element={<GuideStudent />} />
+            <Route path="/join" element={<Join />} />
+            <Route path="/flyer/:id" element={<Flyer />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </ErrorBoundary>

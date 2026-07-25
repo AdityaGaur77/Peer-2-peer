@@ -41,9 +41,15 @@ Before sharing publicly: set your real contact email and a new admin passcode in
 - **Home** — hero with the animated relay chain, live community stats, subject
   cards, the "how it works" bento, a kudos marquee, and the why-it's-free story.
 - **Sessions** — searchable, filterable board of free live sessions; RSVP saves
-  your spot and exports a calendar invite. Full sessions take a waitlist, and
-  releasing a spot auto-promotes the first person waiting. Live sessions get a
-  pulsing "live now" state. Learners request + upvote topics.
+  your spot and exports a calendar invite (.ics or Google Calendar). Full
+  sessions take a waitlist, and releasing a spot auto-promotes the first person
+  waiting. Live sessions get a pulsing "live now" state. Learners request +
+  upvote topics.
+- **Invite links** — "copy invite" packs an entire session into the URL
+  (deflate-compressed, ~350 chars), so a link works for someone who has never
+  opened Relay: they land on `/#/join`, see the class, and add it to their board
+  in one click. This is how a serverless app still shares a schedule. There's a
+  print-ready **flyer** per session too, for noticeboards.
 - **Tutors** — the founding crew, their volunteer hours, and a "thank them" flow
   that posts to the kudos wall.
 - **Teach** — the two-step tutor path: pass a certification quiz (options shuffle
@@ -57,8 +63,16 @@ Before sharing publicly: set your real contact email and a new admin passcode in
   stats.
 - **Certificate** — a printable certificate of service generated from the tutor's
   logged sessions.
-- **Founder console** (`/#/admin`) — review applications, approve tutors, publish
-  sessions. Passcode + everything else in [`src/lib/config.ts`](src/lib/config.ts).
+- **Founder console** (`/#/admin`) — a live **launch checklist**, application
+  review, crew management, session publishing, and data export/import. Its
+  **Data → Go live** action strips the seeded demo content (invented tutors,
+  sample kudos, fabricated history) while keeping everything real, so nothing on
+  the site claims a history that didn't happen. Passcode and the rest live in
+  [`src/lib/config.ts`](src/lib/config.ts).
+
+> **Publishing?** Work through [LAUNCH.md](LAUNCH.md) first — it covers the
+> demo-data wipe, the placeholder passcode and email, and exactly what the
+> no-backend model does and doesn't do.
 
 ## Tech
 
