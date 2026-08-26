@@ -4,37 +4,50 @@ import { globalStats, useStore } from '../lib/store';
 
 const FAQ = [
   {
-    q: "It's really free? What's the catch?",
-    a: "Really free. No card, no trial, no 'premium' tier waiting to upsell you. Tutors are students volunteering their time, and the whole thing runs on the idea that you repay your education by helping someone else. The only catch is we hope you'll pass it on someday.",
+    q: "It's actually free? What's the catch?",
+    a: "No catch. There's no card, no trial, and no paid tier waiting behind the free one. Tutors are students volunteering an hour of their time, and they get volunteer hours out of it. The only thing we ask is that you consider teaching something yourself once you're further along.",
   },
   {
-    q: 'How do you make sure tutors actually know their stuff?',
-    a: 'Every tutor passes a certification quiz for each subject they teach — the same idea schoolhouse.world uses. It tests the concepts you actually teach in intro sessions, not trivia. And because these are peers who learned it recently, they remember exactly what was confusing.',
+    q: 'How do you know the tutors are any good?',
+    a: "For subjects that have a quiz, tutors have to pass it before they can teach. Everything else gets read by a person before the tutor is approved. Beyond that, these are peers who learned the material recently, which usually means they remember what was confusing about it.",
   },
   {
     q: 'Is this safe for younger students?',
-    a: 'Sessions are small and run on video with a certified tutor. Founders review every tutor application by hand. This is a pilot built by students — as it grows, parental-consent flows and background checks are the first things on the roadmap.',
+    a: "Sessions are small and run on video with a tutor who has been approved by hand. This is a student-run pilot rather than a company, so it doesn't have background checks or parental consent flows yet. If your school or family wants to sit in on a session, that's completely fine.",
   },
   {
-    q: 'I only just learned Python. Can I really tutor?',
-    a: "Yes — that's the whole point. You don't need a degree, you need to be one solid step ahead and willing to be patient. Some of our best tutors certified two months after writing their first line of code.",
+    q: 'I only just learned this myself. Can I really tutor?',
+    a: "Yes, and you might be better at it than someone who learned it years ago. You still remember which part was confusing. You don't need to be an expert, just a step or two ahead and willing to be patient.",
   },
   {
     q: 'What do tutors get out of it?',
-    a: 'Logged volunteer hours with a printable service certificate, the deep understanding that only comes from teaching, and a community of people doing the same thing. Also, genuinely, the kudos wall is addictive.',
+    a: "Volunteer hours that get logged automatically, a printable service certificate, and the fact that teaching something forces you to actually understand it. Also, the thank-you notes are genuinely nice to receive.",
   },
   {
-    q: 'When are other subjects coming?',
-    a: 'Math, Physics, and Web Dev are next. The fastest way to speed one up is to request it on the session board — tutors build the schedule around what people vote for.',
+    q: 'What subjects can I get help with?',
+    a: "Python and AI have the most going on, since that's what the first tutors knew. Math, physics, chemistry, biology, English, history, Spanish, web development and test prep are all open too. If nothing is scheduled in your subject, request it on the session board and a tutor can pick it up.",
   },
 ];
 
+
 const TIMELINE = [
-  { when: 'the start', title: 'Peer2Peer, $8–$20 a class', body: 'A marketplace where high schoolers taught younger kids for a small fee. It worked — but the price quietly filtered out the students who needed help most.' },
-  { when: 'the turn', title: 'We found schoolhouse.world', body: 'A free, peer-to-peer tutoring nonprofit built on one idea: education you pay for by passing it on. It reframed everything. The fee wasn\'t the feature — it was the friction.' },
-  { when: 'now', title: 'Relay — free, forever', body: 'Same tutors, same care, zero dollars. We started with the two things we know cold — Python and AI — and a handful of friends as the founding crew.' },
-  { when: 'next', title: 'STEM, one baton at a time', body: 'Math, Physics, Web Dev, and whatever the request board demands. Every new learner is a future tutor, and the track keeps extending.' },
+  {
+    when: 'before',
+    title: 'Peer2Peer, $8 to $20 a class',
+    body: 'I ran a small tutoring marketplace where high schoolers taught younger kids for a fee. It worked well enough. The problem was who it quietly turned away: the students who needed the help most were the ones least likely to pay for it.',
+  },
+  {
+    when: 'now',
+    title: 'Relay, free',
+    body: 'Same idea, no money. Tutors volunteer an hour, students book a seat, nobody pays anything. It turns out plenty of people will teach for free if you make it easy and give them credit for the hours.',
+  },
+  {
+    when: 'next',
+    title: 'Whatever people show up to teach',
+    body: 'Python and AI came first because that is what the first tutors knew. Math, chemistry, essay writing, Spanish, test prep are all on the list. If you can teach it and someone wants to learn it, it belongs here.',
+  },
 ];
+
 
 export function About() {
   const { db } = useStore();
@@ -49,14 +62,14 @@ export function About() {
           </Reveal>
           <Reveal delay={0.05}>
             <h2 className="display" style={{ fontSize: 'clamp(2.2rem, 5vw, 3.4rem)' }}>
-              We deleted our prices <em className="em-ember">on purpose.</em>
+              I deleted the prices <em className="em-ember">on purpose.</em>
             </h2>
           </Reveal>
           <Reveal delay={0.1}>
             <p className="lede">
-              Relay is a free, student-run tutoring community — built on a simple trade: someone
-              helped you understand something hard, so you help the next person. No money changes
-              hands, ever. Here's how we got here.
+              Relay is free tutoring run by students. Someone helps you understand something
+              hard, and later you do the same for somebody else. No money changes hands. Here is
+              how it ended up that way.
             </p>
           </Reveal>
         </div>
@@ -156,10 +169,10 @@ export function About() {
         {/* faq */}
         <div className="section-head" style={{ marginBottom: 20 }}>
           <Reveal>
-            <span className="eyebrow">questions, answered</span>
+            <span className="eyebrow">faq</span>
           </Reveal>
           <Reveal delay={0.05}>
-            <h2 className="h2">The honest FAQ</h2>
+            <h2 className="h2">Questions people ask</h2>
           </Reveal>
         </div>
         <Reveal delay={0.08}>
@@ -176,14 +189,14 @@ export function About() {
         <Reveal delay={0.1}>
           <div className="cta-band" style={{ marginTop: 'clamp(40px, 7vw, 72px)' }}>
             <h2 className="h2" style={{ maxWidth: 520 }}>
-              Ready to <em>grab the baton?</em>
+              Want to <em>join in?</em>
             </h2>
             <div className="row" style={{ justifyContent: 'center' }}>
               <Link to="/sessions" className="btn btn-band-light">
-                Learn for free
+                Find a session
               </Link>
               <Link to="/teach" className="btn btn-band-ghost">
-                Teach for free
+                Become a tutor
               </Link>
             </div>
           </div>

@@ -3,14 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Reveal } from '../components/Reveal';
 import { SessionCard } from '../components/SessionCard';
 import { pastSessions, tutorById, upcomingSessions, useStore } from '../lib/store';
-import type { Level, SubjectId } from '../lib/types';
+import { SUBJECTS, type Level, type SubjectId } from '../lib/types';
 import { cx } from '../lib/util';
-
-const SUBJECT_FILTERS: Array<{ id: 'all' | SubjectId; label: string }> = [
-  { id: 'all', label: 'All subjects' },
-  { id: 'python', label: 'Python' },
-  { id: 'ai', label: 'AI & ML' },
-];
 
 const LEVEL_FILTERS: Array<{ id: 'all' | Level; label: string }> = [
   { id: 'all', label: 'Any level' },
@@ -27,7 +21,7 @@ export function Sessions() {
   const [showAll, setShowAll] = useState(() => !!params.get('s'));
   const [query, setQuery] = useState('');
   const [topic, setTopic] = useState('');
-  const [topicSubject, setTopicSubject] = useState<'python' | 'ai' | 'other'>('python');
+  const [topicSubject, setTopicSubject] = useState<SubjectId | 'other'>(SUBJECTS[0].id);
 
   const subject = (params.get('subject') as SubjectId | null) ?? 'all';
   const tutorFilter = params.get('tutor');
@@ -104,13 +98,13 @@ export function Sessions() {
           </Reveal>
           <Reveal delay={0.05}>
             <h2 className="h2">
-              Every spot is <em className="em-ember">free.</em> Grab one.
+              Every seat is <em className="em-ember">free.</em> Take one.
             </h2>
           </Reveal>
           <Reveal delay={0.1}>
             <p className="lede">
-              Live group sessions on video — small, casual, taught by certified student tutors.
-              RSVP and the room link is yours.
+              Live sessions on video, usually six to twelve people, run by student tutors.
+              Book a seat and you get the room link.
             </p>
           </Reveal>
         </div>
@@ -125,17 +119,21 @@ export function Sessions() {
               onChange={(e) => setQuery(e.target.value)}
               aria-label="Search sessions"
             />
+            <select
+              className="select"
+              style={{ width: 'auto', padding: '8px 14px', borderRadius: 999, fontSize: 13.5 }}
+              value={subject}
+              onChange={(e) => setSubject(e.target.value as 'all' | SubjectId)}
+              aria-label="Filter by subject"
+            >
+              <option value="all">All subjects</option>
+              {SUBJECTS.map((sub) => (
+                <option key={sub.id} value={sub.id}>
+                  {sub.name}
+                </option>
+              ))}
+            </select>
             <span style={{ width: 6 }} />
-            {SUBJECT_FILTERS.map((f) => (
-              <button
-                key={f.id}
-                className={cx('chip chip-btn', subject === f.id && 'on')}
-                onClick={() => setSubject(f.id)}
-              >
-                {f.label}
-              </button>
-            ))}
-            <span style={{ width: 10 }} />
             {LEVEL_FILTERS.map((f) => (
               <button
                 key={f.id}
@@ -165,10 +163,10 @@ export function Sessions() {
             {upcoming.length === 0 && (
               <div className="card card-pad" style={{ textAlign: 'center', padding: 48 }}>
                 <p className="serif-i" style={{ fontSize: 22, color: 'var(--ink-2)' }}>
-                  Nothing on the board for that filter — yet.
+                  Nothing scheduled there yet.
                 </p>
                 <p className="muted small" style={{ marginTop: 8 }}>
-                  Request the topic on the right and a tutor will pick it up. New here?{' '}
+                  Request it on the right and a tutor can pick it up. New here?{' '}
                   <Link to="/guide/student" style={{ color: 'var(--ember-deep)', borderBottom: '1.5px dotted' }}>
                     Take the 2-minute tour
                   </Link>
@@ -205,7 +203,7 @@ export function Sessions() {
             <div className="card card-pad stack" style={{ gap: 14 }}>
               <h3 className="h3">Request a topic</h3>
               <p className="muted" style={{ fontSize: 13.5 }}>
-                Tutors build the schedule from this list. Most-wanted goes first.
+Tutors pick what to teach from this list. Most requested goes first.
               </p>
               <form className="stack" style={{ gap: 10 }} onSubmit={submitTopic}>
                 <input
@@ -221,9 +219,12 @@ export function Sessions() {
                     value={topicSubject}
                     onChange={(e) => setTopicSubject(e.target.value as typeof topicSubject)}
                   >
-                    <option value="python">Python</option>
-                    <option value="ai">AI & ML</option>
-                    <option value="other">Something new</option>
+                    {SUBJECTS.map((sub) => (
+                      <option key={sub.id} value={sub.id}>
+                        {sub.name}
+                      </option>
+                    ))}
+                    <option value="other">Something else</option>
                   </select>
                   <button className="btn btn-primary btn-sm" type="submit" disabled={topic.trim().length < 4}>
                     Request

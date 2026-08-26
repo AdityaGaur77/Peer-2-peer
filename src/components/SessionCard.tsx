@@ -4,7 +4,7 @@ import { downloadSessionICS, googleCalUrl } from '../lib/ics';
 import { inviteUrl } from '../lib/invite';
 import { levelLabel, tutorById, useStore } from '../lib/store';
 import type { Session } from '../lib/types';
-import { subjectMeta } from '../lib/types';
+import { subjectMeta, subjectShort } from '../lib/types';
 import {
   cx, fmtDayNum, fmtMonth, fmtRelativeDay, fmtTime, fmtWeekday, initials, isPastSession,
   sessionEnd,
@@ -70,8 +70,12 @@ export function SessionCard({
       <div className="ticket-body">
         <div className="row between">
           <div className="row" style={{ gap: 8 }}>
-            <span className="chip" data-subject={session.subject}>
-              {meta.name.split(' ')[0]}
+            <span
+              className="chip"
+              data-subject={session.subject}
+              style={{ '--sub-h': meta.hue } as CSSProperties}
+            >
+              {subjectShort(session.subject)}
             </span>
             <span className="chip chip-ghost">{levelLabel(session.level)}</span>
             {live && <span className="chip chip-live">live now</span>}

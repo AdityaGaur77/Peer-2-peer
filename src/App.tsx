@@ -21,7 +21,7 @@ import { Teach } from './pages/Teach';
 import { Tutors } from './pages/Tutors';
 
 const TITLES: Record<string, string> = {
-  '/': 'Relay — free peer tutoring in Python & AI',
+  '/': 'Relay — free tutoring by students',
   '/sessions': 'Free sessions — Relay',
   '/tutors': 'The crew — Relay',
   '/teach': 'Become a tutor — Relay',

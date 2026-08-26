@@ -4,10 +4,12 @@ import { useStore } from '../lib/store';
 import { cx, firstName, hashHue, initials } from '../lib/util';
 import { Wordmark } from './Logo';
 
+// `tutorOnly` links disappear for anyone who signed in as a student.
+// Signed-out visitors see everything, since they haven't picked a side yet.
 const LINKS = [
   { to: '/sessions', label: 'Sessions' },
   { to: '/tutors', label: 'Tutors' },
-  { to: '/teach', label: 'Teach' },
+  { to: '/teach', label: 'Teach', tutorOnly: true },
   { to: '/about', label: 'About' },
 ];
 
@@ -39,7 +41,8 @@ export function Nav() {
 
   useEffect(() => setOpen(false), [location.pathname]);
 
-  const links = LINKS.map((l) => (
+  const isStudent = profile?.role === 'student';
+  const links = LINKS.filter((l) => !(l.tutorOnly && isStudent)).map((l) => (
     <NavLink key={l.to} to={l.to} className={({ isActive }) => cx('nav-link', isActive && 'active')}>
       {l.label}
     </NavLink>

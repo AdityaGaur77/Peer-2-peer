@@ -1,9 +1,9 @@
 # Relay — free peer-to-peer tutoring
 
-Free, live tutoring in **Python** and **AI**, taught by students for students.
-Modeled on [schoolhouse.world](https://schoolhouse.world): no fees, ever — you
-repay your education by teaching the next person. This is the free-platform
-successor to the old paid *Peer2Peer* app.
+Free live tutoring run by students. Sessions cover Python, AI, web development,
+math, physics, chemistry, biology, English, history, Spanish and test prep, and
+subjects are added as tutors turn up who can teach them. Nobody pays anything.
+This replaced *Peer2Peer*, a paid tutoring app with the same tutors.
 
 **Concept:** knowledge as a relay baton, drawn on graph paper. Cool notebook
 surfaces, blue ink, and one green accent — the baton — that always means "go /
@@ -32,10 +32,17 @@ so `dist/` deploys to any static host with zero config:
 - **GitHub Pages** — push the repo, then either upload `dist/` to a `gh-pages`
   branch (`npx gh-pages -d dist`) or enable Pages with a Vite build action.
 
-Contact email and founder passcode are already configured in
-[`src/lib/config.ts`](src/lib/config.ts). The one step left before you share the
-link is clearing the seeded demo content: founder console → **Data → Go live**.
-See [LAUNCH.md](LAUNCH.md).
+### Setting the founder passcode on Vercel
+
+The console at `/#/admin` reads its passcode from `VITE_ADMIN_CODE`:
+
+1. Vercel → your project → **Settings → Environment Variables**
+2. Add `VITE_ADMIN_CODE` with the passcode you want, for all environments
+3. **Redeploy** — Vite bakes env vars in at build time, so a redeploy is required
+
+Without that variable the app falls back to the value in
+[`src/lib/config.ts`](src/lib/config.ts), which is visible to anyone reading the
+repo. See [LAUNCH.md](LAUNCH.md) for the rest.
 
 ## What's inside
 
@@ -64,12 +71,13 @@ See [LAUNCH.md](LAUNCH.md).
   stats.
 - **Certificate** — a printable certificate of service generated from the tutor's
   logged sessions.
-- **Founder console** (`/#/admin`) — a live **launch checklist**, application
-  review, crew management, session publishing, and data export/import. Its
-  **Data → Go live** action strips the seeded demo content (invented tutors,
-  sample kudos, fabricated history) while keeping everything real, so nothing on
-  the site claims a history that didn't happen. Passcode and the rest live in
-  [`src/lib/config.ts`](src/lib/config.ts).
+- **Founder console** (`/#/admin`) — a live launch checklist, application review,
+  tutor management, session publishing, and data export/import. The passcode
+  comes from `VITE_ADMIN_CODE` (see above).
+- **Roles** — people pick student or tutor when they sign in. Students never see
+  the Teach tab; either side can switch from their dashboard.
+- **No sample data** — a new board starts with one tutor (you) and nothing else,
+  so every number on the site reflects something that actually happened.
 
 > **Publishing?** Work through [LAUNCH.md](LAUNCH.md) first — it covers the
 > demo-data wipe and exactly what the no-backend model does and doesn't do.
@@ -90,8 +98,10 @@ implementation for API calls — the component layer doesn't change.
 - **The crew** — edit `TUTOR_SEEDS` in `src/lib/seed.ts`, or just approve real
   applications from the founder console.
 - **Quizzes** — question banks live in `src/lib/quiz-data.ts`.
-- **New subjects** — add to `SUBJECTS` in `src/lib/types.ts` (Math / Physics /
-  Web Dev are already teased on the landing page).
+- **New subjects** — add an entry to `SUBJECTS` in `src/lib/types.ts` with a name,
+  blurb and hue. Filters, the class builder, sign-up and the board all pick it up
+  automatically, and the colour is generated from the hue, so no CSS is needed.
+  Set `hasQuiz: true` only if you also add a quiz in `src/lib/quiz-data.ts`.
 
 > ⚠️ The admin passcode is client-side: it ships in the JS bundle and lives in
 > this repo, so it is a latch rather than a lock. That is survivable here because

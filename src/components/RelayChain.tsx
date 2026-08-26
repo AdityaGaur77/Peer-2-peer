@@ -22,26 +22,25 @@ const BEATS: Beat[] = [
     frac: 0.04, initials: 'AG', name: FOUNDER_FIRST, when: 'leg 01',
     caption: (
       <>
-        <strong>{FOUNDER_FIRST}</strong> hosts one free session — a few kids, one video call, no
-        invoice.
+        <strong>{FOUNDER_FIRST}</strong> runs one free session. A few students, one video call.
       </>
     ),
   },
   {
     frac: 0.28, initials: '+1', name: 'a learner', when: 'leg 02',
-    caption: <>Someone finally gets it, passes the tutor quiz, and <strong>grabs the baton</strong>.</>,
+    caption: <>One of them gets it, passes the quiz, and signs up to teach.</>,
   },
   {
     frac: 0.52, initials: '+1', name: 'who teaches', when: 'leg 03',
-    caption: <>They run the next session. Now someone else has the lightbulb moment.</>,
+    caption: <>They run the next session, and it clicks for somebody else.</>,
   },
   {
     frac: 0.75, initials: '+n', name: 'a full room', when: 'leg 04',
-    caption: <>That person certifies too — and <strong>the room keeps doubling</strong>.</>,
+    caption: <>That person teaches too. <strong>The room keeps growing.</strong></>,
   },
   {
     frac: 0.97, initials: '?', name: 'you', when: 'next', dashed: true,
-    caption: <>The baton doesn't stop here. <strong>It's your turn.</strong></>,
+    caption: <>It keeps going from there. <strong>Your turn.</strong></>,
   },
 ];
 

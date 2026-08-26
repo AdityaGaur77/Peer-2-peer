@@ -11,7 +11,7 @@ import { subjectMeta } from '../lib/types';
 import { fmtDate, fmtLongDate, initials, plural } from '../lib/util';
 
 export function Dashboard() {
-  const { db, profile, openSignIn, signOut } = useStore();
+  const { db, profile, openSignIn, signOut, setRole } = useStore();
   const navigate = useNavigate();
   const [thanking, setThanking] = useState<Tutor | null>(null);
   const hasDraft = useMemo(() => {
@@ -74,13 +74,21 @@ export function Dashboard() {
                   Hey, {profile.name.split(' ')[0]}.
                 </h2>
                 <p className="mono small muted">
-                  {tutor ? `${tutor.grade} · Relay tutor` : 'Relay learner'} · {profile.email}
+                  {tutor ? `${tutor.grade} · tutor` : profile.role === 'tutor' ? 'signed up to tutor' : 'student'} · {profile.email}
                 </p>
               </div>
             </div>
-            <button className="btn-quiet" onClick={signOut}>
-              sign out
-            </button>
+            <div className="row">
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => setRole(profile.role === 'tutor' ? 'student' : 'tutor')}
+              >
+                {profile.role === 'tutor' ? 'Switch to student view' : 'Switch to tutor view'}
+              </button>
+              <button className="btn-quiet" onClick={signOut}>
+                sign out
+              </button>
+            </div>
           </div>
         </Reveal>
 
@@ -157,7 +165,12 @@ export function Dashboard() {
             ) : (
               <div className="row" style={{ gap: 10 }}>
                 {certs.map((c) => (
-                  <div key={c.subject} className="chip chip-cert" data-subject={c.subject} style={{ padding: '9px 16px' }}>
+                  <div
+                    key={c.subject}
+                    className="chip chip-cert"
+                    data-subject={c.subject}
+                    style={{ padding: '9px 16px', '--sub-h': subjectMeta(c.subject).hue } as CSSProperties}
+                  >
                     {subjectMeta(c.subject).name} · {c.score}/{c.total}
                   </div>
                 ))}

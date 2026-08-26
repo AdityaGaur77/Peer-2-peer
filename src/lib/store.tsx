@@ -18,6 +18,7 @@ import type {
   Level,
   Profile,
   RelayState,
+  Role,
   Session,
   SubjectId,
   TopicRequest,
@@ -60,8 +61,8 @@ interface StoreValue {
   removeTutor: (id: string) => void;
   importData: (state: RelayState) => void;
   resetData: () => void;
-  goLive: () => void;
   acceptInvite: (d: DecodedInvite) => string;
+  setRole: (role: Role) => void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -140,7 +141,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setSignInOpen(false);
       const after = pendingAction.current;
       pendingAction.current = null;
-      toast(`Hey ${p.name.split(' ')[0]} — you're in.`);
+      toast(`You're in, ${p.name.split(' ')[0]}.`);
       if (after) after(p);
     },
     [toast],
@@ -148,7 +149,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(() => {
     setProfile(null);
-    toast('Signed out. The baton awaits your return.');
+    toast('Signed out.');
   }, [toast]);
 
   const requireProfile = useCallback(
@@ -167,7 +168,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!session) return;
       const going = session.attendees.some((a) => a.email === p.email);
       if (!going && session.attendees.length >= session.capacity) {
-        toast("That one's full — grab a waitlist spot instead.");
+        toast("That one's full. You can join the waitlist instead.");
         return;
       }
       const promoted = going ? session.waitlist[0] : undefined;
@@ -193,8 +194,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       toast(
         going
           ? promoted
-            ? `Spot released — ${promoted.name.split(' ')[0]} moves in from the waitlist.`
-            : 'Spot released — someone else will thank you.'
+            ? `Spot released. ${promoted.name.split(' ')[0]} moves up from the waitlist.`
+            : 'Spot released.'
           : `You're going: ${session.title}`,
       );
     },
@@ -223,7 +224,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       toast(
         on
           ? 'Off the waitlist.'
-          : `You're #${session.waitlist.length + 1} on the waitlist — spots open up more often than you'd think.`,
+          : `You're #${session.waitlist.length + 1} on the waitlist. Spots do open up.`,
       );
     },
     [db.sessions, toast],
@@ -238,7 +239,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           { ...a, id: uid('app'), status: 'pending', submittedISO: new Date().toISOString() },
         ],
       }));
-      toast('Application in. A founder reviews every single one.');
+      toast('Application sent.');
     },
     [toast],
   );
@@ -262,7 +263,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ...prev.kudos,
         ],
       }));
-      toast("Kudos delivered. You just made someone's week.");
+      toast("Sent. That will make their day.");
     },
     [toast],
   );
@@ -284,7 +285,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ...prev.requests,
         ],
       }));
-      toast('Topic requested — tutors pick sessions from this list.');
+      toast('Requested. Tutors build sessions from this list.');
     },
     [toast],
   );
@@ -332,7 +333,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           a.id === id ? { ...a, status: 'approved' as const } : a,
         ),
       }));
-      toast("Approved — they're officially a Relay tutor.");
+      toast("Approved. They are a tutor now.");
     },
     [db.applications, toast],
   );
@@ -356,7 +357,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           { ...s, id, attendees: [], waitlist: [], status: 'scheduled' },
         ],
       }));
-      toast("Session published — it's live on the board.");
+      toast("Published. It is on the board.");
       return id;
     },
     [toast],
@@ -410,51 +411,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const importData = useCallback(
     (state: RelayState) => {
       setDb(normalizeState(state));
-      toast('Data imported — the board is restored.');
+      toast('Imported.');
     },
     [toast],
   );
 
   const resetData = useCallback(() => {
     setDb(buildSeed());
-    toast('Fresh demo data seeded.');
-  }, [toast]);
-
-  /**
-   * Launch state: drop every seeded placeholder — invented tutors, their
-   * sessions, the sample kudos and learner records — and keep only the
-   * founder. Nothing on the site claims history that didn't happen.
-   * Anything genuinely created (approved tutors, published sessions, kudos
-   * people actually sent) is preserved.
-   */
-  const goLive = useCallback(() => {
-    setDb((prev) => {
-      const ids = seededIds();
-      const founderEmail = prev.tutors.find((t) => t.isFounder)?.email.toLowerCase() ?? '';
-
-      const keptTutors = prev.tutors.filter((t) => t.isFounder || !ids.tutors.has(t.id));
-      const keptTutorIds = new Set(keptTutors.map((t) => t.id));
-
-      return {
-        tutors: keptTutors,
-        // seeded sessions carry fabricated attendance; real ones stay
-        sessions: prev.sessions.filter(
-          (s) => !ids.sessions.has(s.id) && keptTutorIds.has(s.tutorId),
-        ),
-        // sample thank-you notes are not real testimonials
-        kudos: prev.kudos.filter((k) => !ids.kudos.has(k.id) && keptTutorIds.has(k.tutorId)),
-        // keep the founder's own certifications, drop the placeholder crew's
-        certifications: prev.certifications.filter(
-          (c) =>
-            c.email.toLowerCase() === founderEmail ||
-            !ids.emails.has(c.email.toLowerCase()),
-        ),
-        // seeded requests have invented askers; real ones stay
-        requests: prev.requests.filter((r) => !ids.requests.has(r.id)),
-        applications: prev.applications,
-      };
-    });
-    toast('You are live. Every number on the site is real from here on.');
+    toast('Board cleared.');
   }, [toast]);
 
   /**
@@ -492,6 +456,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  /** Students and tutors see a slightly different site; this is the switch. */
+  const setRole = useCallback(
+    (role: Role) => {
+      setProfile((p) => (p ? { ...p, role } : p));
+      toast(role === 'tutor' ? 'Switched to the tutor view.' : 'Switched to the student view.');
+    },
+    [toast],
+  );
+
   const value = useMemo<StoreValue>(
     () => ({
       db,
@@ -519,15 +492,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       removeTutor,
       importData,
       resetData,
-      goLive,
       acceptInvite,
+      setRole,
     }),
     [
       db, profile, toasts, signInOpen,
       openSignIn, closeSignIn, completeSignIn, signOut, requireProfile, toast,
       toggleRsvp, toggleWaitlist, submitApplication, saveCertification, addKudos, addRequest,
       voteRequest, approveApplication, declineApplication, createSession,
-      cancelSession, updateTutor, removeTutor, importData, resetData, goLive, acceptInvite,
+      cancelSession, updateTutor, removeTutor, importData, resetData, acceptInvite, setRole,
     ],
   );
 
@@ -623,41 +596,6 @@ export function globalStats(db: RelayState): GlobalStats {
     volunteerHours: Math.round(minutes / 60),
     tutorCount: db.tutors.length,
   };
-}
-
-/**
- * Exact ids the seed generates. Matching on these — never on id prefixes —
- * is what keeps real content safe: uid('kudos') produces `kudos_<base36>`,
- * the same prefix the seeded notes use, so prefix matching would delete
- * thank-you notes people actually sent.
- */
-let _seededIds: {
-  tutors: Set<string>; sessions: Set<string>; kudos: Set<string>;
-  requests: Set<string>; emails: Set<string>;
-} | null = null;
-
-function seededIds() {
-  if (!_seededIds) {
-    const s = buildSeed();
-    _seededIds = {
-      tutors: new Set(s.tutors.filter((t) => !t.isFounder).map((t) => t.id)),
-      sessions: new Set(s.sessions.map((x) => x.id)),
-      kudos: new Set(s.kudos.map((k) => k.id)),
-      requests: new Set(s.requests.map((r) => r.id)),
-      emails: new Set(s.tutors.filter((t) => !t.isFounder).map((t) => t.email.toLowerCase())),
-    };
-  }
-  return _seededIds;
-}
-
-/** True while any seeded placeholder content is still on the site. */
-export function hasDemoData(db: RelayState): boolean {
-  const ids = seededIds();
-  return (
-    db.tutors.some((t) => ids.tutors.has(t.id)) ||
-    db.sessions.some((s) => ids.sessions.has(s.id)) ||
-    db.kudos.some((k) => ids.kudos.has(k.id))
-  );
 }
 
 /** No real history yet — used to keep day-one copy honest. */

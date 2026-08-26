@@ -21,7 +21,9 @@ export interface Quiz {
 // prove they know a topic before they teach it. Explanations are written
 // the way you'd explain to a student, because that's the actual job.
 
-export const QUIZZES: Record<SubjectId, Quiz> = {
+// Only some subjects have a quiz. Everything else is reviewed by a founder
+// when the application comes in.
+export const QUIZZES: Partial<Record<SubjectId, Quiz>> = {
   python: {
     subject: 'python',
     title: 'Python Tutor Certification',

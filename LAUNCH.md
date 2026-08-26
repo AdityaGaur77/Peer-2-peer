@@ -1,30 +1,23 @@
 # Launch checklist
 
-The founder console (`/#/admin` → **Overview**) runs the first four of these
-live against the site. This file covers the rest.
+The founder console (`/#/admin` → **Overview**) checks most of this against the
+live site. This file covers the rest.
 
 ## Before you publish
 
-- [ ] **Publish one real class** through the builder at `/#/guide/tutor`, then
-      **copy invite** on its card and send that link to a few people. That's the
-      whole launch: one class, one link.
-- [ ] **Clear the demo content.** Console → **Data → Go live**. The site ships
-      with seeded placeholders — invented tutors, sample thank-you notes, and a
-      fabricated session history that feeds the homepage counters. Visitors read
-      those as real. Going live deletes them and keeps only you plus anything
-      genuinely created.
-- [x] **Founder passcode changed.** `ADMIN_CODE` in
-      [`src/lib/config.ts`](src/lib/config.ts) is no longer the shipped default.
-      It still lives in the JS bundle and in this repo, so treat it as a latch:
-      never reuse a password from anywhere else. (Harmless if read — every
-      visitor only ever unlocks their own browser's copy of the board.)
-- [x] **Real contact email set.** `CONTACT_EMAIL` points at a live inbox, so the
-      footer and About page reach you.
-- [ ] **Put at least one session on the board.** An empty board on launch day is
-      a bounce. Use the class builder at `/#/guide/tutor`.
-- [ ] **Check your name.** `FOUNDER_NAME` signs every volunteer certificate and
-      appears in the hero relay chain.
-- [ ] Rebuild after editing config: `npm run build`.
+- [ ] **Set the founder passcode on your host.** The console reads
+      `VITE_ADMIN_CODE`. On Vercel: **Settings → Environment Variables**, add
+      `VITE_ADMIN_CODE`, then **redeploy** (Vite bakes env vars in at build time).
+      Without it the app falls back to the value in `src/lib/config.ts`, which is
+      readable by anyone with the repo link.
+- [ ] **Publish one class** at `/#/guide/tutor`, then hit **copy invite** on its
+      card and send that link to a few people. That is the whole launch: one
+      class, one link.
+- [ ] **Check your name.** `FOUNDER_NAME` in `src/lib/config.ts` signs every
+      volunteer certificate and appears in the hero.
+- [x] **Contact email set.** `CONTACT_EMAIL` points at a live inbox.
+- [x] **No sample data.** A new board starts with you and nothing else, so there
+      are no invented tutors or fake numbers to clear out.
 
 ## Deploy
 

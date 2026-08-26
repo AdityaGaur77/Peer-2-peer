@@ -1,12 +1,14 @@
 import { useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { Reveal } from '../components/Reveal';
 import {
-  ADMIN_CODE, CONTACT_EMAIL, IS_DEFAULT_ADMIN_CODE, IS_PLACEHOLDER_EMAIL, SEED_VERSION,
+  ADMIN_CODE, ADMIN_CODE_FROM_ENV, CONTACT_EMAIL, IS_PLACEHOLDER_EMAIL, SEED_VERSION,
 } from '../lib/config';
 import {
-  globalStats, hasDemoData, pastSessions, tutorById, tutorStats, upcomingSessions, useStore,
+  globalStats, pastSessions, tutorById, tutorStats, upcomingSessions, useStore,
 } from '../lib/store';
-import { SUBJECTS, type Level, type RelayState, type SubjectId } from '../lib/types';
+import {
+  SUBJECTS, subjectMeta, subjectShort, type Level, type RelayState, type SubjectId,
+} from '../lib/types';
 import { cx, downloadText, fmtDate, fmtTime, initials, plural } from '../lib/util';
 
 type Tab = 'overview' | 'applications' | 'sessions' | 'schedule' | 'crew' | 'data';
@@ -23,7 +25,7 @@ export function Admin() {
   const store = useStore();
   const {
     db, approveApplication, declineApplication, cancelSession, toast,
-    updateTutor, removeTutor, importData, resetData, goLive,
+    updateTutor, removeTutor, importData, resetData,
   } = store;
   const [authed, setAuthed] = useState(() => sessionStorage.getItem('relay.admin') === '1');
   const [code, setCode] = useState('');
@@ -72,10 +74,10 @@ export function Admin() {
                 Enter console
               </button>
             </form>
-            {IS_DEFAULT_ADMIN_CODE && (
-              <p className="hint" style={{ color: 'var(--hot-deep)' }}>
-                ⚠ still the shipped default — change ADMIN_CODE in src/lib/config.ts before you
-                publish
+            {!ADMIN_CODE_FROM_ENV && (
+              <p className="hint">
+                using the passcode from src/lib/config.ts — set VITE_ADMIN_CODE in your host's
+                environment variables to keep it out of the repo
               </p>
             )}
           </div>
@@ -130,7 +132,7 @@ export function Admin() {
         {tab === 'overview' && (
           <Reveal>
             <div className="stack" style={{ gap: 20 }}>
-              <LaunchChecklist db={db} onGoLive={() => setTab('data')} />
+              <LaunchChecklist db={db} onPublish={() => setTab('schedule')} />
 
               <div className="card" style={{ overflow: 'hidden' }}>
                 <div className="stat-strip" style={{ borderBlock: 'none' }}>
@@ -305,13 +307,7 @@ export function Admin() {
 
         {tab === 'data' && (
           <Reveal>
-            <DataPanel
-              db={db}
-              importData={importData}
-              resetData={resetData}
-              goLive={goLive}
-              toast={toast}
-            />
+            <DataPanel db={db} importData={importData} resetData={resetData} toast={toast} />
           </Reveal>
         )}
       </div>
@@ -321,23 +317,14 @@ export function Admin() {
 
 // ── launch readiness ─────────────────────────────────────────
 
-function LaunchChecklist({ db, onGoLive }: { db: RelayState; onGoLive: () => void }) {
-  const demo = hasDemoData(db);
+function LaunchChecklist({ db, onPublish }: { db: RelayState; onPublish: () => void }) {
   const items = [
     {
-      ok: !demo,
-      label: 'Placeholder demo content cleared',
-      detail: demo
-        ? 'Invented tutors, sample thank-you notes, and fabricated session history are still live — visitors would read them as real.'
-        : 'Every tutor, session, and number on the site is real.',
-      action: demo ? { label: 'Go to Data → Go live', run: onGoLive } : null,
-    },
-    {
-      ok: !IS_DEFAULT_ADMIN_CODE,
-      label: 'Founder passcode changed',
-      detail: IS_DEFAULT_ADMIN_CODE
-        ? 'Still the shipped default. Edit ADMIN_CODE in src/lib/config.ts and rebuild.'
-        : 'Custom passcode in place.',
+      ok: ADMIN_CODE_FROM_ENV,
+      label: 'Passcode set outside the repo',
+      detail: ADMIN_CODE_FROM_ENV
+        ? 'Read from VITE_ADMIN_CODE, so it never appears in the source.'
+        : "Using the fallback in src/lib/config.ts. Set VITE_ADMIN_CODE in your host's environment variables (Vercel: Settings → Environment Variables), then redeploy.",
       action: null,
     },
     {
@@ -353,9 +340,9 @@ function LaunchChecklist({ db, onGoLive }: { db: RelayState; onGoLive: () => voi
       label: 'At least one session on the board',
       detail:
         upcomingSessions(db).length > 0
-          ? `${plural(upcomingSessions(db).length, 'session')} scheduled — visitors have something to join.`
+          ? `${plural(upcomingSessions(db).length, 'session')} scheduled, so visitors have something to join.`
           : 'An empty board on launch day is a bounce. Publish one before you share the link.',
-      action: null,
+      action: upcomingSessions(db).length > 0 ? null : { label: 'Publish one', run: onPublish },
     },
   ];
   const blocking = items.filter((i) => !i.ok).length;
@@ -439,8 +426,13 @@ function CrewPanel({
                   <strong style={{ fontSize: 15.5 }}>{t.name}</strong>
                   {t.isFounder && <span className="chip chip-founder">Founder</span>}
                   {t.subjects.map((sub) => (
-                    <span key={sub} className="chip" data-subject={sub} style={{ fontSize: 10.5 }}>
-                      {sub === 'python' ? 'Python' : 'AI'}
+                    <span
+                      key={sub}
+                      className="chip"
+                      data-subject={sub}
+                      style={{ fontSize: 10.5, '--sub-h': subjectMeta(sub).hue } as CSSProperties}
+                    >
+                      {subjectShort(sub)}
                     </span>
                   ))}
                 </div>
@@ -535,19 +527,15 @@ function DataPanel({
   db,
   importData,
   resetData,
-  goLive,
   toast,
 }: {
   db: RelayState;
   importData: ReturnType<typeof useStore>['importData'];
   resetData: ReturnType<typeof useStore>['resetData'];
-  goLive: ReturnType<typeof useStore>['goLive'];
   toast: ReturnType<typeof useStore>['toast'];
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [confirmReset, setConfirmReset] = useState(false);
-  const [confirmLive, setConfirmLive] = useState(false);
-  const demo = hasDemoData(db);
 
   const onExport = () => {
     downloadText(
@@ -579,46 +567,6 @@ function DataPanel({
 
   return (
     <div className="stack" style={{ gap: 16 }}>
-      {demo && (
-        <div className="card card-pad stack" style={{ gap: 12, borderColor: 'var(--hot)' }}>
-          <div className="row between">
-            <h3 className="h3">Go live</h3>
-            <span className="status-pill status-pending">demo content on site</span>
-          </div>
-          <p style={{ fontSize: 14.5, color: 'var(--ink-2)', maxWidth: '64ch' }}>
-            The site is still showing seeded placeholders: invented tutors, sample thank-you notes,
-            and a fabricated session history that feeds the counters on the homepage. Visitors read
-            all of that as real. Going live deletes it and keeps only{' '}
-            <b>you and anything genuinely created</b> — real tutors you approved, sessions you
-            published, kudos people actually sent.
-          </p>
-          <p className="hint">export a backup first if you want the demo content back later</p>
-          <div className="row">
-            {confirmLive ? (
-              <>
-                <button
-                  className="btn btn-sm"
-                  style={{ background: 'var(--hot)', color: '#fff' }}
-                  onClick={() => {
-                    goLive();
-                    setConfirmLive(false);
-                  }}
-                >
-                  Yes — clear the placeholders
-                </button>
-                <button className="btn-quiet" onClick={() => setConfirmLive(false)}>
-                  not yet
-                </button>
-              </>
-            ) : (
-              <button className="btn btn-primary btn-sm" onClick={() => setConfirmLive(true)}>
-                Clear demo content & go live
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
       <p className="muted small">
         Relay's pilot keeps everything in <b>this browser's storage</b> — {db.tutors.length} tutors,{' '}
         {db.sessions.length} sessions, {db.kudos.length} kudos, {db.applications.length} applications.
@@ -662,9 +610,9 @@ function DataPanel({
         </div>
 
         <div className="card card-pad stack" style={{ gap: 10 }}>
-          <h3 className="h3">Reset</h3>
+          <h3 className="h3">Start over</h3>
           <p className="muted" style={{ fontSize: 13.5 }}>
-            Wipe everything and reseed the demo data.
+            Clear every tutor, session and note, back to an empty board.
           </p>
           <div className="row">
             {confirmReset ? (
@@ -677,7 +625,7 @@ function DataPanel({
                     setConfirmReset(false);
                   }}
                 >
-                  Yes, wipe it
+                  Yes, clear it
                 </button>
                 <button className="btn-quiet" onClick={() => setConfirmReset(false)}>
                   keep
@@ -685,7 +633,7 @@ function DataPanel({
               </>
             ) : (
               <button className="btn btn-ghost btn-sm" onClick={() => setConfirmReset(true)}>
-                Reset demo data
+                Clear the board
               </button>
             )}
           </div>

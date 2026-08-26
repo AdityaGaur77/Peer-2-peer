@@ -1,17 +1,17 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type CSSProperties, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { QuizEngine } from '../components/QuizEngine';
 import { Modal } from '../components/Modal';
 import { Reveal } from '../components/Reveal';
 import { QUIZZES } from '../lib/quiz-data';
 import { applicationFor, certsFor, tutorByEmail, useStore } from '../lib/store';
-import { SUBJECTS, type SubjectId } from '../lib/types';
+import { SUBJECTS, subjectShort, type SubjectId } from '../lib/types';
 import { cx, fmtDate } from '../lib/util';
 
 const AVAIL = ['Weekday afternoons', 'Weekday evenings', 'Weekend mornings', 'Weekend afternoons'];
 
 export function Teach() {
-  const { db, profile, requireProfile, submitApplication } = useStore();
+  const { db, profile, requireProfile, submitApplication, setRole } = useStore();
   const navigate = useNavigate();
   const [quizSubject, setQuizSubject] = useState<SubjectId | null>(null);
 
@@ -67,18 +67,17 @@ export function Teach() {
       return (
         <div className="stack" style={{ gap: 14, textAlign: 'center', padding: '20px 0' }}>
           <span className="serif-i" style={{ fontSize: 26, color: 'var(--ember-deep)' }}>
-            You're already on the crew.
+You are already a tutor.
           </span>
           <p className="muted">
-            Your tutor profile is live. Head to your dashboard for your schedule, hours, and
-            certificate.
+Your profile is live. Your dashboard has your schedule, hours and certificate.
           </p>
           <div className="row" style={{ justifyContent: 'center' }}>
             <Link to="/dashboard" className="btn btn-primary">
               Open dashboard
             </Link>
             <Link to="/tutors" className="btn btn-ghost">
-              See the crew
+See the tutors
             </Link>
           </div>
         </div>
@@ -95,10 +94,10 @@ export function Teach() {
                 in review
               </span>
               <span className="serif-i" style={{ fontSize: 26, color: 'var(--ember-deep)' }}>
-                Application in. Welcome to the track.
+Application sent.
               </span>
               <p className="muted">
-                A founder reviews every application by hand
+Someone reads every application
                 {existing ? ` — yours arrived ${fmtDate(existing.submittedISO)}` : ''}. In the
                 meantime, the best prep is joining a session as a learner.
               </p>
@@ -118,7 +117,7 @@ export function Teach() {
                 approved
               </span>
               <span className="serif-i" style={{ fontSize: 26, color: 'var(--ember-deep)' }}>
-                You're in — welcome to the crew.
+You are in.
               </span>
               <p className="muted">
                 Your tutor profile is live. Sign in with this email and your dashboard unlocks
@@ -137,11 +136,11 @@ export function Teach() {
                 not this time
               </span>
               <span className="serif-i" style={{ fontSize: 26, color: 'var(--ink-2)' }}>
-                Not yet — and that's okay.
+Not this time.
               </span>
               <p className="muted">
-                Usually this just means "join a few sessions first so we know you." Learn with us
-                for a bit, then run it back.
+Usually it just means come to a few sessions first so we know you. Try again after
+                that.
               </p>
               <div className="row" style={{ justifyContent: 'center' }}>
                 <Link to="/sessions" className="btn btn-primary">
@@ -160,6 +159,31 @@ export function Teach() {
     return null; // fall through to the form
   };
 
+  // Signed in as a student: this page is hidden from their nav, so they only
+  // get here from a direct link. Offer the switch rather than a dead end.
+  if (profile?.role === 'student') {
+    return (
+      <div className="section" style={{ paddingTop: 'clamp(120px, 16vw, 160px)', textAlign: 'center' }}>
+        <div className="container stack" style={{ gap: 18, maxWidth: 460, margin: '0 auto' }}>
+          <span className="eyebrow" style={{ justifyContent: 'center' }}>for tutors</span>
+          <h2 className="h2">Want to teach as well?</h2>
+          <p className="lede" style={{ margin: '0 auto' }}>
+            You signed up to learn, so we keep the tutor pages out of your way. You can change
+            that whenever you like — plenty of people do both.
+          </p>
+          <div className="row" style={{ justifyContent: 'center' }}>
+            <button className="btn btn-primary" onClick={() => setRole('tutor')}>
+              Show me the tutor side
+            </button>
+            <Link to="/sessions" className="btn btn-ghost">
+              Back to sessions
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="section" style={{ paddingTop: 'clamp(110px, 15vw, 150px)' }}>
       <div className="container">
@@ -169,14 +193,14 @@ export function Teach() {
           </Reveal>
           <Reveal delay={0.05}>
             <h2 className="h2">
-              You learned it. <em className="em-ember">Now pass it on.</em>
+              You learned it. <em className="em-ember">Now teach it.</em>
             </h2>
           </Reveal>
           <Reveal delay={0.1}>
             <p className="lede">
-              Teaching is how you actually master something — and here it's also how you rack up
-              real, logged volunteer hours. Two steps: certify in a subject, then apply. A founder
-              reviews every application personally.
+Teaching something is the fastest way to properly learn it, and the hours count
+              toward service requirements. Two steps: take a short quiz if your subject has one,
+              then send a short application.
             </p>
           </Reveal>
         </div>
@@ -184,8 +208,8 @@ export function Teach() {
         <Reveal delay={0.11}>
           <div className="welcome-card" style={{ marginBottom: 20 }}>
             <span>
-              <b>Prefer a guided walkthrough?</b> Build your first class step by step — name it,
-              shape it, schedule it, post it.
+              <b>Want it walked through?</b> The class builder takes you from a blank page to a
+              posted session in a few minutes.
             </span>
             <Link to="/guide/tutor">open the class builder →</Link>
           </div>
@@ -199,23 +223,32 @@ export function Teach() {
                 <span className="step-no" style={{ fontSize: 13 }}>
                   STEP 01
                 </span>
-                <h3 className="h3">Certify — prove you know it</h3>
+                <h3 className="h3">Take the quiz for your subject</h3>
               </div>
-              <span className="mono small muted">unlimited retakes</span>
+              <span className="mono small muted">retake as often as you like</span>
             </div>
 
-            <div className="grid-2">
-              {SUBJECTS.map((s) => {
+            <p className="muted" style={{ fontSize: 13.5, marginBottom: 14, maxWidth: '62ch' }}>
+              Only these two have a quiz so far. For every other subject there is nothing to pass
+              — just fill in the application below and someone will read it.
+            </p>
+
+            <div className="grid-3">
+              {SUBJECTS.filter((s) => s.hasQuiz).map((s) => {
                 const cert = myCerts.find((c) => c.subject === s.id);
-                const quiz = QUIZZES[s.id];
+                const quiz = QUIZZES[s.id]!;
                 return (
                   <div key={s.id} className="card card-pad" style={{ background: 'var(--paper)' }}>
                     <div className="row between">
-                      <span className="chip" data-subject={s.id}>
+                      <span className="chip" data-subject={s.id} style={{ '--sub-h': s.hue } as CSSProperties}>
                         {s.name}
                       </span>
                       {cert && (
-                        <span className="chip chip-cert" data-subject={s.id}>
+                        <span
+                          className="chip chip-cert"
+                          data-subject={s.id}
+                          style={{ '--sub-h': s.hue } as CSSProperties}
+                        >
                           {cert.score}/{cert.total}
                         </span>
                       )}
@@ -228,7 +261,7 @@ export function Teach() {
                       className={cx('btn btn-sm', cert ? 'btn-ghost' : 'btn-primary')}
                       onClick={() => requireProfile(() => setQuizSubject(s.id))}
                     >
-                      {cert ? 'Retake quiz' : `Take the ${s.name.split(' ')[0]} quiz`}
+                      {cert ? 'Retake quiz' : `Take the ${subjectShort(s.id)} quiz`}
                     </button>
                   </div>
                 );
@@ -339,12 +372,12 @@ export function Teach() {
       {quizSubject && (
         <Modal onClose={() => setQuizSubject(null)} wide labelledBy="quiz-title">
           <h2 id="quiz-title" className="h3">
-            {QUIZZES[quizSubject].title}
+            {QUIZZES[quizSubject]!.title}
           </h2>
           <p className="muted" style={{ fontSize: 14, marginTop: -8 }}>
-            {QUIZZES[quizSubject].intro}
+            {QUIZZES[quizSubject]!.intro}
           </p>
-          <QuizEngine quiz={QUIZZES[quizSubject]} onExit={() => setQuizSubject(null)} />
+          <QuizEngine quiz={QUIZZES[quizSubject]!} onExit={() => setQuizSubject(null)} />
         </Modal>
       )}
     </div>

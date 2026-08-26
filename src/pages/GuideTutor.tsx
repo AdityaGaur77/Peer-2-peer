@@ -5,7 +5,7 @@ import { SessionCard } from '../components/SessionCard';
 import {
   applicationFor, certsFor, tutorByEmail, upcomingSessions, useStore,
 } from '../lib/store';
-import { SUBJECTS, type Level, type Session, type SubjectId } from '../lib/types';
+import { SUBJECTS, subjectMeta, type Level, type Session, type SubjectId } from '../lib/types';
 import { cx, fmtDate, fmtTime, uid } from '../lib/util';
 
 const DRAFT_KEY = 'relay.classdraft';
@@ -70,7 +70,7 @@ interface Template {
   capacity: number;
 }
 
-const TEMPLATES: Record<SubjectId, Template[]> = {
+const TEMPLATES: Partial<Record<SubjectId, Template[]>> = {
   python: [
     {
       label: 'Absolute beginners',
@@ -276,13 +276,13 @@ export function GuideTutor() {
 
   return (
     <GuideShell
-      eyebrow="tutor onboarding · ~5 minutes"
+      eyebrow="set up a class · about 5 minutes"
       title={
         <>
-          Build your first class, <em className="em-ember">step by step.</em>
+          Set up your first class, <em className="em-ember">step by step.</em>
         </>
       }
-      intro="This isn't a tour — it's the real thing. Each leg fills in a piece of your actual class, the preview builds as you go, and the last step posts it to the board."
+      intro="This is not a demo. Each step fills in part of a real class, the preview updates as you type, and the last step puts it on the board."
       steps={STEPS}
       current={step}
       maxVisited={maxVisited}
@@ -311,17 +311,28 @@ export function GuideTutor() {
           {draft.subject && (
             <div className="guide-tip">
               {!profile ? (
-                <>You'll sign in before posting — no account needed to draft.</>
+                <>You can draft the whole thing now and sign in when you post it.</>
               ) : myCerts.some((c) => c.subject === draft.subject) ? (
                 <>
-                  <b>✓ You're certified in {SUBJECTS.find((s) => s.id === draft.subject)?.name}.</b>{' '}
-                  Clear runway — keep going.
+                  <b>You are cleared to teach {subjectMeta(draft.subject).name}.</b> Keep going.
+                </>
+              ) : subjectMeta(draft.subject).hasQuiz ? (
+                <>
+                  <b>One thing:</b> {subjectMeta(draft.subject).name} has a short quiz you need to
+                  pass first. Draft this now and take it on the{' '}
+                  <Link to="/teach" style={{ color: 'var(--ember-deep)', borderBottom: '1.5px dotted' }}>
+                    Teach page
+                  </Link>
+                  . It takes about ten minutes and you can retake it.
                 </>
               ) : (
                 <>
-                  <b>Heads up:</b> you haven't passed the{' '}
-                  {SUBJECTS.find((s) => s.id === draft.subject)?.name} quiz yet. Draft now, then
-                  take it on the <Link to="/teach" style={{ color: 'var(--ember-deep)', borderBottom: '1.5px dotted' }}>Teach page</Link> — 10 minutes, unlimited retakes.
+                  {subjectMeta(draft.subject).name} has no quiz yet, so your application gets read
+                  by a person instead. Draft the class now and send it from the{' '}
+                  <Link to="/teach" style={{ color: 'var(--ember-deep)', borderBottom: '1.5px dotted' }}>
+                    Teach page
+                  </Link>
+                  .
                 </>
               )}
             </div>
@@ -333,16 +344,16 @@ export function GuideTutor() {
         <div className="stack" style={{ gap: 16 }}>
           <h3 className="h3">Name the outcome, not the topic</h3>
           <p style={{ color: 'var(--ink-2)', fontSize: 15 }}>
-            Learners scroll past topics. They stop for the thing they'll walk away with.
+People scroll past topic names. They stop for what they will be able to do afterwards.
           </p>
 
-          {draft.subject && (
+          {draft.subject && TEMPLATES[draft.subject] && (
             <div className="stack" style={{ gap: 8 }}>
               <span className="mono small muted">
-                or start from a class that already works — everything stays editable:
+                or start from one of these and edit it:
               </span>
               <div className="row" style={{ gap: 8 }}>
-                {TEMPLATES[draft.subject].map((t) => (
+                {TEMPLATES[draft.subject]!.map((t) => (
                   <button
                     key={t.label}
                     className="optchip"
@@ -482,14 +493,13 @@ export function GuideTutor() {
             <span className="price-quip">{priceVal === 0 ? quip : '…'}</span>
           </div>
           <p style={{ color: 'var(--ink-2)', fontSize: 15 }}>
-            Relay classes cost <b>$0, forever</b> — that's the deal that makes this place work.
-            Learners "pay" by teaching the next person once something clicks. You get paid too,
-            just not in dollars:
+Sessions are free, and that is not going to change. Students pay it back by
+            teaching someone else later. You still get something out of it:
           </p>
           <div className="eg-row">
-            <div className="eg good"><span className="verdict">01</span><span><b>Logged volunteer hours</b> — every session lands on your printable service certificate</span></div>
-            <div className="eg good"><span className="verdict">02</span><span><b>Actual mastery</b> — teaching something is the final boss of learning it</span></div>
-            <div className="eg good"><span className="verdict">03</span><span><b>The kudos wall</b> — dangerously addictive, you've been warned</span></div>
+            <div className="eg good"><span className="verdict">01</span><span><b>Volunteer hours</b>, added up automatically and printable as a certificate</span></div>
+            <div className="eg good"><span className="verdict">02</span><span><b>You learn it properly</b>, because explaining something exposes what you half-know</span></div>
+            <div className="eg good"><span className="verdict">03</span><span><b>Thank-you notes</b> from the people you helped</span></div>
           </div>
         </div>
       )}
@@ -563,8 +573,8 @@ export function GuideTutor() {
 
           {tutor ? (
             <div className="guide-tip">
-              <b>You're cleared to post.</b> The button below publishes for real — learners can
-              RSVP the second it lands. See you on the track.
+              <b>You are cleared to post.</b> The button below publishes it for real, and people
+              can book a seat straight away.
             </div>
           ) : (
             <div className="stack" style={{ gap: 12 }}>
@@ -576,7 +586,7 @@ export function GuideTutor() {
                   ) : myCerts.length > 0 ? (
                     <> You've passed a quiz already — just send the 2-minute application.</>
                   ) : (
-                    <> The path: pass the {draft.subject === 'ai' ? 'AI' : 'Python'} quiz (~10 min), then a 2-minute application.</>
+                    <> Take the quiz if your subject has one, then send a short application.</>
                   )
                 ) : (
                   <> Sign in, pass the subject quiz (~10 min), send a 2-minute application — a founder reviews it fast.</>

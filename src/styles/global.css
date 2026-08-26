@@ -29,10 +29,7 @@
   --hot-soft: #fce4ea;
 
   /* subjects */
-  --py: #2e6fa7;
-  --py-soft: #ddeaf6;
-  --ai: #7048e8;
-  --ai-soft: #e9e2fb;
+  /* subject colors are generated from each subject's hue — see types.ts */
   --gold: #a87b18;
   --gold-soft: #f6edcf;
 
@@ -74,10 +71,6 @@
   --hot-deep: #ff92ae;
   --hot-soft: rgba(255, 109, 146, 0.15);
 
-  --py: #64a9e0;
-  --py-soft: rgba(55, 118, 171, 0.2);
-  --ai: #a78bfa;
-  --ai-soft: rgba(140, 115, 235, 0.17);
   --gold: #dcbc6a;
   --gold-soft: rgba(200, 160, 60, 0.14);
 
@@ -463,16 +456,18 @@ button {
   white-space: nowrap;
 }
 
-.chip[data-subject='python'] {
-  background: var(--py-soft);
-  border-color: color-mix(in srgb, var(--py) 30%, transparent);
-  color: var(--py);
+/* Subject chips colour themselves from --sub-h, set inline from the
+   subject's hue. Adding a subject needs no CSS at all. */
+.chip[data-subject] {
+  background: hsl(var(--sub-h, 212) 58% 93%);
+  border-color: hsl(var(--sub-h, 212) 42% 78%);
+  color: hsl(var(--sub-h, 212) 55% 30%);
 }
 
-.chip[data-subject='ai'] {
-  background: var(--ai-soft);
-  border-color: color-mix(in srgb, var(--ai) 28%, transparent);
-  color: var(--ai);
+[data-theme='dark'] .chip[data-subject] {
+  background: hsl(var(--sub-h, 212) 36% 20%);
+  border-color: hsl(var(--sub-h, 212) 30% 37%);
+  color: hsl(var(--sub-h, 212) 62% 74%);
 }
 
 .chip-founder {
@@ -1024,12 +1019,12 @@ button {
   pointer-events: none;
 }
 
-.subject-card[data-subject='python'] {
-  border-top: 3px solid var(--py);
+.subject-card[data-subject] {
+  border-top: 3px solid hsl(var(--sub-h, 212) 52% 46%);
 }
 
-.subject-card[data-subject='ai'] {
-  border-top: 3px solid var(--ai);
+[data-theme='dark'] .subject-card[data-subject] {
+  border-top-color: hsl(var(--sub-h, 212) 55% 62%);
 }
 
 .next-session {
@@ -2387,4 +2382,92 @@ details.faq .faq-a {
 .welcome-x:hover {
   background: rgba(33, 43, 64, 0.06);
   color: var(--ink);
+}
+
+/* ── role picker (sign-in) ─────────────────────────────────── */
+
+.role-pick {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+
+.role-opt {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 13px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--card);
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.15s ease;
+}
+
+.role-opt:hover {
+  border-color: var(--ink);
+  transform: translateY(-1px);
+}
+
+.role-opt.on {
+  border-color: var(--ember);
+  background: var(--ember-soft);
+}
+
+.role-title {
+  font-weight: 640;
+  font-size: 14.5px;
+  letter-spacing: -0.01em;
+}
+
+.role-sub {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.role-opt.on .role-sub {
+  color: var(--ember-deep);
+}
+
+@media (max-width: 420px) {
+  .role-pick {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── subject grid (home) ───────────────────────────────────── */
+
+.subject-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.subject-pill {
+  display: grid;
+  gap: 2px;
+  padding: 13px 16px;
+  border-radius: var(--r-md);
+  border: 1.5px solid var(--border);
+  border-left: 3px solid hsl(var(--sub-h, 212) 52% 50%);
+  background: var(--card);
+  transition: transform 0.16s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.subject-pill:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--border-strong);
+  border-left-color: hsl(var(--sub-h, 212) 52% 50%);
+}
+
+.subject-pill-name {
+  font-weight: 620;
+  font-size: 14.5px;
+  letter-spacing: -0.01em;
+}
+
+.subject-pill-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
 }

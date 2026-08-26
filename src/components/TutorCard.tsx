@@ -2,7 +2,7 @@ import type { CSSProperties, PointerEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { certsFor, tutorStats, useStore } from '../lib/store';
 import type { Tutor } from '../lib/types';
-import { subjectMeta } from '../lib/types';
+import { subjectMeta, subjectShort } from '../lib/types';
 import { initials } from '../lib/util';
 
 interface TutorCardProps {
@@ -40,8 +40,13 @@ export function TutorCard({ tutor, onThank }: TutorCardProps) {
         {tutor.subjects.map((s) => {
           const certified = certs.some((c) => c.subject === s);
           return (
-            <span key={s} className={certified ? 'chip chip-cert' : 'chip'} data-subject={s}>
-              {subjectMeta(s).name.split(' ')[0]}
+            <span
+              key={s}
+              className={certified ? 'chip chip-cert' : 'chip'}
+              data-subject={s}
+              style={{ '--sub-h': subjectMeta(s).hue } as CSSProperties}
+            >
+              {subjectShort(s)}
             </span>
           );
         })}

@@ -6,16 +6,16 @@ import App from './src/App';
 import { StoreProvider } from './src/lib/store';
 
 const ROUTES: Array<[string, string[]]> = [
-  ['/', ['Learn from a student', 'First time here?', 'pass it on']],
-  ['/sessions', ['Every spot is', 'Request a topic']],
-  ['/tutors', ['volunteering their time', 'Thank them']],
-  ['/teach', ['open the class builder', 'Certify']],
-  ['/about', ['We deleted our prices', 'schoolhouse.world']],
+  ['/', ['Learn from a student', 'New here?', 'pass it on']],
+  ['/sessions', ['Every seat is', 'Request a topic']],
+  ['/tutors', ['volunteer their time', 'Thank them']],
+  ['/teach', ['open the class builder', 'Take the quiz']],
+  ['/about', ['I deleted the prices', 'Questions people ask']],
   ['/dashboard', ['Your dashboard']],
   ['/certificate', ['Volunteer certificate']],
   ['/admin', ['Restricted to founders']],
-  ['/guide/tutor', ['Build your first class', 'The subject', 'live preview', 'draft preview']],
-  ['/guide/student', ['by doing it', 'Pick your track', 'student starter guide']],
+  ['/guide/tutor', ['Set up your first class', 'The subject', 'live preview', 'draft preview']],
+  ['/guide/student', ['by trying it', 'Pick your track', 'how it works']],
   ['/join', ['invite']], // no payload → the friendly error state
   ['/flyer/nope', ['No such session']], // unknown id → graceful fallback
   ['/definitely-not-a-page', ['Dropped the']],

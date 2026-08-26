@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GuideShell, type GuideStepDef } from '../components/GuideShell';
 import { KudosModal } from '../components/KudosModal';
@@ -53,7 +53,9 @@ function DemoTicket() {
         <div className="ticket-body">
           <div className="row between">
             <div className="row" style={{ gap: 8 }}>
-              <span className="chip" data-subject="python">Python</span>
+              <span className="chip" data-subject="python" style={{ '--sub-h': 212 } as CSSProperties}>
+                Python
+              </span>
               <span className="chip chip-ghost">Practice card</span>
             </div>
             {going && <span className="mono small going-tag">✓ going</span>}
@@ -114,25 +116,25 @@ function DemoTicket() {
         {mode === 'open' ? (
           going ? (
             <>
-              <b>That's genuinely all it is.</b> The room link appears the moment you're in, and
-              "Add to calendar" drops an invite file into your phone. Changed your mind? "can't
-              make it?" frees the spot for someone else — no guilt, no fee, obviously.
+  <b>That is the whole thing.</b> The room link shows up once you are in, and "Add to
+              calendar" saves it to your phone. If you change your mind, releasing the seat hands
+              it to whoever is next.
             </>
           ) : (
             <>
-              <b>Try it — save the spot.</b> No card, no account wall, no "free trial." The
-              button means what it says.
+<b>Go ahead, book it.</b> No card, no signup wall, no trial. The button does exactly
+              what it says.
             </>
           )
         ) : waitPos ? (
           <>
-            <b>You're #{waitPos} in line.</b> When someone releases a spot, the first person
-            waiting is promoted automatically — it happens more often than you'd think.
+<b>You are #{waitPos} in line.</b> When somebody drops out, the first person waiting
+            gets the seat automatically. It happens fairly often.
           </>
         ) : (
           <>
-            <b>Full class? Join the waitlist.</b> Spots free up all the time, and promotion is
-            automatic — first in line gets it, instantly.
+<b>Class full? Join the waitlist.</b> Seats free up, and the first person waiting
+            gets it automatically.
           </>
         )}
       </p>
@@ -184,13 +186,13 @@ export function GuideStudent() {
   return (
     <>
       <GuideShell
-        eyebrow="student starter guide · ~2 minutes"
+        eyebrow="how it works · about 2 minutes"
         title={
           <>
-            How Relay works — <em className="em-ember">by doing it.</em>
+            How Relay works, <em className="em-ember">by trying it.</em>
           </>
         }
-        intro="Five short legs: pick a subject, practice grabbing a spot on a sandbox card, learn what sessions feel like, vote on what gets taught next, and see how the whole thing pays for itself."
+intro="Five short steps: pick a subject, practise booking a seat on a fake card, see what a session is like, vote on what gets taught next, and find out why none of it costs anything."
         steps={STEPS}
         current={step}
         maxVisited={maxVisited}

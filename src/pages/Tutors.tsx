@@ -4,14 +4,7 @@ import { KudosModal } from '../components/KudosModal';
 import { Reveal } from '../components/Reveal';
 import { TutorCard } from '../components/TutorCard';
 import { globalStats, useStore } from '../lib/store';
-import type { SubjectId, Tutor } from '../lib/types';
-import { cx } from '../lib/util';
-
-const FILTERS: Array<{ id: 'all' | SubjectId; label: string }> = [
-  { id: 'all', label: 'Everyone' },
-  { id: 'python', label: 'Python' },
-  { id: 'ai', label: 'AI & ML' },
-];
+import { SUBJECTS, type SubjectId, type Tutor } from '../lib/types';
 
 export function Tutors() {
   const { db } = useStore();
@@ -33,22 +26,22 @@ export function Tutors() {
           </Reveal>
           <Reveal delay={0.05}>
             <h2 className="h2">
-              Real students, <em className="em-ember">volunteering their time.</em>
+              Students who <em className="em-ember">volunteer their time.</em>
             </h2>
           </Reveal>
           <Reveal delay={0.1}>
             <p className="lede">
-              Every tutor here passed a certification quiz and shows up for free.{' '}
+              Everyone here teaches for free.{' '}
               {stats.sessionsHosted > 0 ? (
                 <>
-                  Together they've volunteered <b>{stats.volunteerHours} hours</b> across{' '}
-                  <b>{stats.sessionsHosted} sessions</b>. Say thanks — it's the only payment they
-                  get.
+                  So far that is <b>{stats.volunteerHours} hours</b> across{' '}
+                  <b>{stats.sessionsHosted} sessions</b>. A thank-you note is the only payment
+                  they get.
                 </>
               ) : (
                 <>
-                  The first sessions are on the board now — say thanks afterwards, because it's the
-                  only payment they get.
+                  Once you have been to a session, leave a note. It is the only payment they
+                  get.
                 </>
               )}
             </p>
@@ -57,17 +50,20 @@ export function Tutors() {
 
         <Reveal delay={0.12}>
           <div className="row between" style={{ marginBottom: 24 }}>
-            <div className="row" style={{ gap: 8 }}>
-              {FILTERS.map((f) => (
-                <button
-                  key={f.id}
-                  className={cx('chip chip-btn', filter === f.id && 'on')}
-                  onClick={() => setFilter(f.id)}
-                >
-                  {f.label}
-                </button>
+            <select
+              className="select"
+              style={{ width: 'auto', padding: '8px 14px', borderRadius: 999, fontSize: 13.5 }}
+              value={filter}
+              onChange={(e) => setFilter(e.target.value as 'all' | SubjectId)}
+              aria-label="Filter tutors by subject"
+            >
+              <option value="all">Everyone</option>
+              {SUBJECTS.map((sub) => (
+                <option key={sub.id} value={sub.id}>
+                  {sub.name}
+                </option>
               ))}
-            </div>
+            </select>
             <Link to="/teach" className="btn btn-primary btn-sm">
               Join them →
             </Link>
@@ -78,11 +74,11 @@ export function Tutors() {
           <div className="card card-pad" style={{ textAlign: 'center', padding: 48 }}>
             <p className="serif-i" style={{ fontSize: 22, color: 'var(--ink-2)' }}>
               {filter === 'all'
-                ? 'The crew is just forming.'
-                : 'Nobody teaching that subject — yet.'}
+                ? 'No tutors yet.'
+                : 'Nobody is teaching that one yet.'}
             </p>
             <p className="muted small" style={{ marginTop: 8 }}>
-              Certification takes about ten minutes.{' '}
+It takes about ten minutes to get started.{' '}
               <Link to="/teach" style={{ color: 'var(--ember-deep)', borderBottom: '1.5px dotted' }}>
                 Be the first
               </Link>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Wordmark } from '../components/Logo';
 import { inviteUrl } from '../lib/invite';
@@ -70,7 +70,11 @@ export function Flyer() {
         <div className="flyer">
           <div className="flyer-top">
             <Wordmark size={22} />
-            <span className="chip" data-subject={session.subject}>
+            <span
+              className="chip"
+              data-subject={session.subject}
+              style={{ '--sub-h': meta.hue } as CSSProperties}
+            >
               {meta.name}
             </span>
           </div>
