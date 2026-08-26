@@ -13,12 +13,13 @@ live against the site. This file covers the rest.
       fabricated session history that feeds the homepage counters. Visitors read
       those as real. Going live deletes them and keeps only you plus anything
       genuinely created.
-- [ ] **Change the founder passcode.** `ADMIN_CODE` in
-      [`src/lib/config.ts`](src/lib/config.ts). It ships as `passiton`.
-      It lives in the JS bundle, so treat it as a lock on a screen door — never
-      reuse a password you use elsewhere.
-- [ ] **Set a real contact email.** `CONTACT_EMAIL` in the same file. The
-      default `hello@relay.demo` goes nowhere.
+- [x] **Founder passcode changed.** `ADMIN_CODE` in
+      [`src/lib/config.ts`](src/lib/config.ts) is no longer the shipped default.
+      It still lives in the JS bundle and in this repo, so treat it as a latch:
+      never reuse a password from anywhere else. (Harmless if read — every
+      visitor only ever unlocks their own browser's copy of the board.)
+- [x] **Real contact email set.** `CONTACT_EMAIL` points at a live inbox, so the
+      footer and About page reach you.
 - [ ] **Put at least one session on the board.** An empty board on launch day is
       a bounce. Use the class builder at `/#/guide/tutor`.
 - [ ] **Check your name.** `FOUNDER_NAME` signs every volunteer certificate and

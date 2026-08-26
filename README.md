@@ -32,9 +32,10 @@ so `dist/` deploys to any static host with zero config:
 - **GitHub Pages** — push the repo, then either upload `dist/` to a `gh-pages`
   branch (`npx gh-pages -d dist`) or enable Pages with a Vite build action.
 
-Before sharing publicly: set your real contact email and a new admin passcode in
-[`src/lib/config.ts`](src/lib/config.ts), and swap the placeholder crew in
-[`src/lib/seed.ts`](src/lib/seed.ts) for your actual friends.
+Contact email and founder passcode are already configured in
+[`src/lib/config.ts`](src/lib/config.ts). The one step left before you share the
+link is clearing the seeded demo content: founder console → **Data → Go live**.
+See [LAUNCH.md](LAUNCH.md).
 
 ## What's inside
 
@@ -71,8 +72,7 @@ Before sharing publicly: set your real contact email and a new admin passcode in
   [`src/lib/config.ts`](src/lib/config.ts).
 
 > **Publishing?** Work through [LAUNCH.md](LAUNCH.md) first — it covers the
-> demo-data wipe, the placeholder passcode and email, and exactly what the
-> no-backend model does and doesn't do.
+> demo-data wipe and exactly what the no-backend model does and doesn't do.
 
 ## Tech
 
@@ -93,5 +93,9 @@ implementation for API calls — the component layer doesn't change.
 - **New subjects** — add to `SUBJECTS` in `src/lib/types.ts` (Math / Physics /
   Web Dev are already teased on the landing page).
 
-> ⚠️ The admin passcode is client-side — it keeps friends out, not attackers.
-> Before this handles real student data, add real auth and a backend.
+> ⚠️ The admin passcode is client-side: it ships in the JS bundle and lives in
+> this repo, so it is a latch rather than a lock. That is survivable here because
+> every visitor gets their own `localStorage` copy of the board — unlocking the
+> console elsewhere only ever exposes that person's own data, never yours. Never
+> reuse a password from anywhere else, and add real auth before Relay stores
+> anything genuinely sensitive.
