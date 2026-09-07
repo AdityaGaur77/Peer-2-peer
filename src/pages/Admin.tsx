@@ -25,7 +25,7 @@ export function Admin() {
   const store = useStore();
   const {
     db, approveApplication, declineApplication, cancelSession, toast,
-    updateTutor, removeTutor, importData, resetData,
+    updateTutor, removeTutor, addTutor, importData, resetData,
   } = store;
   const [authed, setAuthed] = useState(() => sessionStorage.getItem('relay.admin') === '1');
   const [code, setCode] = useState('');
@@ -301,6 +301,7 @@ export function Admin() {
               db={db}
               updateTutor={updateTutor}
               removeTutor={removeTutor}
+              addTutor={addTutor}
             />
           </Reveal>
         )}
@@ -395,17 +396,109 @@ function CrewPanel({
   db,
   updateTutor,
   removeTutor,
+  addTutor,
 }: {
   db: RelayState;
   updateTutor: ReturnType<typeof useStore>['updateTutor'];
   removeTutor: ReturnType<typeof useStore>['removeTutor'];
+  addTutor: ReturnType<typeof useStore>['addTutor'];
 }) {
   const [editId, setEditId] = useState<string | null>(null);
   const [tagDraft, setTagDraft] = useState('');
   const [gradeDraft, setGradeDraft] = useState('');
   const [removingId, setRemovingId] = useState<string | null>(null);
 
+  // add-a-friend form
+  const [nName, setNName] = useState('');
+  const [nEmail, setNEmail] = useState('');
+  const [nGrade, setNGrade] = useState('');
+  const [nSubjects, setNSubjects] = useState<SubjectId[]>([]);
+  const canAdd =
+    nName.trim().length > 1 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nEmail.trim()) &&
+    nSubjects.length > 0;
+
+  const submitNew = (e: FormEvent) => {
+    e.preventDefault();
+    if (!canAdd) return;
+    addTutor({ name: nName, email: nEmail, grade: nGrade, subjects: nSubjects });
+    setNName('');
+    setNEmail('');
+    setNGrade('');
+    setNSubjects([]);
+  };
+
   return (
+    <div className="stack" style={{ gap: 16 }}>
+      <form className="card card-pad stack" style={{ gap: 14 }} onSubmit={submitNew}>
+        <div>
+          <h3 className="h3">Add a tutor</h3>
+          <p className="muted small" style={{ marginTop: 4 }}>
+            For friends who told you what they want to teach. They do not need to sign up
+            themselves.
+          </p>
+        </div>
+        <div className="grid-2">
+          <label className="field">
+            <span className="label">Name</span>
+            <input
+              className="input"
+              value={nName}
+              onChange={(e) => setNName(e.target.value)}
+              placeholder="Maya Krishnan"
+            />
+          </label>
+          <label className="field">
+            <span className="label">Email</span>
+            <input
+              className="input"
+              type="email"
+              value={nEmail}
+              onChange={(e) => setNEmail(e.target.value)}
+              placeholder="maya@school.org"
+            />
+          </label>
+        </div>
+        <label className="field">
+          <span className="label">
+            Grade <span className="muted">(optional)</span>
+          </span>
+          <input
+            className="input"
+            value={nGrade}
+            onChange={(e) => setNGrade(e.target.value)}
+            placeholder="11th grade"
+          />
+        </label>
+        <div className="field">
+          <span className="label">Subjects they can teach</span>
+          <div className="optchips">
+            {SUBJECTS.map((sub) => (
+              <button
+                type="button"
+                key={sub.id}
+                className={cx('optchip', nSubjects.includes(sub.id) && 'on')}
+                onClick={() =>
+                  setNSubjects((cur) =>
+                    cur.includes(sub.id) ? cur.filter((x) => x !== sub.id) : [...cur, sub.id],
+                  )
+                }
+              >
+                {sub.name}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="row between">
+          <span className="hint">
+            {canAdd ? 'ready' : 'name, a valid email and one subject are required'}
+          </span>
+          <button className="btn btn-primary btn-sm" type="submit" disabled={!canAdd}>
+            Add tutor
+          </button>
+        </div>
+      </form>
+
     <div className="card card-pad">
       <p className="muted small" style={{ marginBottom: 10 }}>
         Taglines show on tutor cards — keep them human. Removing a tutor cancels their upcoming
@@ -517,6 +610,7 @@ function CrewPanel({
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

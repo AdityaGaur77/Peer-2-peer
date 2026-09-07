@@ -59,6 +59,7 @@ interface StoreValue {
   cancelSession: (id: string) => void;
   updateTutor: (id: string, patch: Partial<Pick<Tutor, 'tagline' | 'grade' | 'subjects'>>) => void;
   removeTutor: (id: string) => void;
+  addTutor: (t: { name: string; email: string; grade: string; subjects: SubjectId[] }) => void;
   importData: (state: RelayState) => void;
   resetData: () => void;
   acceptInvite: (d: DecodedInvite) => string;
@@ -385,6 +386,39 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [toast],
   );
 
+  /** Put a friend straight on the crew, no application round-trip. */
+  const addTutor = useCallback(
+    (t: { name: string; email: string; grade: string; subjects: SubjectId[] }) => {
+      const email = t.email.trim().toLowerCase();
+      if (db.tutors.some((x) => x.email.toLowerCase() === email)) {
+        toast('Someone already uses that email.');
+        return;
+      }
+      setDb((prev) =>
+        prev.tutors.some((x) => x.email.toLowerCase() === email)
+          ? prev
+          : {
+              ...prev,
+              tutors: [
+                ...prev.tutors,
+                {
+                  id: uid('tutor'),
+                  name: t.name.trim(),
+                  email,
+                  grade: t.grade.trim() || 'Student',
+                  tagline: 'New tutor. Come to their first session and say hello.',
+                  subjects: t.subjects,
+                  joinedISO: new Date().toISOString(),
+                  hue: Math.floor(Math.random() * 360),
+                },
+              ],
+            },
+      );
+      toast(`${t.name.trim().split(' ')[0]} is on the crew.`);
+    },
+    [db.tutors, toast],
+  );
+
   const removeTutor = useCallback(
     (id: string) => {
       const tutor = db.tutors.find((t) => t.id === id);
@@ -490,6 +524,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       cancelSession,
       updateTutor,
       removeTutor,
+      addTutor,
       importData,
       resetData,
       acceptInvite,
@@ -500,7 +535,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       openSignIn, closeSignIn, completeSignIn, signOut, requireProfile, toast,
       toggleRsvp, toggleWaitlist, submitApplication, saveCertification, addKudos, addRequest,
       voteRequest, approveApplication, declineApplication, createSession,
-      cancelSession, updateTutor, removeTutor, importData, resetData, acceptInvite, setRole,
+      cancelSession, updateTutor, removeTutor, addTutor, importData, resetData, acceptInvite, setRole,
     ],
   );
 
