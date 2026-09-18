@@ -20,6 +20,8 @@ interface ClassDraft {
   date: string;
   time: string;
   link: string;
+  /** 1 = one class. 4 = the same slot four weeks running. */
+  repeatWeeks: number;
 }
 
 const EMPTY_DRAFT: ClassDraft = {
@@ -32,6 +34,7 @@ const EMPTY_DRAFT: ClassDraft = {
   date: '',
   time: '17:00',
   link: '',
+  repeatWeeks: 1,
 };
 
 function loadDraft(): { draft: ClassDraft; step: number } {
@@ -227,17 +230,23 @@ export function GuideTutor() {
       const me = tutorByEmail(db, p.email);
       if (!me || !draft.subject || !startMs) return;
       const slug = draft.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 32) || uid('class');
-      const id = createSession({
-        title: draft.title.trim(),
-        subject: draft.subject,
-        level: draft.level,
-        description: draft.description.trim(),
-        tutorId: me.id,
-        startISO: new Date(startMs).toISOString(),
-        durationMin: draft.durationMin,
-        capacity: draft.capacity,
-        link: draft.link.trim() || `https://meet.jit.si/relay-${slug}`,
-      });
+      const weeks = Math.max(1, draft.repeatWeeks || 1);
+      let id = '';
+      // same slot every week; the first one is where we land afterwards
+      for (let w = 0; w < weeks; w++) {
+        const made = createSession({
+          title: draft.title.trim(),
+          subject: draft.subject,
+          level: draft.level,
+          description: draft.description.trim(),
+          tutorId: me.id,
+          startISO: new Date(startMs + w * 7 * 86_400_000).toISOString(),
+          durationMin: draft.durationMin,
+          capacity: draft.capacity,
+          link: draft.link.trim() || `https://meet.jit.si/relay-${slug}`,
+        });
+        if (w === 0) id = made;
+      }
       localStorage.removeItem(DRAFT_KEY);
       navigate(`/sessions?s=${id}`);
     });
@@ -532,6 +541,25 @@ Sessions are free, and that is not going to change. Students pay it back by
               />
             </label>
           </div>
+          <label className="field">
+            <span className="label">How often</span>
+            <select
+              className="select"
+              value={draft.repeatWeeks}
+              onChange={(e) => patch({ repeatWeeks: Number(e.target.value) })}
+            >
+              <option value={1}>Just once</option>
+              <option value={2}>Every week, for 2 weeks</option>
+              <option value={4}>Every week, for 4 weeks</option>
+              <option value={6}>Every week, for 6 weeks</option>
+              <option value={8}>Every week, for 8 weeks</option>
+            </select>
+            <span className="hint">
+              {draft.repeatWeeks > 1
+                ? `this posts ${draft.repeatWeeks} classes, one week apart`
+                : 'one class on this date'}
+            </span>
+          </label>
           {startMs && startMs <= Date.now() && (
             <span className="conflict-warn">that moment already happened — pick a future one</span>
           )}

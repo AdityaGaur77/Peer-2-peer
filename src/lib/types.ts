@@ -9,7 +9,8 @@ export type SubjectId =
   | 'english'
   | 'history'
   | 'spanish'
-  | 'testprep';
+  | 'testprep'
+  | 'cad';
 
 export type Level = 'intro' | 'intermediate' | 'all';
 export type Role = 'student' | 'tutor';
@@ -94,6 +95,12 @@ export const SUBJECTS: SubjectMeta[] = [
     name: 'SAT & ACT Prep',
     blurb: 'Practice sections, timing and the question types that trip people up.',
     hue: 288,
+  },
+  {
+    id: 'cad',
+    name: 'Engineering & CAD',
+    blurb: 'Designing real parts on a computer, from a first sketch to a 3D model.',
+    hue: 68,
   },
 ];
 

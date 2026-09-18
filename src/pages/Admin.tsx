@@ -756,23 +756,27 @@ function ScheduleForm({
   const [capacity, setCapacity] = useState(12);
   const [link, setLink] = useState('');
   const [description, setDescription] = useState('');
+  const [repeatWeeks, setRepeatWeeks] = useState(1);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (title.trim().length < 4 || !date || !tutorId) return;
-    const startISO = new Date(`${date}T${time}`).toISOString();
+    const firstMs = new Date(`${date}T${time}`).getTime();
     const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 32);
-    onCreate({
-      title: title.trim(),
-      subject,
-      level,
-      description: description.trim() || 'A free live session — save your spot.',
-      tutorId,
-      startISO,
-      durationMin: duration,
-      capacity,
-      link: link.trim() || `https://meet.jit.si/relay-${slug}`,
-    });
+    // same slot every week, for however many weeks were picked
+    for (let w = 0; w < Math.max(1, repeatWeeks); w++) {
+      onCreate({
+        title: title.trim(),
+        subject,
+        level,
+        description: description.trim() || 'A live session. Book a seat.',
+        tutorId,
+        startISO: new Date(firstMs + w * 7 * 86_400_000).toISOString(),
+        durationMin: duration,
+        capacity,
+        link: link.trim() || `https://meet.jit.si/relay-${slug}`,
+      });
+    }
     setTitle('');
     setDescription('');
     setLink('');
@@ -831,6 +835,17 @@ function ScheduleForm({
             <input className="input" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
           </label>
         </div>
+
+        <label className="field">
+          <span className="label">How often</span>
+          <select className="select" value={repeatWeeks} onChange={(e) => setRepeatWeeks(Number(e.target.value))}>
+            <option value={1}>Just once</option>
+            <option value={2}>Every week, for 2 weeks</option>
+            <option value={4}>Every week, for 4 weeks</option>
+            <option value={6}>Every week, for 6 weeks</option>
+            <option value={8}>Every week, for 8 weeks</option>
+          </select>
+        </label>
 
         <div className="grid-2">
           <label className="field">
