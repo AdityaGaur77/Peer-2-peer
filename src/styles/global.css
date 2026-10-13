@@ -1266,6 +1266,45 @@ button {
   line-height: 1.45;
 }
 
+.tutor-courses {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.tutor-courses li {
+  display: grid;
+  gap: 3px;
+  padding-left: 12px;
+  border-left: 2px solid var(--border);
+}
+
+.tutor-course-title {
+  font-weight: 640;
+  font-size: 14.5px;
+}
+
+.tutor-course-sum {
+  font-size: 13.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.tutor-when {
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.tutor-when .mono {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-right: 6px;
+}
+
 .tutor-stats {
   display: flex;
   gap: 16px;

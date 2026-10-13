@@ -1,8 +1,11 @@
-import { useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Reveal } from '../components/Reveal';
 import {
   ADMIN_CODE, ADMIN_CODE_FROM_ENV, CONTACT_EMAIL, IS_PLACEHOLDER_EMAIL, SEED_VERSION,
 } from '../lib/config';
+import { decodeApplication } from '../lib/invite';
+import { ROSTER, onboardingGaps, rosterSnippet } from '../lib/roster';
 import {
   globalStats, pastSessions, tutorById, tutorStats, upcomingSessions, useStore,
 } from '../lib/store';
@@ -30,6 +33,31 @@ export function Admin() {
   const [authed, setAuthed] = useState(() => sessionStorage.getItem('relay.admin') === '1');
   const [code, setCode] = useState('');
   const [tab, setTab] = useState<Tab>('overview');
+  const [params, setParams] = useSearchParams();
+  const appPayload = params.get('app');
+
+  // An application link (from the Teach page's "send it" step) lands here.
+  // Wait for the passcode, then file it and clear the link.
+  const handledApp = useRef<string | null>(null);
+  const { receiveApplication } = store;
+  useEffect(() => {
+    if (!authed || !appPayload || handledApp.current === appPayload) return;
+    handledApp.current = appPayload;
+    decodeApplication(appPayload)
+      .then(({ draft, submittedISO }) => {
+        const result = receiveApplication(draft, submittedISO);
+        toast(
+          result === 'duplicate'
+            ? `Already have ${draft.name}'s application.`
+            : result === 'updated'
+              ? `${draft.name} updated their application.`
+              : `Application from ${draft.name} added.`,
+        );
+        setTab('applications');
+      })
+      .catch(() => toast('That application link is broken or cut off.'))
+      .finally(() => setParams({}, { replace: true }));
+  }, [authed, appPayload, receiveApplication, toast, setParams]);
 
   const stats = globalStats(db);
   const pending = db.applications.filter((a) => a.status === 'pending');
@@ -61,6 +89,9 @@ export function Admin() {
               This is where applications get reviewed and sessions get published. Enter the
               founder passcode to continue.
             </p>
+            {appPayload && (
+              <p className="hint">an application is waiting in this link — unlock to file it</p>
+            )}
             <form className="stack" style={{ gap: 12 }} onSubmit={tryCode}>
               <input
                 className="input"
@@ -205,8 +236,10 @@ export function Admin() {
                   <span className="serif-i" style={{ fontSize: 22, color: 'var(--ink-2)' }}>
                     No applications yet.
                   </span>
-                  <p className="muted small" style={{ marginTop: 8 }}>
-                    Share the <b>/teach</b> page with your friends to get the founding crew rolling.
+                  <p className="muted small" style={{ marginTop: 8, maxWidth: '56ch', marginInline: 'auto' }}>
+                    Applications are saved in the applicant's browser. They show up here when
+                    the applicant emails you their application link and you open it on this
+                    device. Share the <b>/teach</b> page to get them coming.
                   </p>
                 </div>
               ) : (
@@ -224,6 +257,17 @@ export function Admin() {
                           {a.email} · {a.grade} · teaches{' '}
                           {a.subjects.map((s) => SUBJECTS.find((x) => x.id === s)?.name).join(', ')}
                         </div>
+                        {a.courseTitle && (
+                          <div style={{ fontSize: 14.5, fontWeight: 600, marginBottom: 4 }}>{a.courseTitle}</div>
+                        )}
+                        {a.courseSummary && (
+                          <p className="small muted" style={{ maxWidth: '62ch', marginBottom: 6 }}>{a.courseSummary}</p>
+                        )}
+                        {a.times && (
+                          <div className="small" style={{ marginBottom: 6 }}>
+                            <span className="mono muted">free:</span> {a.times}
+                          </div>
+                        )}
                         {a.why && (
                           <p style={{ fontSize: 14, color: 'var(--ink-2)', maxWidth: '58ch' }}>“{a.why}”</p>
                         )}
@@ -237,6 +281,22 @@ export function Admin() {
                           </div>
                         )}
                       </div>
+                      {a.status === 'approved' && (
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ flex: 'none' }}
+                          onClick={() =>
+                            navigator.clipboard
+                              .writeText(rosterSnippet(a))
+                              .then(
+                                () => toast('Copied. Paste it into ROSTER in src/lib/roster.ts and redeploy.'),
+                                () => toast("Couldn't reach the clipboard."),
+                              )
+                          }
+                        >
+                          Copy roster entry
+                        </button>
+                      )}
                       {a.status === 'pending' && (
                         <div className="row" style={{ flex: 'none' }}>
                           <button className="btn btn-primary btn-sm" onClick={() => approveApplication(a.id)}>
@@ -430,12 +490,15 @@ function CrewPanel({
 
   return (
     <div className="stack" style={{ gap: 16 }}>
+      <OnboardingTracker db={db} />
+
       <form className="card card-pad stack" style={{ gap: 14 }} onSubmit={submitNew}>
         <div>
           <h3 className="h3">Add a tutor</h3>
           <p className="muted small" style={{ marginTop: 4 }}>
             For friends who told you what they want to teach. They do not need to sign up
-            themselves.
+            themselves. This adds them on this device only; to show them to everyone, add them
+            to src/lib/roster.ts.
           </p>
         </div>
         <div className="grid-2">
@@ -530,7 +593,7 @@ function CrewPanel({
                   ))}
                 </div>
                 <div className="mono" style={{ fontSize: 11.5, color: 'var(--muted)', margin: '3px 0 6px' }}>
-                  {t.email} · {s.hours}h · {plural(s.taught, 'session')} · {plural(s.kudosCount, 'kudo', 'kudos')}
+                  {t.email ? `${t.email} · ` : ''}{s.hours}h · {plural(s.taught, 'session')} · {plural(s.kudosCount, 'kudo', 'kudos')}
                 </div>
                 {editing ? (
                   <div className="stack" style={{ gap: 8, maxWidth: 480 }}>
@@ -571,7 +634,10 @@ function CrewPanel({
                 )}
               </div>
             </div>
-            {!editing && (
+            {t.onRoster && (
+              <span className="hint" style={{ flex: 'none' }}>edit in roster.ts</span>
+            )}
+            {!editing && !t.onRoster && (
               <div className="row" style={{ flex: 'none' }}>
                 <button
                   className="btn btn-ghost btn-sm"
@@ -611,6 +677,64 @@ function CrewPanel({
         );
       })}
       </div>
+    </div>
+  );
+}
+
+// ── onboarding tracker ───────────────────────────────────────
+
+function OnboardingTracker({ db }: { db: RelayState }) {
+  const rows = ROSTER.map((t) => {
+    const s = tutorStats(db, t.id);
+    const gaps = onboardingGaps(t);
+    const stage =
+      s.taught > 0
+        ? 'teaching'
+        : s.upcoming.length > 0
+          ? 'first class posted'
+          : gaps.length > 0
+            ? 'needs info'
+            : 'ready to schedule';
+    return { t, gaps, stage };
+  });
+
+  return (
+    <div className="card card-pad">
+      <div className="row between" style={{ marginBottom: 6 }}>
+        <h3 className="h3">Onboarding</h3>
+        <span className="mono small muted">
+          {rows.filter((r) => r.stage === 'teaching').length}/{rows.length} teaching
+        </span>
+      </div>
+      <p className="muted small" style={{ marginBottom: 10, maxWidth: '64ch' }}>
+        Everyone on the published roster and what they still need. A tutor is ready once we
+        know what they are teaching, when they are free and what grade they are in. Then post
+        their first class from Publish and send them the invite link.
+      </p>
+      {rows.map(({ t, gaps, stage }) => (
+        <div key={t.id} className="line-item" style={{ alignItems: 'flex-start' }}>
+          <div className="row" style={{ gap: 12, minWidth: 0, flex: 1, alignItems: 'flex-start' }}>
+            <span className="avatar avatar-sm" style={{ '--h': t.hue } as CSSProperties}>
+              {initials(t.name)}
+            </span>
+            <div style={{ minWidth: 0 }}>
+              <strong style={{ fontSize: 15 }}>{t.name}</strong>
+              <div className="small muted">
+                {gaps.length > 0 ? `still need: ${gaps.join(', ')}` : t.availability}
+              </div>
+            </div>
+          </div>
+          <span
+            className={cx(
+              'status-pill',
+              stage === 'needs info' ? 'status-pending' : 'status-approved',
+            )}
+            style={{ flex: 'none' }}
+          >
+            {stage}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }

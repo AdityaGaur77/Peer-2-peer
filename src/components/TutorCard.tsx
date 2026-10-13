@@ -52,6 +52,28 @@ export function TutorCard({ tutor, onThank }: TutorCardProps) {
         })}
       </div>
 
+      {tutor.courses && tutor.courses.length > 0 && (
+        <ul className="tutor-courses">
+          {tutor.courses.map((c) => (
+            <li key={c.title}>
+              <span className="tutor-course-title">{c.title}</span>
+              {c.summary && <span className="tutor-course-sum">{c.summary}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {tutor.availability && (
+        <div className="tutor-when">
+          <span className="mono">when</span> {tutor.availability}
+        </div>
+      )}
+
+      {stats.taught === 0 && stats.upcoming.length === 0 && !tutor.isFounder ? (
+        <div className="tutor-stats">
+          <span>First class being scheduled</span>
+        </div>
+      ) : (
       <div className="tutor-stats">
         <span>
           <b>{stats.hours}</b> hrs volunteered
@@ -63,6 +85,7 @@ export function TutorCard({ tutor, onThank }: TutorCardProps) {
           <b>{stats.kudosCount}</b> kudos
         </span>
       </div>
+      )}
 
       <div className="row">
         <button className="btn btn-soft btn-sm" onClick={() => onThank(tutor)}>
