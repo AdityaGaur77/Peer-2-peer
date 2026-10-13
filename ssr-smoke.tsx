@@ -6,7 +6,7 @@ import App from './src/App';
 import { StoreProvider } from './src/lib/store';
 
 const ROUTES: Array<[string, string[]]> = [
-  ['/', ['Learn from a student', 'New here?', 'pass it on']],
+  ['/', ['Learn from a student', 'New here?', 'What you can learn', 'Foundational English Skills', 'For parents']],
   ['/sessions', ['Every seat is', 'Request a topic']],
   ['/tutors', ['volunteer their time', 'Thank them', 'Ayden J.', 'Foundational English Skills', 'Tuesdays and Wednesdays']],
   ['/teach', ['open the class builder', 'Take the quiz', 'What would you call your class?']],
