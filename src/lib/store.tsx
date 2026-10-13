@@ -11,6 +11,7 @@ import {
 } from 'react';
 import { SEED_VERSION } from './config';
 import type { DecodedInvite } from './invite';
+import { ROSTER, ROSTER_IDS } from './roster';
 import { buildSeed } from './seed';
 import type {
   Application,
@@ -49,6 +50,10 @@ interface StoreValue {
   toggleRsvp: (sessionId: string, p: Profile) => void;
   toggleWaitlist: (sessionId: string, p: Profile) => void;
   submitApplication: (a: Omit<Application, 'id' | 'status' | 'submittedISO'>) => void;
+  receiveApplication: (
+    a: Omit<Application, 'id' | 'status' | 'submittedISO'>,
+    submittedISO: string,
+  ) => 'added' | 'updated' | 'duplicate';
   saveCertification: (c: Omit<Certification, 'earnedISO'>) => void;
   addKudos: (tutorId: string, from: string, message: string) => void;
   addRequest: (topic: string, subject: TopicRequest['subject'], by: string) => void;
@@ -68,10 +73,20 @@ interface StoreValue {
 
 const StoreContext = createContext<StoreValue | null>(null);
 
+/**
+ * The published roster always wins: its tutors are added to every board and
+ * refreshed from source on load, so editing roster.ts and redeploying is how
+ * a tutor's public profile changes. Tutors added locally are left alone.
+ */
+function withRoster(tutors: Tutor[]): Tutor[] {
+  return [...tutors.filter((t) => !ROSTER_IDS.has(t.id)), ...ROSTER];
+}
+
 /** Backfill fields added after a user's data was first saved. */
 export function normalizeState(s: RelayState): RelayState {
   return {
     ...s,
+    tutors: withRoster(s.tutors),
     sessions: s.sessions.map((x) => ({
       ...x,
       attendees: Array.isArray(x.attendees) ? x.attendees : [],
@@ -92,7 +107,7 @@ function loadDb(): RelayState {
   } catch {
     /* fall through to fresh seed */
   }
-  return buildSeed();
+  return normalizeState(buildSeed());
 }
 
 function loadProfile(): Profile | null {
@@ -245,6 +260,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [toast],
   );
 
+  /** An application that arrived as a link from someone else's browser. */
+  const receiveApplication = useCallback(
+    (a: Omit<Application, 'id' | 'status' | 'submittedISO'>, submittedISO: string) => {
+      const prior = db.applications.find((x) => x.email.toLowerCase() === a.email.toLowerCase());
+      if (prior?.submittedISO === submittedISO) return 'duplicate' as const;
+      setDb((prev) => ({
+        ...prev,
+        applications: [
+          ...prev.applications.filter((x) => x.email.toLowerCase() !== a.email.toLowerCase()),
+          { ...a, id: uid('app'), status: 'pending', submittedISO },
+        ],
+      }));
+      return prior ? ('updated' as const) : ('added' as const);
+    },
+    [db.applications],
+  );
+
   const saveCertification = useCallback((c: Omit<Certification, 'earnedISO'>) => {
     setDb((prev) => ({
       ...prev,
@@ -324,6 +356,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         subjects: app.subjects,
         joinedISO: new Date().toISOString(),
         hue: Math.floor(Math.random() * 360),
+        availability: app.times || app.availability.join(', ') || undefined,
+        courses: app.courseTitle
+          ? [{ title: app.courseTitle, subject: app.subjects[0], summary: app.courseSummary ?? '' }]
+          : undefined,
       };
       setDb((prev) => ({
         ...prev,
@@ -451,7 +487,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   const resetData = useCallback(() => {
-    setDb(buildSeed());
+    setDb(normalizeState(buildSeed()));
     toast('Board cleared.');
   }, [toast]);
 
@@ -514,6 +550,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       toggleRsvp,
       toggleWaitlist,
       submitApplication,
+      receiveApplication,
       saveCertification,
       addKudos,
       addRequest,
@@ -533,7 +570,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [
       db, profile, toasts, signInOpen,
       openSignIn, closeSignIn, completeSignIn, signOut, requireProfile, toast,
-      toggleRsvp, toggleWaitlist, submitApplication, saveCertification, addKudos, addRequest,
+      toggleRsvp, toggleWaitlist, submitApplication, receiveApplication, saveCertification, addKudos, addRequest,
       voteRequest, approveApplication, declineApplication, createSession,
       cancelSession, updateTutor, removeTutor, addTutor, importData, resetData, acceptInvite, setRole,
     ],

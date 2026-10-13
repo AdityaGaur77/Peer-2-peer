@@ -3,15 +3,19 @@ import { Link } from 'react-router-dom';
 import { KudosMarquee } from '../components/KudosMarquee';
 import { RelayChain } from '../components/RelayChain';
 import { Reveal } from '../components/Reveal';
-import { globalStats, isDayOne, subjectSessions, upcomingSessions, useStore } from '../lib/store';
-import { SUBJECTS, subjectShort } from '../lib/types';
-import { fmtRelativeDay, fmtTime, plural } from '../lib/util';
+import { CONTACT_EMAIL } from '../lib/config';
+import { globalStats, isDayOne, subjectSessions, useStore } from '../lib/store';
+import { SUBJECTS, subjectMeta, subjectShort } from '../lib/types';
+import { fmtRelativeDay, fmtTime, initials, plural } from '../lib/util';
 
 export function Home() {
   const { db } = useStore();
   const stats = globalStats(db);
   const dayOne = isDayOne(db);
-  const upcomingCount = upcomingSessions(db).length;
+  // Every class a listed teacher has said they'll run. Real content for the
+  // page even before the first session is on the calendar.
+  const classes = db.tutors.flatMap((t) => (t.courses ?? []).map((c) => ({ ...c, tutor: t })));
+  const subjectsTaught = new Set(db.tutors.flatMap((t) => t.subjects)).size;
   const withSessions = SUBJECTS.filter((s) => subjectSessions(db, s.id).length > 0);
   const [toured, setToured] = useState(() => localStorage.getItem('relay.toured') === '1');
   const dismissTour = () => {
@@ -26,7 +30,7 @@ export function Home() {
         <div className="container">
           <div className="hero-inner">
             <Reveal>
-              <span className="eyebrow">free · peer-to-peer · student-run</span>
+              <span className="eyebrow">Free tutoring, taught by high school students</span>
             </Reveal>
             <Reveal delay={0.07}>
               <h1 className="display">
@@ -86,24 +90,20 @@ export function Home() {
               {dayOne ? (
                 <>
                   <div className="stat">
-                    <span className="stat-num">{upcomingCount}</span>
-                    <span className="stat-label">sessions on the board</span>
-                  </div>
-                  <div className="stat">
                     <span className="stat-num">{stats.tutorCount}</span>
-                    <span className="stat-label">
-                      {plural(stats.tutorCount, 'tutor')} ready to teach
-                    </span>
+                    <span className="stat-label">student teachers</span>
                   </div>
                   <div className="stat">
-                    <span className="stat-num">
-                      $0<sup>*</sup>
-                    </span>
-                    <span className="stat-label">no fees, ever</span>
+                    <span className="stat-num">{classes.length}</span>
+                    <span className="stat-label">classes starting this fall</span>
                   </div>
                   <div className="stat">
-                    <span className="stat-num">day 01</span>
-                    <span className="stat-label">and you're early</span>
+                    <span className="stat-num">{subjectsTaught}</span>
+                    <span className="stat-label">subjects covered</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-num">$0</span>
+                    <span className="stat-label">to join any class</span>
                   </div>
                 </>
               ) : (
@@ -121,10 +121,8 @@ export function Home() {
                     <span className="stat-label">hours volunteered</span>
                   </div>
                   <div className="stat">
-                    <span className="stat-num">
-                      $0<sup>*</sup>
-                    </span>
-                    <span className="stat-label">no fees, ever</span>
+                    <span className="stat-num">$0</span>
+                    <span className="stat-label">to join any class</span>
                   </div>
                 </>
               )}
@@ -138,17 +136,15 @@ export function Home() {
         <div className="container">
           <div className="section-head">
             <Reveal>
-              <span className="eyebrow">subjects</span>
+              <span className="eyebrow">Classes</span>
             </Reveal>
             <Reveal delay={0.06}>
-              <h2 className="h2">
-                Pick a subject. <em>More get added as tutors join.</em>
-              </h2>
+              <h2 className="h2">What you can learn</h2>
             </Reveal>
             <Reveal delay={0.1}>
               <p className="lede">
-                We started with Python and AI because that is what the first tutors knew. The
-                list grows whenever someone shows up who can teach something else.
+                Each class is run by one of our teachers, on a weekly schedule, over video. New
+                subjects get added whenever someone joins who can teach them.
               </p>
             </Reveal>
           </div>
@@ -194,35 +190,46 @@ export function Home() {
             </div>
           )}
 
-          <Reveal delay={0.14}>
-            <div className="subject-grid">
-              {SUBJECTS.map((s) => {
-                const count = subjectSessions(db, s.id).length;
+          {classes.length > 0 && (
+            <div className="grid-3">
+              {classes.map((c, i) => {
+                const sub = subjectMeta(c.subject);
                 return (
-                  <Link
-                    key={s.id}
-                    to={`/sessions?subject=${s.id}`}
-                    className="subject-pill"
-                    style={{ '--sub-h': s.hue } as CSSProperties}
-                  >
-                    <span className="subject-pill-name">{s.name}</span>
-                    <span className="subject-pill-count">
-                      {count > 0 ? `${count} scheduled` : 'none scheduled yet'}
-                    </span>
-                  </Link>
+                  <Reveal key={`${c.tutor.id}-${c.title}`} delay={Math.min(i * 0.04, 0.24)}>
+                    <article className="card card-hover class-card">
+                      <span
+                        className="chip"
+                        data-subject={sub.id}
+                        style={{ '--sub-h': sub.hue, justifySelf: 'start' } as CSSProperties}
+                      >
+                        {subjectShort(sub.id)}
+                      </span>
+                      <h3 className="h3" style={{ fontSize: '1.12rem' }}>{c.title}</h3>
+                      <p>{c.summary}</p>
+                      <div className="class-teacher">
+                        <span className="avatar avatar-sm" style={{ '--h': c.tutor.hue } as CSSProperties}>
+                          {initials(c.tutor.name)}
+                        </span>
+                        <span>
+                          <b>{c.tutor.name}</b>
+                          {c.tutor.availability ? ` · ${c.tutor.availability.split(' · ')[0]}` : ''}
+                        </span>
+                      </div>
+                    </article>
+                  </Reveal>
                 );
               })}
             </div>
-          </Reveal>
+          )}
 
           <Reveal delay={0.18}>
-            <div className="row" style={{ marginTop: 20 }}>
-              <span className="mono small muted">don't see yours?</span>
-              <Link to="/sessions#requests" className="btn-quiet">
-                request a topic →
+            <div className="row" style={{ marginTop: 24 }}>
+              <Link to="/tutors" className="btn btn-ghost btn-sm">
+                Meet the teachers
               </Link>
-              <Link to="/teach" className="btn-quiet">
-                or teach it yourself →
+              <span className="small muted">Don't see your subject?</span>
+              <Link to="/sessions#requests" className="btn-quiet">
+                Request it →
               </Link>
             </div>
           </Reveal>
@@ -238,30 +245,28 @@ export function Home() {
         <div className="container">
           <div className="section-head">
             <Reveal>
-              <span className="eyebrow">how it works</span>
+              <span className="eyebrow">How it works</span>
             </Reveal>
             <Reveal delay={0.06}>
-              <h2 className="h2">
-                How it works, <em>start to finish.</em>
-              </h2>
+              <h2 className="h2">From signing up to your first class</h2>
             </Reveal>
           </div>
 
           <div className="bento-grid">
             <Reveal className="b-7" delay={0}>
               <div className="card bento" style={{ height: '100%' }}>
-                <span className="step-no">01 — BOOK A SEAT</span>
+                <span className="step-no">Step 1</span>
                 <h3 className="h3">Find a session and sign up</h3>
                 <p style={{ color: 'var(--ink-2)', fontSize: 15 }}>
-                  Sessions are small, run on video, and led by a student who has already been
-                  through the material. Book a seat and the room link is yours. No card, no trial,
+                  Classes are small, run on a video call, and led by a student who has already
+                  taken the course. Save a spot and you get the call link. No card, no trial,
                   nothing to cancel later.
                 </p>
               </div>
             </Reveal>
             <Reveal className="b-5" delay={0.07}>
               <div className="card bento" style={{ height: '100%' }}>
-                <span className="step-no">02 — ASK ANYTHING</span>
+                <span className="step-no">Step 2</span>
                 <h3 className="h3">Small groups, no judgement</h3>
                 <p style={{ color: 'var(--ink-2)', fontSize: 15 }}>
                   Your tutor was stuck on the same thing not long ago. Whatever you feel stupid
@@ -271,17 +276,17 @@ export function Home() {
             </Reveal>
             <Reveal className="b-5" delay={0.07}>
               <div className="card bento" style={{ height: '100%' }}>
-                <span className="step-no">03 — GET CLEARED</span>
-                <h3 className="h3">A short quiz, not a résumé</h3>
+                <span className="step-no">Step 3</span>
+                <h3 className="h3">Every teacher is reviewed</h3>
                 <p style={{ color: 'var(--ink-2)', fontSize: 15 }}>
-                  Tutors take a quick quiz on their subject before they teach it. About ten
-                  minutes, and you can retake it as many times as you need.
+                  Teachers apply with what they want to teach and when. We read every
+                  application before they are listed here.
                 </p>
               </div>
             </Reveal>
             <Reveal className="b-7" delay={0.14}>
               <div className="card bento" style={{ height: '100%' }}>
-                <span className="step-no">04 — TEACH IT FORWARD</span>
+                <span className="step-no">Step 4</span>
                 <h3 className="h3">Your hours get counted</h3>
                 <p style={{ color: 'var(--ink-2)', fontSize: 15 }}>
                   Every session you run is added up automatically. Print a service certificate
@@ -298,12 +303,10 @@ export function Home() {
         <section className="section paper-2" style={{ overflow: 'hidden' }}>
           <div className="container section-head" style={{ marginBottom: 26 }}>
             <Reveal>
-              <span className="eyebrow">passed back down the track</span>
+              <span className="eyebrow">From students</span>
             </Reveal>
             <Reveal delay={0.06}>
-              <h2 className="h2">
-                The wall of <em>thank you.</em>
-              </h2>
+              <h2 className="h2">Notes left for our teachers</h2>
             </Reveal>
           </div>
           <Reveal delay={0.1}>
@@ -317,12 +320,10 @@ export function Home() {
         <div className="container" style={{ display: 'grid', gap: 40, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', alignItems: 'center' }}>
           <div className="stack" style={{ gap: 18 }}>
             <Reveal>
-              <span className="eyebrow">why it's free</span>
+              <span className="eyebrow">Why it's free</span>
             </Reveal>
             <Reveal delay={0.06}>
-              <h2 className="h2">
-                Why it is <em>free.</em>
-              </h2>
+              <h2 className="h2">Why it's free</h2>
             </Reveal>
             <Reveal delay={0.12}>
               <p className="lede" style={{ fontSize: '1.05rem' }}>
@@ -343,7 +344,7 @@ export function Home() {
 
           <Reveal delay={0.1}>
             <div className="card card-pad" style={{ maxWidth: 380, justifySelf: 'center' }}>
-              <span className="mono small muted">the old price list</span>
+              <span className="small muted">What Peer2Peer used to charge</span>
               <div className="stack" style={{ gap: 12, marginTop: 16 }}>
                 {[
                   ['Intro to Python', '$15'],
@@ -358,12 +359,53 @@ export function Home() {
                     </span>
                   </div>
                 ))}
-                <span className="serif-i" style={{ fontSize: 19, color: 'var(--ember-deep)' }}>
-                  now zero, for everyone.
+                <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--ember-deep)' }}>
+                  Now free for everyone.
                 </span>
               </div>
             </div>
           </Reveal>
+        </div>
+      </section>
+
+      {/* ── for parents ── */}
+      <section className="section paper-2">
+        <div className="container">
+          <div className="section-head">
+            <Reveal>
+              <span className="eyebrow">For parents</span>
+            </Reveal>
+            <Reveal delay={0.06}>
+              <h2 className="h2">What to know before your kid joins</h2>
+            </Reveal>
+          </div>
+          <div className="faq-grid">
+            {[
+              [
+                'Who teaches?',
+                'High school students we know personally. Each one applies, tells us what they will cover, and is listed only after we have reviewed it. Their names and classes are on the Tutors page.',
+              ],
+              [
+                'How do classes run?',
+                'Small groups on a video call, at the same time each week. Students get the call link when they save a spot. There is no homework unless the teacher says so up front.',
+              ],
+              [
+                'What does it cost?',
+                'Nothing. We never ask for card details, and there is no paid tier to upgrade to.',
+              ],
+              [
+                'Who do I contact?',
+                `Email ${CONTACT_EMAIL}. One of the founders reads every message.`,
+              ],
+            ].map(([q, a], i) => (
+              <Reveal key={q} delay={i * 0.05}>
+                <div className="card faq-item">
+                  <h3>{q}</h3>
+                  <p>{a}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -372,11 +414,8 @@ export function Home() {
         <div className="container">
           <Reveal>
             <div className="cta-band">
-              <span className="eyebrow" style={{ color: '#90a0bc' }}>
-                two ways in
-              </span>
               <h2 className="h2" style={{ maxWidth: 560 }}>
-                Learn something, or <em>teach something.</em>
+                Learn something, or teach something.
               </h2>
               <div className="row" style={{ justifyContent: 'center' }}>
                 <Link to="/sessions" className="btn btn-band-light">

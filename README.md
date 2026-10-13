@@ -58,10 +58,13 @@ repo. See [LAUNCH.md](LAUNCH.md) for the rest.
   opened Relay: they land on `/#/join`, see the class, and add it to their board
   in one click. This is how a serverless app still shares a schedule. There's a
   print-ready **flyer** per session too, for noticeboards.
-- **Tutors** — the founding crew, their volunteer hours, and a "thank them" flow
-  that posts to the kudos wall.
-- **Teach** — the two-step tutor path: pass a certification quiz (options shuffle
-  each attempt), then apply. Unlimited retakes.
+- **Tutors** — the published roster (`src/lib/roster.ts`): each teacher's
+  classes, when they're free, volunteer hours, and a "thank them" flow that posts
+  to the kudos wall.
+- **Teach** — the tutor path: take a certification quiz if the subject has one,
+  then apply with your class name, what it covers and when you're free. The last
+  step emails the team an application link that opens in the founder console.
+  The whole process is in [TEACHERS.md](TEACHERS.md).
 - **Interactive onboarding** — `/#/guide/student` teaches the platform by doing
   (sandbox RSVP card, real topic voting); `/#/guide/tutor` is a class-builder
   wizard that walks new tutors through naming, pitching, structuring, scheduling,
@@ -71,8 +74,9 @@ repo. See [LAUNCH.md](LAUNCH.md) for the rest.
   stats.
 - **Certificate** — a printable certificate of service generated from the tutor's
   logged sessions.
-- **Founder console** (`/#/admin`) — a live launch checklist, application review,
-  tutor management, session publishing, and data export/import. The passcode
+- **Founder console** (`/#/admin`) — a live launch checklist, application review
+  (with "copy roster entry" for approved tutors), an onboarding tracker showing
+  what each roster teacher still needs, tutor management, session publishing, and data export/import. The passcode
   comes from `VITE_ADMIN_CODE` (see above).
 - **Roles** — people pick student or tutor when they sign in. Students never see
   the Teach tab; either side can switch from their dashboard.
@@ -95,8 +99,7 @@ implementation for API calls — the component layer doesn't change.
 
 - **Config** — founder name, contact email, admin passcode: `src/lib/config.ts`.
   Bump `SEED_VERSION` to push fresh demo data to everyone.
-- **The crew** — edit `TUTOR_SEEDS` in `src/lib/seed.ts`, or just approve real
-  applications from the founder console.
+- **The crew** — edit `ROSTER` in `src/lib/roster.ts`. See [TEACHERS.md](TEACHERS.md).
 - **Quizzes** — question banks live in `src/lib/quiz-data.ts`.
 - **New subjects** — add an entry to `SUBJECTS` in `src/lib/types.ts` with a name,
   blurb and hue. Filters, the class builder, sign-up and the board all pick it up

@@ -1,11 +1,13 @@
-import { useState, type CSSProperties, type FormEvent } from 'react';
+import { useEffect, useState, type CSSProperties, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { QuizEngine } from '../components/QuizEngine';
 import { Modal } from '../components/Modal';
 import { Reveal } from '../components/Reveal';
+import { CONTACT_EMAIL } from '../lib/config';
+import { applicationUrl } from '../lib/invite';
 import { QUIZZES } from '../lib/quiz-data';
 import { applicationFor, certsFor, tutorByEmail, useStore } from '../lib/store';
-import { SUBJECTS, subjectShort, type SubjectId } from '../lib/types';
+import { SUBJECTS, subjectMeta, subjectShort, type Application, type SubjectId } from '../lib/types';
 import { cx, fmtDate } from '../lib/util';
 
 const AVAIL = ['Weekday afternoons', 'Weekday evenings', 'Weekend mornings', 'Weekend afternoons'];
@@ -22,11 +24,19 @@ export function Teach() {
   const [subjects, setSubjects] = useState<SubjectId[]>([]);
   const [why, setWhy] = useState('');
   const [availability, setAvailability] = useState<string[]>([]);
+  const [courseTitle, setCourseTitle] = useState('');
+  const [courseSummary, setCourseSummary] = useState('');
+  const [times, setTimes] = useState('');
   const [sent, setSent] = useState(false);
   const [editing, setEditing] = useState(false);
 
   const myCerts = profile ? certsFor(db, profile.email) : [];
-  const existing = profile ? applicationFor(db, profile.email) : undefined;
+  // Signed-out applicants are found by the email they just typed.
+  const existing = profile
+    ? applicationFor(db, profile.email)
+    : sent
+      ? applicationFor(db, email)
+      : undefined;
   const alreadyTutor = profile ? !!tutorByEmail(db, profile.email) : false;
 
   const startEditing = () => {
@@ -37,6 +47,9 @@ export function Teach() {
       setSubjects(existing.subjects);
       setWhy(existing.why);
       setAvailability(existing.availability);
+      setCourseTitle(existing.courseTitle ?? '');
+      setCourseSummary(existing.courseSummary ?? '');
+      setTimes(existing.times ?? '');
     }
     setSent(false);
     setEditing(true);
@@ -56,6 +69,9 @@ export function Teach() {
       subjects,
       why: why.trim(),
       availability,
+      courseTitle: courseTitle.trim(),
+      courseSummary: courseSummary.trim(),
+      times: times.trim(),
     });
     setSent(true);
     setEditing(false);
@@ -94,13 +110,15 @@ See the tutors
                 in review
               </span>
               <span className="serif-i" style={{ fontSize: 26, color: 'var(--ember-deep)' }}>
-Application sent.
+One more step: send it to us.
               </span>
-              <p className="muted">
-Someone reads every application
-                {existing ? ` — yours arrived ${fmtDate(existing.submittedISO)}` : ''}. In the
-                meantime, the best prep is joining a session as a learner.
+              <p className="muted" style={{ maxWidth: '54ch', margin: '0 auto' }}>
+                Your application is saved
+                {existing ? ` (${fmtDate(existing.submittedISO)})` : ''}, but only on this device.
+                Send it with one of the buttons below so it reaches the team. We usually reply
+                within a few days.
               </p>
+              {existing && <SendApplication app={existing} />}
               <div className="row" style={{ justifyContent: 'center' }}>
                 <Link to="/sessions" className="btn btn-primary">
                   Browse sessions
@@ -336,6 +354,45 @@ Teaching something is the fastest way to properly learn it, and the hours count
                 </div>
 
                 <label className="field">
+                  <span className="label">
+                    Specific days and times <span className="muted">(optional)</span>
+                  </span>
+                  <input
+                    className="input"
+                    value={times}
+                    onChange={(e) => setTimes(e.target.value)}
+                    placeholder="Tuesdays and Wednesdays, 6–8pm"
+                  />
+                  <span className="hint">
+                    classes repeat weekly, so tell us when you are usually free, not a single date
+                  </span>
+                </label>
+
+                <label className="field">
+                  <span className="label">
+                    What would you call your class? <span className="muted">(optional)</span>
+                  </span>
+                  <input
+                    className="input"
+                    value={courseTitle}
+                    onChange={(e) => setCourseTitle(e.target.value)}
+                    placeholder="Foundational English Skills"
+                  />
+                </label>
+
+                <label className="field">
+                  <span className="label">
+                    What will you cover? <span className="muted">(optional)</span>
+                  </span>
+                  <textarea
+                    className="textarea"
+                    value={courseSummary}
+                    onChange={(e) => setCourseSummary(e.target.value)}
+                    placeholder="Two or three sentences a student would read before signing up. What topics, how a class runs, any homework."
+                  />
+                </label>
+
+                <label className="field">
                   <span className="label">Why do you want to tutor? <span className="muted">(optional)</span></span>
                   <textarea
                     className="textarea"
@@ -347,7 +404,9 @@ Teaching something is the fastest way to properly learn it, and the hours count
 
                 <div className="row between">
                   <span className="hint">
-                    {subjects.length === 0 ? 'pick at least one subject' : 'a founder reviews every application'}
+                    {subjects.length === 0
+                      ? 'pick at least one subject'
+                      : 'next you will send this to the team'}
                   </span>
                   <button className="btn btn-primary" type="submit" disabled={subjects.length === 0}>
                     Submit application
@@ -380,6 +439,69 @@ Teaching something is the fastest way to properly learn it, and the hours count
           <QuizEngine quiz={QUIZZES[quizSubject]!} onExit={() => setQuizSubject(null)} />
         </Modal>
       )}
+    </div>
+  );
+}
+
+/**
+ * Applications are saved in the applicant's browser, which the team can't
+ * see. This packs one into a link that opens in the founder console.
+ */
+function SendApplication({ app }: { app: Application }) {
+  const { toast } = useStore();
+  const [url, setUrl] = useState('');
+
+  useEffect(() => {
+    let live = true;
+    const { id: _id, status: _status, submittedISO, ...draft } = app;
+    applicationUrl(draft, submittedISO).then((u) => live && setUrl(u));
+    return () => {
+      live = false;
+    };
+  }, [app]);
+
+  const subjects = app.subjects.map((s) => subjectMeta(s).name).join(', ');
+  const body = [
+    `Name: ${app.name}`,
+    `Grade: ${app.grade}`,
+    `Subjects: ${subjects}`,
+    app.courseTitle && `Class: ${app.courseTitle}`,
+    app.courseSummary && `What I'll cover: ${app.courseSummary}`,
+    (app.times || app.availability.length > 0) &&
+      `When I'm free: ${app.times || app.availability.join(', ')}`,
+    app.why && `Why: ${app.why}`,
+    '',
+    'Open my application in the console:',
+    url,
+  ]
+    .filter((x) => x !== false && x !== undefined)
+    .join('\n');
+  const mailto = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(
+    `Tutor application: ${app.name}`,
+  )}&body=${encodeURIComponent(body)}`;
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(body);
+      toast('Copied. Paste it to us in a message.');
+    } catch {
+      toast('Could not copy. Use the email button instead.');
+    }
+  };
+
+  return (
+    <div className="row" style={{ justifyContent: 'center' }}>
+      <a
+        className="btn btn-primary"
+        href={url ? mailto : undefined}
+        aria-disabled={!url}
+        style={url ? undefined : { opacity: 0.5, pointerEvents: 'none' }}
+      >
+        Email it to the team
+      </a>
+      <button className="btn btn-ghost" onClick={copy} disabled={!url}>
+        Copy to send another way
+      </button>
     </div>
   );
 }

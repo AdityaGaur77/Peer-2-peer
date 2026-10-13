@@ -1,4 +1,4 @@
-import type { Level, Session, SubjectId, Tutor } from './types';
+import { SUBJECT_IDS, type Application, type Level, type Session, type SubjectId, type Tutor } from './types';
 
 /**
  * Invite links carry a whole session inside the URL.
@@ -70,6 +70,10 @@ async function unsqueeze(payload: string): Promise<string> {
   return new Response(stream).text();
 }
 
+function asSubject(x: unknown): SubjectId {
+  return SUBJECT_IDS.includes(x as SubjectId) ? (x as SubjectId) : 'python';
+}
+
 // ── public API ───────────────────────────────────────────────
 
 export async function encodeInvite(session: Session, tutor: Tutor | undefined): Promise<string> {
@@ -103,7 +107,7 @@ export async function decodeInvite(payload: string): Promise<DecodedInvite> {
     session: {
       title: String(p.t),
       description: String(p.d ?? ''),
-      subject: (p.s === 'ai' ? 'ai' : 'python') as SubjectId,
+      subject: asSubject(p.s),
       level: (['intro', 'intermediate', 'all'] as Level[]).includes(p.l) ? p.l : 'intro',
       startISO: new Date(Number(p.w)).toISOString(),
       durationMin: Number(p.m) || 60,
@@ -116,7 +120,7 @@ export async function decodeInvite(payload: string): Promise<DecodedInvite> {
       email: String(p.e ?? ''),
       grade: String(p.g ?? 'Student'),
       tagline: 'Joined your board through a session invite.',
-      subjects: [(p.s === 'ai' ? 'ai' : 'python') as SubjectId],
+      subjects: [asSubject(p.s)],
       joinedISO: new Date().toISOString(),
       hue: Number(p.h) || 200,
     },
@@ -128,4 +132,46 @@ export async function inviteUrl(session: Session, tutor: Tutor | undefined): Pro
   const payload = await encodeInvite(session, tutor);
   const { origin, pathname } = window.location;
   return `${origin}${pathname}#/join?i=${payload}`;
+}
+
+// ── application links ────────────────────────────────────────
+// Same trick, other direction: an application filled in on a tutor's phone
+// is only in their browser, so the "send it" step packs it into a link that
+// opens straight into the founder console.
+
+export type ApplicationDraft = Omit<Application, 'id' | 'status' | 'submittedISO'>;
+
+interface AppPayload {
+  v: 1;
+  a: ApplicationDraft;
+  w: number; // submitted, epoch ms
+}
+
+export async function applicationUrl(a: ApplicationDraft, submittedISO: string): Promise<string> {
+  const p: AppPayload = { v: 1, a, w: new Date(submittedISO).getTime() };
+  const { origin, pathname } = window.location;
+  return `${origin}${pathname}#/admin?app=${await squeeze(JSON.stringify(p))}`;
+}
+
+export async function decodeApplication(
+  payload: string,
+): Promise<{ draft: ApplicationDraft; submittedISO: string }> {
+  const p = JSON.parse(await unsqueeze(payload)) as AppPayload;
+  const a = p?.a;
+  if (p?.v !== 1 || !a?.name || !a.email) throw new Error('not a Relay application');
+  const str = (x: unknown) => (typeof x === 'string' ? x.slice(0, 2000) : '');
+  return {
+    submittedISO: new Date(Number(p.w) || Date.now()).toISOString(),
+    draft: {
+      name: str(a.name),
+      email: str(a.email).toLowerCase(),
+      grade: str(a.grade) || 'Student',
+      subjects: (Array.isArray(a.subjects) ? a.subjects : []).map(asSubject),
+      why: str(a.why),
+      availability: (Array.isArray(a.availability) ? a.availability : []).map(str),
+      courseTitle: str(a.courseTitle),
+      courseSummary: str(a.courseSummary),
+      times: str(a.times),
+    },
+  };
 }
