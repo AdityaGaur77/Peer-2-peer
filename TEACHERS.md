@@ -1,11 +1,11 @@
 # Teacher onboarding
 
-How someone goes from "I want to teach" to running a class on Relay. This is
+How someone goes from "I want to teach" to running a class on Peer 2 Peer. This is
 written for whoever manages teachers, not only for whoever writes the code.
 
 ## Why it works this way
 
-Relay has no server. Everything a visitor does is saved in their own browser.
+Peer 2 Peer has no server. Everything a visitor does is saved in their own browser.
 That means:
 
 - An application someone fills in on their phone is **only on their phone**.
@@ -83,9 +83,9 @@ Keep emails and phone numbers in the team's private sheet, never in
 
 ## Open questions for the team
 
-- **Akil wants to charge** $15 a class for the first four, then $20. Relay is
+- **Akil wants to charge** $15 a class for the first four, then $20. Peer 2 Peer is
   free (it's the whole pitch, and volunteer hours depend on it). Either he
-  teaches free here, or his paid tutoring stays separate from Relay. His
+  teaches free here, or his paid tutoring stays separate from Peer 2 Peer. His
   pricing is not on the site.
 - **Volunteer hours / Foothill club.** The site already generates a printable
   certificate of hours from logged sessions (`/#/certificate`). Check what the

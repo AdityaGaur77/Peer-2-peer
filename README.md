@@ -1,8 +1,9 @@
-# Relay — free peer-to-peer tutoring
+# Peer 2 Peer — tutoring by students
 
-Free live tutoring run by students. Sessions cover Python, AI, web development,
+Live tutoring run by students. Most classes are free; a teacher can charge up
+to $19 a class, and only free classes count toward volunteer hours. Sessions cover Python, AI, web development,
 math, physics, chemistry, biology, English, history, Spanish and test prep, and
-subjects are added as tutors turn up who can teach them. Nobody pays anything.
+subjects are added as tutors turn up who can teach them.
 This replaced *Peer2Peer*, a paid tutoring app with the same tutors.
 
 **Concept:** knowledge as a relay baton, drawn on graph paper. Cool notebook
@@ -54,7 +55,7 @@ See [LAUNCH.md](LAUNCH.md) for the rest.
   upvote topics.
 - **Invite links** — "copy invite" packs an entire session into the URL
   (deflate-compressed, ~350 chars), so a link works for someone who has never
-  opened Relay: they land on `/#/join`, see the class, and add it to their board
+  opened Peer 2 Peer: they land on `/#/join`, see the class, and add it to their board
   in one click. This is how a serverless app still shares a schedule. There's a
   print-ready **flyer** per session too, for noticeboards.
 - **Tutors** — the published roster (`src/lib/roster.ts`): each teacher's
@@ -128,5 +129,5 @@ loaded with the schema (37 checks covering every role's permissions).
 > this repo, so it is a latch rather than a lock. That is survivable here because
 > every visitor gets their own `localStorage` copy of the board — unlocking the
 > console elsewhere only ever exposes that person's own data, never yours. Never
-> reuse a password from anywhere else, and add real auth before Relay stores
+> reuse a password from anywhere else, and add real auth before Peer 2 Peer stores
 > anything genuinely sensitive.

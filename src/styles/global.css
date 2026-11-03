@@ -621,6 +621,18 @@ button {
   margin-right: 14px;
 }
 
+.brand-mark {
+  border-radius: 50%;
+  flex: none;
+}
+
+.chip-price {
+  background: var(--sky);
+  border-color: var(--sky);
+  color: #0a2850;
+  font-weight: 650;
+}
+
 .brand-dot {
   color: var(--ember);
 }
@@ -2183,7 +2195,7 @@ details.faq .faq-a {
   font-family: var(--font-serif);
   font-style: italic;
   font-size: 16.5px;
-  color: var(--hot-deep);
+  color: var(--ember-deep);
   min-height: 24px;
 }
 

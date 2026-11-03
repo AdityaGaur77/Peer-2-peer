@@ -51,7 +51,7 @@ export function Nav() {
   return (
     <div className={cx('island-wrap', open && 'open')}>
       <nav className={cx('island', scrolled && 'scrolled')} aria-label="Main">
-        <NavLink to="/" aria-label="Relay home">
+        <NavLink to="/" aria-label="Peer 2 Peer home">
           <Wordmark />
         </NavLink>
 

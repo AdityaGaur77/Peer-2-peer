@@ -22,17 +22,17 @@ import { Teach } from './pages/Teach';
 import { Tutors } from './pages/Tutors';
 
 const TITLES: Record<string, string> = {
-  '/': 'Relay — free tutoring by students',
-  '/sessions': 'Free sessions — Relay',
-  '/tutors': 'The crew — Relay',
-  '/teach': 'Become a tutor — Relay',
-  '/about': 'Why it\'s free — Relay',
-  '/dashboard': 'Your dashboard — Relay',
-  '/certificate': 'Volunteer certificate — Relay',
-  '/admin': 'Founder console — Relay',
-  '/guide/tutor': 'Post your first class — Relay',
-  '/guide/student': 'How Relay works — Relay',
-  '/join': "You're invited — Relay",
+  '/': 'Peer 2 Peer — tutoring by students',
+  '/sessions': 'Classes — Peer 2 Peer',
+  '/tutors': 'The crew — Peer 2 Peer',
+  '/teach': 'Become a tutor — Peer 2 Peer',
+  '/about': 'Our story — Peer 2 Peer',
+  '/dashboard': 'Your dashboard — Peer 2 Peer',
+  '/certificate': 'Volunteer certificate — Peer 2 Peer',
+  '/admin': 'Founder console — Peer 2 Peer',
+  '/guide/tutor': 'Post your first class — Peer 2 Peer',
+  '/guide/student': 'How Peer 2 Peer works — Peer 2 Peer',
+  '/join': "You're invited — Peer 2 Peer",
 };
 
 function RouteMeta() {
@@ -41,8 +41,8 @@ function RouteMeta() {
     document.title =
       TITLES[pathname] ??
       (pathname.startsWith('/flyer/')
-        ? 'Session flyer — Relay'
-        : 'Relay — free peer tutoring');
+        ? 'Session flyer — Peer 2 Peer'
+        : 'Peer 2 Peer — tutoring by students');
   }, [pathname]);
   return null;
 }

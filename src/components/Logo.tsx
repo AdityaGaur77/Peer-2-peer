@@ -1,29 +1,23 @@
-export function Logo({ size = 26 }: { size?: number }) {
-  // an open track with the baton at the gap — mid-handoff
+// The Peer 2 Peer mark: two figures, one helping the other. The image is
+// public/logo-192.png, cut from the team's logo.
+export function Logo({ size = 30 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true">
-      <defs>
-        <linearGradient id="logoBaton" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#add9fd" />
-          <stop offset="1" stopColor="#4c9be0" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M 26.4 8.9 A 12.5 12.5 0 1 0 29 16"
-        stroke="currentColor"
-        strokeWidth="3.4"
-        strokeLinecap="round"
-      />
-      <circle cx="27.5" cy="5.8" r="4.2" fill="url(#logoBaton)" />
-    </svg>
+    <img
+      className="brand-mark"
+      src={`${import.meta.env.BASE_URL}logo-192.png`}
+      width={size}
+      height={size}
+      alt=""
+      aria-hidden="true"
+    />
   );
 }
 
-export function Wordmark({ size = 26 }: { size?: number }) {
+export function Wordmark({ size = 30 }: { size?: number }) {
   return (
     <span className="brand">
       <Logo size={size} />
-      relay<span className="brand-dot">.</span>
+      peer 2 peer
     </span>
   );
 }

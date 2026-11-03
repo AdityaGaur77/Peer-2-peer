@@ -12,7 +12,7 @@ Takes about 20 minutes. Do it from the project email account.
    with the project email (not "Continue with GitHub").
 2. Turn on two-factor login: avatar (top right) → **Account preferences** →
    **Multi-factor authentication**.
-3. Create an organization called **Relay** on the **Free** plan.
+3. Create an organization called **Peer 2 Peer** on the **Free** plan.
 4. **New project** → name `relay`, click **Generate a password** and save it in
    a password manager, pick the region closest to you (e.g. West US) → **Create**.
 5. Wait a couple of minutes for it to finish setting up.
@@ -25,17 +25,22 @@ Takes about 20 minutes. Do it from the project email account.
    returned".
 3. New query again, do the same with [`supabase/seed.sql`](supabase/seed.sql).
    That adds the teachers from the roster.
-4. New query once more. Put in the emails of everyone who should see the
-   admin console, **in lowercase**, and run it:
+4. New query once more. Replace the two example emails below with **your real
+   emails, in lowercase** (the project email and your personal one, plus
+   anyone else on the team who should see the admin console), then run it:
 
    ```sql
    insert into admins (email) values
-     ('your-project-email@gmail.com'),
-     ('your-personal-email@gmail.com');
+     ('the-real-project-email@gmail.com'),
+     ('your-real-personal-email@gmail.com');
    ```
 
-Both files are safe to run again later. If the schema changes in a future
-update, just run `schema.sql` again.
+   To check who is an admin: `select * from admins;`
+   To remove one: `delete from admins where email = 'someone@gmail.com';`
+
+Both files are safe to run again later. **Whenever an update changes
+`schema.sql`, run it again** so the database gets the new columns (for
+example, class prices were added this way).
 
 ## 3. Set up sign-in
 
@@ -48,7 +53,7 @@ there are no passwords.
    this, so the email contains the code as well as the link:
 
    ```html
-   <h2>Your Relay sign-in code</h2>
+   <h2>Your Peer 2 Peer sign-in code</h2>
    <p>Type this code on the site:</p>
    <p style="font-size:28px;font-weight:bold;letter-spacing:4px">{{ .Token }}</p>
    <p>Or <a href="{{ .ConfirmationURL }}">tap here to sign in</a> on the device you started on.</p>

@@ -4,7 +4,7 @@ import { hashHue } from './util';
 /**
  * The published teacher roster.
  *
- * Relay has no backend, so a tutor approved in the founder console only
+ * Peer 2 Peer has no backend, so a tutor approved in the founder console only
  * exists in that one browser. Anyone listed here ships with the site
  * instead, which means every visitor sees them on the Tutors page.
  *

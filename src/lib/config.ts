@@ -1,4 +1,4 @@
-// ── Relay config ─────────────────────────────────────────────
+// ── Peer 2 Peer config ─────────────────────────────────────────────
 // Everything a founder might want to change lives here.
 
 export const FOUNDER_NAME = 'Aditya Gaur';

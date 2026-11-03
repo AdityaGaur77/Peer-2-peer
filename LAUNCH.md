@@ -36,7 +36,7 @@ one of them has a workaround built in:
 
 **Sharing a class → solved by invite links.** Hit **copy invite** on any session
 card. That link carries the entire class *inside the URL* (compressed, ~350–400
-characters), so anyone who opens it — even someone who has never seen Relay —
+characters), so anyone who opens it — even someone who has never seen Peer 2 Peer —
 gets the class on their board with one click. Use these to announce sessions in
 group chats. There's also a printable **flyer** (the "flyer" link on your own
 sessions) for hallway noticeboards.

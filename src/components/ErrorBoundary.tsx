@@ -17,7 +17,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('Relay crashed:', error, info);
+    console.error('Peer 2 Peer crashed:', error, info);
   }
 
   render() {

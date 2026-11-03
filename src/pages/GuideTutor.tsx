@@ -4,6 +4,7 @@ import { GuideShell, type GuideStepDef } from '../components/GuideShell';
 import { MeetingFields } from '../components/MeetingPanel';
 import { SessionCard } from '../components/SessionCard';
 import { DEFAULT_MIN_AGE, meetingLinkError } from '../lib/meeting';
+import { MAX_PRICE, priceLabel } from '../lib/price';
 import {
   applicationFor, certsFor, tutorByEmail, upcomingSessions, useStore,
 } from '../lib/store';
@@ -25,6 +26,8 @@ interface ClassDraft {
   meetingId: string;
   passcode: string;
   minAge: number;
+  /** Whole dollars, 0 (free) to MAX_PRICE. */
+  price: number;
   /** 1 = one class. 4 = the same slot four weeks running. */
   repeatWeeks: number;
 }
@@ -42,6 +45,7 @@ const EMPTY_DRAFT: ClassDraft = {
   meetingId: '',
   passcode: '',
   minAge: DEFAULT_MIN_AGE,
+  price: 0,
   repeatWeeks: 1,
 };
 
@@ -142,13 +146,6 @@ const TEMPLATES: Partial<Record<SubjectId, Template[]>> = {
   ],
 };
 
-const QUIPS = [
-  'nice try.',
-  "we don't do that here.",
-  'the slider is decorative.',
-  "$0. it's kind of our whole thing.",
-];
-
 export function GuideTutor() {
   const { db, profile, requireProfile, createSession, toast } = useStore();
   const navigate = useNavigate();
@@ -156,8 +153,6 @@ export function GuideTutor() {
   const [draft, setDraft] = useState<ClassDraft>(initialDraft);
   const [step, setStep] = useState(initialStep);
   const [maxVisited, setMaxVisited] = useState(initialStep);
-  const [priceVal, setPriceVal] = useState(0);
-  const [quip, setQuip] = useState('');
 
   const tutor = profile ? tutorByEmail(db, profile.email) : undefined;
   const myCerts = profile ? certsFor(db, profile.email) : [];
@@ -223,17 +218,10 @@ export function GuideTutor() {
       waitlist: [],
       link: draft.link || 'https://meet.jit.si/relay-your-class',
       minAge: draft.minAge,
+      price: draft.price,
       status: 'scheduled',
     };
   }, [draft, startMs, tutor?.id]);
-
-  const wigglePrice = (v: number) => {
-    setPriceVal(v);
-    if (v > 0) {
-      setQuip(QUIPS[Math.floor(Math.random() * QUIPS.length)]);
-      window.setTimeout(() => setPriceVal(0), 380);
-    }
-  };
 
   const publish = () => {
     requireProfile((p) => {
@@ -257,6 +245,7 @@ export function GuideTutor() {
           meetingId: draft.meetingId.trim() || undefined,
           passcode: draft.passcode.trim() || undefined,
           minAge: draft.minAge,
+          price: draft.price,
         });
         if (w === 0) id = made;
       }
@@ -514,25 +503,29 @@ People scroll past topic names. They stop for what they will be able to do after
         <div className="stack" style={{ gap: 16 }}>
           <h3 className="h3">Set your price</h3>
           <div className="price-gag">
-            <span className="price-read">${priceVal}</span>
+            <span className="price-read">{priceLabel(draft.price)}</span>
             <input
               type="range"
               min={0}
-              max={20}
-              value={priceVal}
-              onChange={(e) => wigglePrice(Number(e.target.value))}
-              aria-label="Price — locked at zero dollars, permanently"
+              max={MAX_PRICE}
+              step={1}
+              value={draft.price}
+              onChange={(e) => patch({ price: Number(e.target.value) })}
+              aria-label={`Price per class, from free to $${MAX_PRICE}`}
             />
-            <span className="price-quip">{priceVal === 0 ? quip : '…'}</span>
+            <span className="price-quip">
+              {draft.price === 0 ? 'free · counts as volunteer hours' : 'per student, per class'}
+            </span>
           </div>
           <p style={{ color: 'var(--ink-2)', fontSize: 15 }}>
-Sessions are free, and that is not going to change. Students pay it back by
-            teaching someone else later. You still get something out of it:
+            Free is the default, and most classes here are free. You can charge up to $
+            {MAX_PRICE} a class if you want to. The price shows on the class before anyone signs
+            up.
           </p>
           <div className="eg-row">
-            <div className="eg good"><span className="verdict">01</span><span><b>Volunteer hours</b>, added up automatically and printable as a certificate</span></div>
-            <div className="eg good"><span className="verdict">02</span><span><b>You learn it properly</b>, because explaining something exposes what you half-know</span></div>
-            <div className="eg good"><span className="verdict">03</span><span><b>Thank-you notes</b> from the people you helped</span></div>
+            <div className="eg good"><span className="verdict">01</span><span><b>Free classes count as volunteer hours</b>, added up automatically and printable as a certificate. Paid classes don't, since volunteering means unpaid.</span></div>
+            <div className="eg good"><span className="verdict">02</span><span><b>You collect payment yourself.</b> The site shows the price but doesn't take money, so agree on how students pay you before the first class.</span></div>
+            <div className="eg good"><span className="verdict">03</span><span><b>Keep it fair.</b> A free first class is a good way to find students.</span></div>
           </div>
         </div>
       )}

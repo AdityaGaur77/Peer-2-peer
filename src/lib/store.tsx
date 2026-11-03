@@ -12,6 +12,7 @@ import {
 import { supabase } from './backend';
 import { SEED_VERSION } from './config';
 import type { DecodedInvite } from './invite';
+import { isFree } from './price';
 import { fetchState, remote } from './remote';
 import { ROSTER, ROSTER_IDS } from './roster';
 import { buildSeed } from './seed';
@@ -936,7 +937,8 @@ export interface TutorStats {
 export function tutorStats(db: RelayState, tutorId: string): TutorStats {
   const past = pastSessions(db).filter((s) => s.tutorId === tutorId);
   const upcoming = upcomingSessions(db).filter((s) => s.tutorId === tutorId);
-  const minutes = past.reduce((acc, s) => acc + s.durationMin, 0);
+  // volunteering means unpaid, so paid classes don't add hours
+  const minutes = past.filter(isFree).reduce((acc, s) => acc + s.durationMin, 0);
   const emails = new Set(past.flatMap((s) => s.attendees.map((a) => a.email)));
   const dates = past.map((s) => s.startISO).sort();
   return {
@@ -961,7 +963,7 @@ export interface GlobalStats {
 export function globalStats(db: RelayState): GlobalStats {
   const past = pastSessions(db);
   const emails = new Set(past.flatMap((s) => s.attendees.map((a) => a.email)));
-  const minutes = past.reduce((acc, s) => acc + s.durationMin, 0);
+  const minutes = past.filter(isFree).reduce((acc, s) => acc + s.durationMin, 0);
   return {
     sessionsHosted: past.length,
     learnersHelped: emails.size,

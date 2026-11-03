@@ -8,7 +8,7 @@ export function KudosMarquee() {
     id: k.id,
     message: k.message,
     from: k.from,
-    tutorName: tutorById(db, k.tutorId)?.name ?? 'a Relay tutor',
+    tutorName: tutorById(db, k.tutorId)?.name ?? 'a Peer 2 Peer tutor',
   }));
 
   const half = (prefix: string, hidden: boolean) =>

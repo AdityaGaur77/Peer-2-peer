@@ -52,7 +52,7 @@ try {
   const session = {
     id: 'sess_e2e', title: 'Geometry help', subject: 'math', level: 'all', description: 'x',
     tutorId: 'roster-abhiram', startISO: start, durationMin: 60, capacity: 1,
-    link: 'https://meet.google.com/aaa-bbbb-ccc', meetingId: '123 456', passcode: 'pw1', minAge: 13,
+    link: 'https://meet.google.com/aaa-bbbb-ccc', meetingId: '123 456', passcode: 'pw1', minAge: 13, price: 15,
     attendees: [], waitlist: [], status: 'scheduled',
   };
   check('a student cannot post a class', !!(await err(remote.createSession(s, session))));
@@ -61,6 +61,9 @@ try {
   st = await fetchState(anon, null);
   const pub = st.state.sessions.find((x) => x.id === 'sess_e2e');
   check('visitors see the class', !!pub);
+  check('visitors see its price', pub?.price === 15);
+  check('a price of $20 or more is refused',
+    !!(await err(remote.createSession(teach, { ...session, id: 'sess_pricey', price: 20 }))));
   check('visitors do not see the meeting link', pub?.link === '' && pub?.passcode === undefined);
 
   for (const [c, email, name, age] of [[s, 'sam@x.com', 'Sam', 15], [k, 'kid@x.com', 'Kid', 12], [o, 'olu@x.com', 'Olu', 16]]) {

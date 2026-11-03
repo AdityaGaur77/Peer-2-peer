@@ -40,7 +40,7 @@ export function Certificate() {
           </span>
           <p className="lede" style={{ margin: '0 auto' }}>
             Your certificate fills in automatically once you've taught your first session. Certify
-            in a subject, get approved, and host a session — Relay tracks the rest.
+            in a subject, get approved, and host a session — Peer 2 Peer tracks the rest.
           </p>
           <div className="row" style={{ justifyContent: 'center' }}>
             <Link to="/teach" className="btn btn-primary">
@@ -99,7 +99,7 @@ export function Certificate() {
               </div>
 
               <p style={{ fontSize: 17, lineHeight: 1.7, color: 'var(--ink-2)', maxWidth: '54ch' }}>
-                volunteered as a peer tutor with Relay, a free student-run tutoring community,
+                volunteered as a peer tutor with Peer 2 Peer, a free student-run tutoring community,
                 contributing{' '}
                 <b style={{ color: 'var(--ink)' }}>{plural(stats.hours, 'hour')}</b> of instruction
                 across <b style={{ color: 'var(--ink)' }}>{plural(stats.taught, 'live session')}</b>{' '}
@@ -148,7 +148,7 @@ export function Certificate() {
                     {FOUNDER_NAME}
                   </span>
                   <div className="mono small muted" style={{ marginTop: 2 }}>
-                    Founder, Relay
+                    Founder, Peer 2 Peer
                   </div>
                 </div>
                 <div className="mono small muted" style={{ textAlign: 'right' }}>
@@ -162,7 +162,7 @@ export function Certificate() {
 
         <Reveal delay={0.12}>
           <p className="muted small no-print" style={{ textAlign: 'center', marginTop: 20, maxWidth: '52ch', marginInline: 'auto' }}>
-            This certificate is generated from Relay's live session log. For an official
+            This certificate is generated from Peer 2 Peer's live session log. For an official
             countersigned copy for college or scholarship applications, mention it to a founder.
           </p>
         </Reveal>

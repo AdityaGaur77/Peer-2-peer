@@ -5,7 +5,7 @@ import { cx, firstName } from '../lib/util';
 const FOUNDER_FIRST = firstName(FOUNDER_NAME);
 
 // The signature piece: one baton travelling through the people it changed.
-// Everything Relay is, in one loop.
+// Everything Peer 2 Peer is, in one loop.
 
 interface Beat {
   frac: number;

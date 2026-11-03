@@ -98,7 +98,7 @@ export function Sessions() {
           </Reveal>
           <Reveal delay={0.05}>
             <h2 className="h2">
-              Every seat is <em className="em-ember">free.</em> Take one.
+              Most seats are free. Take one.
             </h2>
           </Reveal>
           <Reveal delay={0.1}>

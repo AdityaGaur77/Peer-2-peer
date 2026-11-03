@@ -106,7 +106,7 @@ export function Join() {
           </Reveal>
           <Reveal delay={0.05}>
             <h2 className="h2">
-              {who} invited you to a <em className="em-ember">free class.</em>
+              {who} invited you to a {invite.session.price ? 'class' : 'free class'}.
             </h2>
           </Reveal>
           <Reveal delay={0.1}>
@@ -122,7 +122,7 @@ export function Join() {
           <SessionCard
             session={preview}
             preview
-            previewNote={`${preview.capacity} spots · free · add it to your board to save one`}
+            previewNote={`${preview.capacity} spots · ${invite.session.price ? `$${invite.session.price} a class` : 'free'} · add it to your board to save one`}
           />
         </Reveal>
 
@@ -136,7 +136,7 @@ export function Join() {
             ) : (
               <div className="guide-tip">
                 Adding it puts the class on <b>your</b> copy of the board, where you can save a
-                spot and grab the room link. Relay keeps everything in your own browser — nothing
+                spot and grab the room link. Peer 2 Peer keeps everything in your own browser — nothing
                 about you gets sent anywhere.
               </div>
             )}
@@ -150,7 +150,7 @@ export function Join() {
                 See what else is on
               </Link>
               <Link to="/guide/student" className="btn-quiet">
-                new to Relay? 2-minute tour →
+                new to Peer 2 Peer? 2-minute tour →
               </Link>
             </div>
           </div>
