@@ -19,7 +19,7 @@ interface TutorRow {
 }
 interface SessionRow {
   id: string; title: string; subject: string; level: Session['level']; description: string;
-  tutor_id: string; start_at: string; duration_min: number; capacity: number; min_age: number;
+  tutor_id: string; start_at: string; duration_min: number; capacity: number; min_age: number; price: number;
   status: Session['status'];
 }
 interface RoomRow {
@@ -122,6 +122,7 @@ export async function fetchState(sb: SupabaseClient, myEmail: string | null): Pr
       durationMin: s.duration_min,
       capacity: s.capacity,
       minAge: s.min_age,
+      price: s.price ?? 0,
       status: s.status,
       attendees,
       waitlist,
@@ -249,6 +250,7 @@ export const remote = {
         duration_min: s.durationMin,
         capacity: s.capacity,
         min_age: s.minAge ?? 13,
+        price: s.price ?? 0,
       }),
     );
     await ok(

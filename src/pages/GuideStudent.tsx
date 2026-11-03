@@ -189,7 +189,7 @@ export function GuideStudent() {
         eyebrow="how it works · about 2 minutes"
         title={
           <>
-            How Relay works, <em className="em-ember">by trying it.</em>
+            How Peer 2 Peer works, <em className="em-ember">by trying it.</em>
           </>
         }
 intro="Five short steps: pick a subject, practise booking a seat on a fake card, see what a session is like, vote on what gets taught next, and find out why none of it costs anything."
@@ -318,9 +318,10 @@ intro="Five short steps: pick a subject, practise booking a seat on a fake card,
 
         {step === 4 && (
           <div className="stack" style={{ gap: 16 }}>
-            <h3 className="h3">This is how it stays free</h3>
+            <h3 className="h3">How most classes stay free</h3>
             <p style={{ color: 'var(--ink-2)', fontSize: 15 }}>
-              Nobody pays money — ever. The economy runs on two things you can give instead:
+              Most teachers volunteer their time. A few charge a little (never more than $19, and
+              always shown on the class). Either way, two things keep it going:
             </p>
             <div className="eg-row" style={{ gap: 12 }}>
               <div className="eg good">

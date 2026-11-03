@@ -16,9 +16,9 @@ export function googleCalUrl(session: Session, tutor: Tutor | undefined): string
   const stamp = (ms: number) => icsStamp(ms);
   const params = new URLSearchParams({
     action: 'TEMPLATE',
-    text: `Relay · ${session.title}`,
+    text: `Peer 2 Peer · ${session.title}`,
     dates: `${stamp(start)}/${stamp(end)}`,
-    details: `${session.description}\n\nTutor: ${tutor?.name ?? 'Relay tutor'}\nJoin: ${session.link}\n\nFree peer tutoring — the only fee is passing it on.`,
+    details: `${session.description}\n\nTutor: ${tutor?.name ?? 'Peer 2 Peer tutor'}\nJoin: ${session.link}\n\nPeer 2 Peer: tutoring by students.`,
     location: session.link,
   });
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
@@ -30,15 +30,15 @@ export function downloadSessionICS(session: Session, tutor: Tutor | undefined): 
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Relay//Free Peer Tutoring//EN',
+    'PRODID:-//Peer 2 Peer//Free Peer Tutoring//EN',
     'BEGIN:VEVENT',
     `UID:${session.id}@relay`,
     `DTSTAMP:${icsStamp(Date.now())}`,
     `DTSTART:${icsStamp(start)}`,
     `DTEND:${icsStamp(end)}`,
-    `SUMMARY:${icsEscape(`Relay · ${session.title}`)}`,
+    `SUMMARY:${icsEscape(`Peer 2 Peer · ${session.title}`)}`,
     `DESCRIPTION:${icsEscape(
-      `${session.description}\n\nTutor: ${tutor?.name ?? 'Relay tutor'}\nJoin: ${session.link}\n\nFree peer tutoring — the only fee is passing it on.`,
+      `${session.description}\n\nTutor: ${tutor?.name ?? 'Peer 2 Peer tutor'}\nJoin: ${session.link}\n\nPeer 2 Peer: tutoring by students.`,
     )}`,
     `LOCATION:${icsEscape(session.link)}`,
     'END:VEVENT',

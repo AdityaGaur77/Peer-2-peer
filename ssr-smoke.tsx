@@ -7,10 +7,10 @@ import { StoreProvider } from './src/lib/store';
 
 const ROUTES: Array<[string, string[]]> = [
   ['/', ['Learn from a student', 'New here?', 'What you can learn', 'Foundational English Skills', 'For parents']],
-  ['/sessions', ['Every seat is', 'Request a topic']],
+  ['/sessions', ['Most seats are free', 'Request a topic']],
   ['/tutors', ['volunteer their time', 'Thank them', 'Ayden J.', 'Foundational English Skills', 'Tuesdays and Wednesdays']],
   ['/teach', ['open the class builder', 'Take the quiz', 'What would you call your class?']],
-  ['/about', ['I deleted the prices', 'Questions people ask']],
+  ['/about', ['Free by default', 'Questions people ask']],
   ['/dashboard', ['Your dashboard']],
   ['/certificate', ['Volunteer certificate']],
   ['/admin', ['Restricted to founders']],

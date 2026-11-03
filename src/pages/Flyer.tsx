@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Wordmark } from '../components/Logo';
+import { priceLabel } from '../lib/price';
 import { inviteUrl } from '../lib/invite';
 import { levelLabel, tutorById, useStore } from '../lib/store';
 import { subjectMeta } from '../lib/types';
@@ -80,7 +81,16 @@ export function Flyer() {
           </div>
 
           <div className="flyer-free">
-            FREE<span>·</span>ALWAYS
+            {session.price ? (
+              <>
+                {priceLabel(session.price)}
+                <span>·</span>PER CLASS
+              </>
+            ) : (
+              <>
+                FREE<span>·</span>CLASS
+              </>
+            )}
           </div>
 
           <h1 className="flyer-title">{session.title}</h1>
@@ -99,7 +109,7 @@ export function Flyer() {
             </div>
             <div>
               <span className="flyer-k">who</span>
-              <span className="flyer-v">{tutor?.name ?? 'A Relay tutor'}</span>
+              <span className="flyer-v">{tutor?.name ?? 'A Peer 2 Peer tutor'}</span>
               <span className="flyer-v2">
                 {tutor?.grade ?? 'Student'} · {levelLabel(session.level)} ·{' '}
                 {session.capacity} spots

@@ -31,7 +31,7 @@ export function Home() {
         <div className="container">
           <div className="hero-inner">
             <Reveal>
-              <span className="eyebrow">Free tutoring, taught by high school students</span>
+              <span className="eyebrow">Tutoring taught by high school students</span>
             </Reveal>
             <Reveal delay={0.07}>
               <h1 className="display">
@@ -40,15 +40,15 @@ export function Home() {
             </Reveal>
             <Reveal delay={0.14}>
               <p className="lede">
-                Relay is free tutoring run by students. Book a live session, get help from
-                someone a year or two ahead of you, and teach it forward once it clicks. Nothing
-                to pay, nothing to upgrade to.
+                Peer 2 Peer is tutoring run by students. Book a live class, get help from someone
+                a year or two ahead of you, and teach it forward once it clicks. Most classes are
+                free, and none cost more than $19.
               </p>
             </Reveal>
             <Reveal delay={0.21}>
               <div className="row">
                 <Link to="/sessions" className="btn btn-primary">
-                  Find a free session
+                  Find a class
                 </Link>
                 <Link to="/teach" className="btn btn-ghost">
                   Become a tutor
@@ -57,8 +57,8 @@ export function Home() {
             </Reveal>
             <Reveal delay={0.28}>
               <p className="hero-foot">
-                I used to charge $15 a class for this.{' '}
-                <Link to="/about">here's why I stopped</Link>
+                Free is the default here.{' '}
+                <Link to="/about">here's why</Link>
               </p>
             </Reveal>
             {!toured && (
@@ -104,7 +104,7 @@ export function Home() {
                   </div>
                   <div className="stat">
                     <span className="stat-num">$0</span>
-                    <span className="stat-label">to join any class</span>
+                    <span className="stat-label">to join most classes</span>
                   </div>
                 </>
               ) : (
@@ -123,7 +123,7 @@ export function Home() {
                   </div>
                   <div className="stat">
                     <span className="stat-num">$0</span>
-                    <span className="stat-label">to join any class</span>
+                    <span className="stat-label">to join most classes</span>
                   </div>
                 </>
               )}
@@ -321,17 +321,17 @@ export function Home() {
         <div className="container" style={{ display: 'grid', gap: 40, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', alignItems: 'center' }}>
           <div className="stack" style={{ gap: 18 }}>
             <Reveal>
-              <span className="eyebrow">Why it's free</span>
+              <span className="eyebrow">Our story</span>
             </Reveal>
             <Reveal delay={0.06}>
-              <h2 className="h2">Why it's free</h2>
+              <h2 className="h2">Why most classes are free</h2>
             </Reveal>
             <Reveal delay={0.12}>
               <p className="lede" style={{ fontSize: '1.05rem' }}>
                 This started as Peer2Peer, where I charged $8 to $20 a class. It worked well
                 enough, but the students who needed help most were the ones least likely to pay
-                for it. Dropping the price fixed that, and it turns out plenty of people will
-                teach for free if you make it easy and count their hours.
+                for it. So classes are free by default now. Teachers can charge a little, never
+                more than $19, and only free classes count toward their volunteer hours.
               </p>
             </Reveal>
             <Reveal delay={0.18}>
@@ -361,7 +361,7 @@ export function Home() {
                   </div>
                 ))}
                 <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--ember-deep)' }}>
-                  Now free for everyone.
+                  Now free by default.
                 </span>
               </div>
             </div>
@@ -392,7 +392,7 @@ export function Home() {
               ],
               [
                 'What does it cost?',
-                'Nothing. We never ask for card details, and there is no paid tier to upgrade to.',
+                'Most classes are free. A teacher can charge up to $19 a class, and the price is on the class before you sign up. You pay the teacher directly; this site never asks for card details.',
               ],
               [
                 'Who do I contact?',

@@ -196,7 +196,7 @@ export function Dashboard() {
             {myRsvps.length === 0 ? (
               <div className="card card-pad" style={{ textAlign: 'center' }}>
                 <p className="muted" style={{ fontSize: 15 }}>
-                  You haven't saved a spot yet. The board is full of free sessions —{' '}
+                  You haven't saved a spot yet. There are classes on the board —{' '}
                   <Link to="/sessions" style={{ color: 'var(--ember-deep)', borderBottom: '1.5px dotted' }}>
                     go grab one
                   </Link>

@@ -1,4 +1,4 @@
--- Relay database. Paste this whole file into Supabase → SQL Editor → Run.
+-- Peer 2 Peer database. Paste this whole file into Supabase → SQL Editor → Run.
 -- It is safe to run again: everything is "create if not exists" or replaced.
 --
 -- Who can do what is enforced here, by row-level security, not by the
@@ -58,9 +58,14 @@ create table if not exists public.sessions (
   duration_min  int not null check (duration_min between 10 and 300),
   capacity      int not null check (capacity between 1 and 500),
   min_age       int not null default 13 check (min_age between 5 and 25),
+  -- dollars per student; 0 = free. The site shows it, it doesn't take payment.
+  price         int not null default 0 check (price between 0 and 19),
   status        text not null default 'scheduled' check (status in ('scheduled', 'canceled')),
   created_at    timestamptz not null default now()
 );
+
+alter table public.sessions add column if not exists price int not null default 0
+  check (price between 0 and 19);
 
 -- Meeting details live apart from sessions so only people in the class
 -- (plus the teacher and admins) can read them.

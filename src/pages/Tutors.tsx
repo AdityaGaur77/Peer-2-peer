@@ -32,7 +32,7 @@ export function Tutors() {
           </Reveal>
           <Reveal delay={0.1}>
             <p className="lede">
-              Everyone here teaches for free.{' '}
+              Most of our teachers teach for free.{' '}
               {stats.sessionsHosted > 0 ? (
                 <>
                   So far that is <b>{stats.volunteerHours} hours</b> across{' '}

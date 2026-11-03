@@ -6,15 +6,15 @@ export function Footer() {
     <footer className="footer">
       <div className="container footer-inner">
         <div className="footer-mark">
-          Relay<span className="dot">.</span>
+          Peer 2 Peer<span className="dot">.</span>
         </div>
 
         <div className="footer-cols">
           <div className="footer-col" style={{ maxWidth: 300 }}>
-            <h4>Relay</h4>
+            <h4>Peer 2 Peer</h4>
             <p style={{ fontSize: 14.5, lineHeight: 1.6 }}>
-              Free live classes taught by high school students, for students who want a little
-              more help than school gives them.
+              Live classes taught by high school students, for students who want a little more
+              help than school gives them. Most are free.
             </p>
           </div>
           <div className="footer-col">
@@ -22,7 +22,7 @@ export function Footer() {
             <Link to="/sessions">Upcoming sessions</Link>
             <Link to="/tutors">Meet the tutors</Link>
             <Link to="/guide/student">New here? Start guide</Link>
-            <Link to="/about">Why it's free</Link>
+            <Link to="/about">Our story</Link>
           </div>
           <div className="footer-col">
             <h4>For tutors</h4>
@@ -40,8 +40,8 @@ export function Footer() {
         </div>
 
         <div className="footer-base">
-          <span>© 2026 Relay. Run by students.</span>
-          <span>No ads. No fees.</span>
+          <span>© 2026 Peer 2 Peer. Run by students.</span>
+          <span>No ads. Most classes free.</span>
         </div>
       </div>
     </footer>

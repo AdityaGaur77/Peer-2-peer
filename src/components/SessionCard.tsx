@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { downloadSessionICS, googleCalUrl } from '../lib/ics';
 import { inviteUrl } from '../lib/invite';
+import { priceLabel } from '../lib/price';
 import { MeetingPanel } from './MeetingPanel';
 import { levelLabel, tutorById, useStore } from '../lib/store';
 import type { Session } from '../lib/types';
@@ -40,7 +41,7 @@ export function SessionCard({
   const canEditLink = isMine || isAdmin;
 
   // An invite link carries the whole class inside the URL, so it works even
-  // for someone who has never opened Relay before (see lib/invite.ts).
+  // for someone who has never opened Peer 2 Peer before (see lib/invite.ts).
   // On the live database every class is already on everyone's board, so a
   // plain link will do, and it never carries the meeting link.
   const share = async () => {
@@ -86,6 +87,9 @@ export function SessionCard({
             </span>
             <span className="chip chip-ghost">{levelLabel(session.level)}</span>
             {session.minAge ? <span className="chip chip-ghost">ages {session.minAge}+</span> : null}
+            <span className={cx('chip', session.price ? 'chip-price' : 'chip-ghost')}>
+              {session.price ? `${priceLabel(session.price)} / class` : 'Free'}
+            </span>
             {live && <span className="chip chip-live">live now</span>}
           </div>
           {going && !past && <span className="mono small going-tag">✓ going</span>}
@@ -185,7 +189,7 @@ export function SessionCard({
                     className="btn btn-primary btn-sm"
                     onClick={() => requireProfile((p) => toggleRsvp(session.id, p))}
                   >
-                    Save my spot — free
+                    {session.price ? `Save my spot · ${priceLabel(session.price)}` : 'Save my spot — free'}
                   </button>
                   {!canEditLink && <span className="hint">you get the meeting link once you save a spot</span>}
                 </>

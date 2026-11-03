@@ -172,7 +172,7 @@ export function SignInModal() {
                 aria-pressed={role === 'student'}
               >
                 <span className="role-title">I want to learn</span>
-                <span className="role-sub">Book free classes</span>
+                <span className="role-sub">Book classes</span>
               </button>
               <button
                 type="button"

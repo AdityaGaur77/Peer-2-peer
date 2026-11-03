@@ -159,6 +159,8 @@ export interface Session {
   linkUpdatedISO?: string;
   /** Set by the teacher. Students younger than this can't save a spot. */
   minAge?: number;
+  /** Dollars per student, 0 or missing = free. Capped at MAX_PRICE (lib/price.ts). */
+  price?: number;
   status: 'scheduled' | 'canceled';
 }
 

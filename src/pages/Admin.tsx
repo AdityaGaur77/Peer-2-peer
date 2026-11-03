@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { MeetingFields } from '../components/MeetingPanel';
 import { Reveal } from '../components/Reveal';
 import { DEFAULT_MIN_AGE, meetingLinkError } from '../lib/meeting';
+import { MAX_PRICE, priceLabel } from '../lib/price';
 import {
   AttentionPanel, ClassesPanel, StatsPanel, StudentsPanel, TeacherTable,
 } from './AdminPanels';
@@ -810,7 +811,7 @@ function DataPanel({
           ? (parsed as { state: RelayState }).state
           : null;
       if (!state) {
-        toast("That file doesn't look like a Relay backup.");
+        toast("That file doesn't look like a Peer 2 Peer backup.");
         return;
       }
       importData(state);
@@ -822,7 +823,7 @@ function DataPanel({
   return (
     <div className="stack" style={{ gap: 16 }}>
       <p className="muted small">
-        Relay's pilot keeps everything in <b>this browser's storage</b> — {db.tutors.length} tutors,{' '}
+        Peer 2 Peer's pilot keeps everything in <b>this browser's storage</b> — {db.tutors.length} tutors,{' '}
         {db.sessions.length} sessions, {db.kudos.length} kudos, {db.applications.length} applications.
         Export before switching devices or clearing the browser; import to restore.
       </p>
@@ -918,6 +919,7 @@ function ScheduleForm({
   const [meetingId, setMeetingId] = useState('');
   const [passcode, setPasscode] = useState('');
   const [minAge, setMinAge] = useState(DEFAULT_MIN_AGE);
+  const [price, setPrice] = useState(0);
   const [description, setDescription] = useState('');
   const [repeatWeeks, setRepeatWeeks] = useState(1);
   const linkErr = link.trim() ? meetingLinkError(link) : null;
@@ -942,6 +944,7 @@ function ScheduleForm({
         meetingId: meetingId.trim() || undefined,
         passcode: passcode.trim() || undefined,
         minAge,
+        price,
       });
     }
     setTitle('');
@@ -1047,6 +1050,21 @@ function ScheduleForm({
             onChange={(e) => setMinAge(Number(e.target.value) || DEFAULT_MIN_AGE)}
           />
           <span className="hint">students younger than this can't save a spot</span>
+        </label>
+
+        <label className="field">
+          <span className="label">Price per student: {priceLabel(price)}</span>
+          <input
+            type="range"
+            min={0}
+            max={MAX_PRICE}
+            step={1}
+            value={price}
+            onChange={(e) => setPrice(Number(e.target.value))}
+          />
+          <span className="hint">
+            free by default, up to ${MAX_PRICE}. Paid classes don't count as volunteer hours.
+          </span>
         </label>
 
         <label className="field">

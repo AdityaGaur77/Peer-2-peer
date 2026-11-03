@@ -4,8 +4,8 @@ import { globalStats, useStore } from '../lib/store';
 
 const FAQ = [
   {
-    q: "It's actually free? What's the catch?",
-    a: "No catch. There's no card, no trial, and no paid tier waiting behind the free one. Tutors are students volunteering an hour of their time, and they get volunteer hours out of it. The only thing we ask is that you consider teaching something yourself once you're further along.",
+    q: 'Is it free?',
+    a: "Most classes are. Teachers can choose to charge up to $19 a class, and the price is always on the class before you sign up. There's no subscription and the site never takes card details; if a class has a price, you pay the teacher directly. Free classes are taught by students volunteering their time, and they get volunteer hours for it.",
   },
   {
     q: 'How do you know the tutors are any good?',
@@ -38,8 +38,8 @@ const TIMELINE = [
   },
   {
     when: 'now',
-    title: 'Relay, free',
-    body: 'Same idea, no money. Tutors volunteer an hour, students book a seat, nobody pays anything. It turns out plenty of people will teach for free if you make it easy and give them credit for the hours.',
+    title: 'Peer 2 Peer, free by default',
+    body: 'Same idea, with the prices taken down. Most teachers volunteer an hour and count it as service hours. A teacher who wants to can charge a little, capped at $19 a class, so cost never becomes the reason someone can\'t get help.',
   },
   {
     when: 'next',
@@ -62,14 +62,14 @@ export function About() {
           </Reveal>
           <Reveal delay={0.05}>
             <h2 className="display" style={{ fontSize: 'clamp(2.2rem, 5vw, 3.4rem)' }}>
-              I deleted the prices <em className="em-ember">on purpose.</em>
+              Free by default, <em className="em-ember">on purpose.</em>
             </h2>
           </Reveal>
           <Reveal delay={0.1}>
             <p className="lede">
-              Relay is free tutoring run by students. Someone helps you understand something
-              hard, and later you do the same for somebody else. No money changes hands. Here is
-              how it ended up that way.
+              Peer 2 Peer is tutoring run by students. Someone helps you understand something
+              hard, and later you do the same for somebody else. Most classes cost nothing. Here
+              is how it ended up that way.
             </p>
           </Reveal>
         </div>
@@ -131,7 +131,7 @@ export function About() {
                   >
                     schoolhouse.world
                   </a>
-                  , the free peer-tutoring nonprofit that proved this works at scale. Relay is our
+                  , the free peer-tutoring nonprofit that proved this works at scale. Peer 2 Peer is our
                   small, Python-and-AI-shaped take on the same idea, built for our own community.
                 </p>
               </div>

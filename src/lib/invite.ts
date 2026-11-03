@@ -1,9 +1,10 @@
+import { clampPrice } from './price';
 import { SUBJECT_IDS, type Application, type Level, type Session, type SubjectId, type Tutor } from './types';
 
 /**
  * Invite links carry a whole session inside the URL.
  *
- * Relay has no backend — every visitor gets their own copy of the board in
+ * Peer 2 Peer has no backend — every visitor gets their own copy of the board in
  * localStorage — so a session you publish is invisible to everyone else.
  * Encoding the session into the link closes that gap: you send a link, they
  * open it, the class lands on their board. No server, no accounts.
@@ -26,6 +27,7 @@ interface Payload {
   g: string; // tutor grade
   h: number; // tutor hue
   e: string; // tutor email
+  p?: number; // price in dollars, missing on older links = free
 }
 
 // ── base64url over bytes ─────────────────────────────────────
@@ -87,10 +89,11 @@ export async function encodeInvite(session: Session, tutor: Tutor | undefined): 
     m: session.durationMin,
     c: session.capacity,
     k: session.link,
-    n: tutor?.name ?? 'A Relay tutor',
+    n: tutor?.name ?? 'A Peer 2 Peer tutor',
     g: tutor?.grade ?? 'Student',
     h: tutor?.hue ?? 200,
     e: tutor?.email ?? '',
+    p: session.price ?? 0,
   };
   return squeeze(JSON.stringify(p));
 }
@@ -102,7 +105,7 @@ export interface DecodedInvite {
 
 export async function decodeInvite(payload: string): Promise<DecodedInvite> {
   const p = JSON.parse(await unsqueeze(payload)) as Payload;
-  if (p?.v !== 1 || !p.t || !p.w) throw new Error('not a Relay invite');
+  if (p?.v !== 1 || !p.t || !p.w) throw new Error('not a Peer 2 Peer invite');
   return {
     session: {
       title: String(p.t),
@@ -114,9 +117,10 @@ export async function decodeInvite(payload: string): Promise<DecodedInvite> {
       capacity: Number(p.c) || 10,
       tutorId: '', // filled in when the invite is accepted
       link: String(p.k ?? ''),
+      price: clampPrice(p.p),
     },
     tutor: {
-      name: String(p.n ?? 'A Relay tutor'),
+      name: String(p.n ?? 'A Peer 2 Peer tutor'),
       email: String(p.e ?? ''),
       grade: String(p.g ?? 'Student'),
       tagline: 'Joined your board through a session invite.',
@@ -158,7 +162,7 @@ export async function decodeApplication(
 ): Promise<{ draft: ApplicationDraft; submittedISO: string }> {
   const p = JSON.parse(await unsqueeze(payload)) as AppPayload;
   const a = p?.a;
-  if (p?.v !== 1 || !a?.name || !a.email) throw new Error('not a Relay application');
+  if (p?.v !== 1 || !a?.name || !a.email) throw new Error('not a Peer 2 Peer application');
   const str = (x: unknown) => (typeof x === 'string' ? x.slice(0, 2000) : '');
   return {
     submittedISO: new Date(Number(p.w) || Date.now()).toISOString(),
