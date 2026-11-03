@@ -81,8 +81,8 @@ interface StoreValue {
   /** Signed in with an email listed in the admins table. Always false offline. */
   isAdmin: boolean;
   refresh: () => void;
-  /** Live mode: email a sign-in code. The details are saved once it's confirmed. */
-  sendSignInCode: (p: Profile) => Promise<void>;
+  /** Live mode: email a sign-in code. Name and age are asked after, first time only. */
+  sendSignInCode: (email: string) => Promise<void>;
   verifySignInCode: (email: string, code: string) => Promise<void>;
   saveProfile: (p: Profile) => void;
   updateMeeting: (
@@ -138,8 +138,6 @@ function loadDb(): RelayState {
   }
   return normalizeState(buildSeed());
 }
-
-const PENDING_KEY = 'relay.pendingProfile';
 
 function loadProfile(): Profile | null {
   if (supabase) return null; // comes from the signed-in session instead
@@ -208,36 +206,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!supabase) return;
     const sb = supabase;
-    const adopt = async (email: string | null, meta?: Record<string, unknown>) => {
+    const adopt = async (email: string | null) => {
       myEmail.current = email;
       const snap = await reload();
       if (!email) {
         setProfile(null);
         return;
       }
-      let me = snap?.me;
+      const me = snap?.me;
       if (!me) {
-        // first sign-in: save what they typed before the code was sent
-        let pending: Partial<Profile> = {};
-        try {
-          pending = JSON.parse(localStorage.getItem(PENDING_KEY) ?? '{}') as Partial<Profile>;
-        } catch {
-          /* nothing saved */
-        }
-        const fresh: Profile = {
-          email,
-          name: String(pending.name ?? meta?.name ?? email.split('@')[0]),
-          age: Number(pending.age ?? meta?.age) || undefined,
-          role: (pending.role ?? meta?.role ?? 'student') as Role,
-        };
-        try {
-          await remote.saveProfile(sb, fresh);
-        } catch (e) {
-          toast((e as Error).message);
-        }
-        localStorage.removeItem(PENDING_KEY);
-        setProfile(fresh);
-        void reload();
+        // First sign-in. Nothing is saved until they give a name and age:
+        // a profile without an age makes the sign-in box ask for them.
+        setProfile({ email, name: email.split('@')[0], role: 'student' });
         return;
       }
       setProfile({ email, name: me.name, age: me.age ?? undefined, role: me.role });
@@ -245,14 +225,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     sb.auth.getSession().then(({ data }) => {
       const u = data.session?.user;
-      void adopt(u?.email?.toLowerCase() ?? null, u?.user_metadata);
+      void adopt(u?.email?.toLowerCase() ?? null);
     });
     const { data: sub } = sb.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
         const u = session?.user;
         const email = u?.email?.toLowerCase() ?? null;
         if (email === myEmail.current && event !== 'SIGNED_OUT') return;
-        void adopt(email, u?.user_metadata);
+        void adopt(email);
       }
     });
 
@@ -282,15 +262,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
   }, [reload, toast]);
 
-  const sendSignInCode = useCallback(async (p: Profile) => {
+  const sendSignInCode = useCallback(async (email: string) => {
     if (!supabase) return;
-    localStorage.setItem(PENDING_KEY, JSON.stringify(p));
     const { error } = await supabase.auth.signInWithOtp({
-      email: p.email,
-      options: {
-        emailRedirectTo: `${window.location.origin}${window.location.pathname}`,
-        data: { name: p.name, age: p.age, role: p.role },
-      },
+      email,
+      options: { emailRedirectTo: `${window.location.origin}${window.location.pathname}` },
     });
     if (error) throw new Error(error.message);
   }, []);
