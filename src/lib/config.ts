@@ -11,17 +11,15 @@ export const CONTACT_EMAIL = 'adityagaur12077@gmail.com';
 // Project → Settings → Environment Variables, then redeploy). Doing it that
 // way keeps the passcode out of this repo entirely.
 //
-// If no variable is set, the fallback below is used so the site still works
-// locally — but it is visible to anyone reading the source, so never reuse a
-// password from anywhere else.
-//
 // Either way this is a latch, not a lock: every visitor gets their own copy
 // of the board in their browser, so unlocking the console somewhere else
 // only ever shows that person their own data, never yours.
-const FALLBACK_ADMIN_CODE = 'G@ur';
 const ENV_ADMIN_CODE = (import.meta.env.VITE_ADMIN_CODE ?? '').trim();
 
-export const ADMIN_CODE: string = ENV_ADMIN_CODE || FALLBACK_ADMIN_CODE;
+// `npm run dev` on your own computer works without the variable, using the
+// passcode "dev". A deployed site without VITE_ADMIN_CODE keeps the
+// console locked, so forgetting to set it can never leave it open.
+export const ADMIN_CODE: string = ENV_ADMIN_CODE || (import.meta.env.DEV ? 'dev' : '');
 export const ADMIN_CODE_FROM_ENV = ENV_ADMIN_CODE.length > 0;
 
 // Bump this to push a fresh start to everyone, wiping their saved board.

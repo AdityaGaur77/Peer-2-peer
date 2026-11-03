@@ -34,15 +34,14 @@ so `dist/` deploys to any static host with zero config:
 
 ### Setting the founder passcode on Vercel
 
-The console at `/#/admin` reads its passcode from `VITE_ADMIN_CODE`:
+The console at `/#/admin` reads its passcode from `VITE_ADMIN_CODE`. A deployed
+site without it keeps the console locked (`npm run dev` uses `dev`):
 
 1. Vercel → your project → **Settings → Environment Variables**
 2. Add `VITE_ADMIN_CODE` with the passcode you want, for all environments
 3. **Redeploy** — Vite bakes env vars in at build time, so a redeploy is required
 
-Without that variable the app falls back to the value in
-[`src/lib/config.ts`](src/lib/config.ts), which is visible to anyone reading the
-repo. See [LAUNCH.md](LAUNCH.md) for the rest.
+See [LAUNCH.md](LAUNCH.md) for the rest.
 
 ## What's inside
 
@@ -74,9 +73,19 @@ repo. See [LAUNCH.md](LAUNCH.md) for the rest.
   stats.
 - **Certificate** — a printable certificate of service generated from the tutor's
   logged sessions.
+- **Meeting links** — teachers paste a Google Meet, Zoom, Teams, Jitsi or
+  Discord link, plus a meeting ID and passcode if it has them. Only students
+  with a seat see them. If a free call hits its time limit, the teacher pastes
+  a new link from the class card and everyone in the class sees "New link".
+  Students find it on the class card, at the top of their dashboard, and in a
+  "your class is starting" pill that appears 15 minutes before.
+- **Minimum age** — set per class by the teacher; students give their age when
+  they sign in and younger ones can't save a spot.
 - **Founder console** (`/#/admin`) — a live launch checklist, application review
   (with "copy roster entry" for approved tutors), an onboarding tracker showing
-  what each roster teacher still needs, tutor management, session publishing, and data export/import. The passcode
+  what each roster teacher still needs, site statistics, a "needs attention"
+  list, every class with who signed up, a student list (block/unblock, take
+  someone off a class), teacher management including their private login email, session publishing, and data export/import. The passcode
   comes from `VITE_ADMIN_CODE` (see above).
 - **Roles** — people pick student or tutor when they sign in. Students never see
   the Teach tab; either side can switch from their dashboard.
@@ -89,11 +98,20 @@ repo. See [LAUNCH.md](LAUNCH.md) for the rest.
 ## Tech
 
 Vite + React + TypeScript, React Router (hash routing so it deploys to any static
-host), self-hosted fonts via `@fontsource`. **No backend** — all state lives in
-`localStorage` (see [`src/lib/store.tsx`](src/lib/store.tsx)) and reseeds from
-[`src/lib/seed.ts`](src/lib/seed.ts). That's deliberate for a pilot: it runs
-anywhere with zero setup. Moving to real accounts/data means swapping the store's
-implementation for API calls — the component layer doesn't change.
+host), self-hosted fonts via `@fontsource`.
+
+**Data:** with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` set, everything
+lives in Supabase: sign-in by emailed code, shared classes and signups, live
+link updates. Setup is in [SUPABASE.md](SUPABASE.md); the tables and the
+permission rules are in [`supabase/schema.sql`](supabase/schema.sql). Without
+those variables the site falls back to saving everything in each visitor's
+browser, which is handy for local development. Either way pages only talk to
+[`src/lib/store.tsx`](src/lib/store.tsx); the database calls are in
+[`src/lib/remote.ts`](src/lib/remote.ts).
+
+`npm run seed-sql` regenerates `supabase/seed.sql` from the roster.
+`live-e2e.mjs` runs the database code against a local Postgres + PostgREST
+loaded with the schema (37 checks covering every role's permissions).
 
 ### Making it your own
 

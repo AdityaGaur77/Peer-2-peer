@@ -31,10 +31,30 @@ Two things get around that:
 | 6 | Software | Pastes the entry into `ROSTER` in `src/lib/roster.ts`, checks it reads well, commits and redeploys. The teacher is now public. |
 | 7 | Team | **Crew → Onboarding** shows what each teacher still needs. Once nothing is missing, post their first class from **Publish** (or the teacher posts it with the class builder at `/#/guide/tutor`). |
 | 8 | Team | Hits **copy invite** on the class card and sends it to the teacher and the students. That link is how a class reaches people. |
+| 9 | Teacher | With Supabase connected: signs in with the login email the team saved for them, and from then on posts classes and changes their own meeting link. |
+
+**With Supabase connected, steps 3, 4 and 6 go away:** the application lands
+in the console as soon as it's submitted, and approving it publishes the
+teacher and saves their login email. The roster file is only used to seed the
+database the first time (see [SUPABASE.md](SUPABASE.md)).
 
 Teachers can also skip steps 1–4 if they send their details another way (the
 Discord replies below are an example). Then go straight to step 6 and write
 the roster entry by hand.
+
+## Meeting links
+
+Teachers paste a Google Meet, Zoom, Teams, Jitsi or Discord link when they
+post a class, plus a meeting ID and passcode if the meeting has them. Only
+students with a seat see these.
+
+If a free call cuts out (Zoom's free plan stops at 40 minutes, Google Meet's
+at 60 for group calls), the teacher starts a new call, opens the class card,
+hits **update link** and pastes the new one. Everyone in the class sees a
+"New link" notice on the card, on their dashboard and in the "class is
+starting" pill, within a few seconds.
+
+Each class also has a **minimum age** the teacher sets (default 13).
 
 ## What we ask every teacher
 

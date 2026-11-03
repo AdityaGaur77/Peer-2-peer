@@ -13,7 +13,7 @@ import { cx, fmtDate } from '../lib/util';
 const AVAIL = ['Weekday afternoons', 'Weekday evenings', 'Weekend mornings', 'Weekend afternoons'];
 
 export function Teach() {
-  const { db, profile, requireProfile, submitApplication, setRole } = useStore();
+  const { db, profile, requireProfile, submitApplication, setRole, live } = useStore();
   const navigate = useNavigate();
   const [quizSubject, setQuizSubject] = useState<SubjectId | null>(null);
 
@@ -60,21 +60,30 @@ export function Teach() {
 
   const apply = (e: FormEvent) => {
     e.preventDefault();
-    if (name.trim().length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || subjects.length === 0)
+    if (name.trim().length < 2 || subjects.length === 0) return;
+    const send = (from: string) => {
+      submitApplication({
+        name: name.trim(),
+        email: from,
+        grade: grade.trim() || 'Student',
+        subjects,
+        why: why.trim(),
+        availability,
+        courseTitle: courseTitle.trim(),
+        courseSummary: courseSummary.trim(),
+        times: times.trim(),
+      });
+      setSent(true);
+      setEditing(false);
+    };
+    // On the live database an application is tied to the signed-in email,
+    // so the team can reach whoever actually sent it.
+    if (live) {
+      requireProfile((p) => send(p.email));
       return;
-    submitApplication({
-      name: name.trim(),
-      email: email.trim().toLowerCase(),
-      grade: grade.trim() || 'Student',
-      subjects,
-      why: why.trim(),
-      availability,
-      courseTitle: courseTitle.trim(),
-      courseSummary: courseSummary.trim(),
-      times: times.trim(),
-    });
-    setSent(true);
-    setEditing(false);
+    }
+    const from = email.trim().toLowerCase();
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(from)) send(from);
   };
 
   // What lives inside the Step-02 card, depending on where this person is.
@@ -109,16 +118,31 @@ See the tutors
               <span className={cx('status-pill', 'status-pending')} style={{ margin: '0 auto' }}>
                 in review
               </span>
-              <span className="serif-i" style={{ fontSize: 26, color: 'var(--ember-deep)' }}>
-One more step: send it to us.
-              </span>
-              <p className="muted" style={{ maxWidth: '54ch', margin: '0 auto' }}>
-                Your application is saved
-                {existing ? ` (${fmtDate(existing.submittedISO)})` : ''}, but only on this device.
-                Send it with one of the buttons below so it reaches the team. We usually reply
-                within a few days.
-              </p>
-              {existing && <SendApplication app={existing} />}
+              {live ? (
+                <>
+                  <span className="serif-i" style={{ fontSize: 26, color: 'var(--ember-deep)' }}>
+                    Application sent.
+                  </span>
+                  <p className="muted" style={{ maxWidth: '54ch', margin: '0 auto' }}>
+                    It's with the team
+                    {existing ? ` (sent ${fmtDate(existing.submittedISO)})` : ''}. We usually reply
+                    within a few days, by email.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <span className="serif-i" style={{ fontSize: 26, color: 'var(--ember-deep)' }}>
+                    One more step: send it to us.
+                  </span>
+                  <p className="muted" style={{ maxWidth: '54ch', margin: '0 auto' }}>
+                    Your application is saved
+                    {existing ? ` (${fmtDate(existing.submittedISO)})` : ''}, but only on this
+                    device. Send it with one of the buttons below so it reaches the team. We
+                    usually reply within a few days.
+                  </p>
+                  {existing && <SendApplication app={existing} />}
+                </>
+              )}
               <div className="row" style={{ justifyContent: 'center' }}>
                 <Link to="/sessions" className="btn btn-primary">
                   Browse sessions
@@ -307,7 +331,14 @@ Teaching something is the fastest way to properly learn it, and the hours count
                   </label>
                   <label className="field">
                     <span className="label">Email</span>
-                    <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@school.org" />
+                    <input
+                      className="input"
+                      type="email"
+                      value={live ? (profile?.email ?? '') : email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      readOnly={live}
+                      placeholder={live ? 'you sign in when you submit' : 'you@school.org'}
+                    />
                   </label>
                 </div>
 

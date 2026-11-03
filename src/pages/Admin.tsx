@@ -1,20 +1,26 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { MeetingFields } from '../components/MeetingPanel';
 import { Reveal } from '../components/Reveal';
+import { DEFAULT_MIN_AGE, meetingLinkError } from '../lib/meeting';
+import {
+  AttentionPanel, ClassesPanel, StatsPanel, StudentsPanel, TeacherTable,
+} from './AdminPanels';
 import {
   ADMIN_CODE, ADMIN_CODE_FROM_ENV, CONTACT_EMAIL, IS_PLACEHOLDER_EMAIL, SEED_VERSION,
 } from '../lib/config';
+import { LIVE } from '../lib/backend';
 import { decodeApplication } from '../lib/invite';
-import { ROSTER, onboardingGaps, rosterSnippet } from '../lib/roster';
+import { onboardingGaps, rosterSnippet } from '../lib/roster';
 import {
-  globalStats, pastSessions, tutorById, tutorStats, upcomingSessions, useStore,
+  tutorById, tutorStats, upcomingSessions, useStore,
 } from '../lib/store';
 import {
   SUBJECTS, subjectMeta, subjectShort, type Level, type RelayState, type SubjectId,
 } from '../lib/types';
-import { cx, downloadText, fmtDate, fmtTime, initials, plural } from '../lib/util';
+import { cx, downloadText, initials, plural } from '../lib/util';
 
-type Tab = 'overview' | 'applications' | 'sessions' | 'schedule' | 'crew' | 'data';
+type Tab = 'overview' | 'applications' | 'sessions' | 'students' | 'schedule' | 'crew' | 'data';
 
 function looksLikeState(x: unknown): x is RelayState {
   if (!x || typeof x !== 'object') return false;
@@ -27,7 +33,7 @@ function looksLikeState(x: unknown): x is RelayState {
 export function Admin() {
   const store = useStore();
   const {
-    db, approveApplication, declineApplication, cancelSession, toast,
+    db, approveApplication, declineApplication, toast,
     updateTutor, removeTutor, addTutor, importData, resetData,
   } = store;
   const [authed, setAuthed] = useState(() => sessionStorage.getItem('relay.admin') === '1');
@@ -59,15 +65,12 @@ export function Admin() {
       .finally(() => setParams({}, { replace: true }));
   }, [authed, appPayload, receiveApplication, toast, setParams]);
 
-  const stats = globalStats(db);
   const pending = db.applications.filter((a) => a.status === 'pending');
-  const upcoming = useMemo(() => upcomingSessions(db), [db]);
-  const past = useMemo(() => pastSessions(db), [db]);
 
   if (!authed) {
     const tryCode = (e: FormEvent) => {
       e.preventDefault();
-      if (code.trim() === ADMIN_CODE) {
+      if (ADMIN_CODE && code.trim() === ADMIN_CODE) {
         sessionStorage.setItem('relay.admin', '1');
         setAuthed(true);
         toast('Welcome back, founder.');
@@ -105,10 +108,10 @@ export function Admin() {
                 Enter console
               </button>
             </form>
-            {!ADMIN_CODE_FROM_ENV && (
+            {!ADMIN_CODE && (
               <p className="hint">
-                using the passcode from src/lib/config.ts — set VITE_ADMIN_CODE in your host's
-                environment variables to keep it out of the repo
+                The console is locked until VITE_ADMIN_CODE is set in Vercel (Settings →
+                Environment Variables), followed by a redeploy.
               </p>
             )}
           </div>
@@ -117,12 +120,49 @@ export function Admin() {
     );
   }
 
+  // On the live database the passcode only opens the door; the data itself
+  // is locked to emails in the admins table, so you also sign in.
+  if (store.live && !store.isAdmin) {
+    return (
+      <div className="section" style={{ paddingTop: 'clamp(120px, 16vw, 160px)' }}>
+        <div className="container" style={{ maxWidth: 460 }}>
+          <div className="card card-pad stack" style={{ gap: 14 }}>
+            <h2 className="h3">Sign in with a team email</h2>
+            {store.profile ? (
+              <p className="muted" style={{ fontSize: 14.5 }}>
+                You're signed in as <b>{store.profile.email}</b>, which isn't on the team list. Add
+                it in Supabase (Table Editor → admins), or sign out and use your team email.
+              </p>
+            ) : (
+              <p className="muted" style={{ fontSize: 14.5 }}>
+                The console shows students' names and emails, so it needs the sign-in code as
+                well as the passcode.
+              </p>
+            )}
+            <div className="row">
+              {store.profile ? (
+                <button className="btn btn-ghost" onClick={store.signOut}>
+                  Sign out
+                </button>
+              ) : (
+                <button className="btn btn-primary" onClick={() => store.openSignIn()}>
+                  Sign in
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const TABS: Array<{ id: Tab; label: string; badge?: number }> = [
     { id: 'overview', label: 'Overview' },
+    { id: 'sessions', label: 'Classes' },
+    { id: 'students', label: 'Students' },
+    { id: 'crew', label: 'Teachers' },
     { id: 'applications', label: 'Applications', badge: pending.length },
-    { id: 'sessions', label: 'Live board' },
     { id: 'schedule', label: 'Publish' },
-    { id: 'crew', label: 'Crew' },
     { id: 'data', label: 'Data' },
   ];
 
@@ -165,26 +205,9 @@ export function Admin() {
             <div className="stack" style={{ gap: 20 }}>
               <LaunchChecklist db={db} onPublish={() => setTab('schedule')} />
 
-              <div className="card" style={{ overflow: 'hidden' }}>
-                <div className="stat-strip" style={{ borderBlock: 'none' }}>
-                  <div className="stat">
-                    <span className="stat-num">{stats.tutorCount}</span>
-                    <span className="stat-label">tutors</span>
-                  </div>
-                  <div className="stat">
-                    <span className="stat-num">{upcoming.length}</span>
-                    <span className="stat-label">upcoming sessions</span>
-                  </div>
-                  <div className="stat">
-                    <span className="stat-num">{stats.learnersHelped}</span>
-                    <span className="stat-label">learners helped</span>
-                  </div>
-                  <div className="stat">
-                    <span className="stat-num">{pending.length}</span>
-                    <span className="stat-label">pending applications</span>
-                  </div>
-                </div>
-              </div>
+              <StatsPanel db={db} />
+              <AttentionPanel db={db} live={store.live} />
+              <TeacherTable db={db} />
 
               <div className="grid-2">
                 <div className="card card-pad">
@@ -316,36 +339,13 @@ export function Admin() {
 
         {tab === 'sessions' && (
           <Reveal>
-            <div className="stack" style={{ gap: 12 }}>
-              <p className="muted small">
-                {plural(upcoming.length, 'upcoming session')} · {past.length} completed
-              </p>
-              {upcoming.map((s) => {
-                const tutor = tutorById(db, s.tutorId);
-                return (
-                  <div key={s.id} className="card card-pad line-item" style={{ border: '1.5px solid var(--border)' }}>
-                    <div className="row" style={{ gap: 12, minWidth: 0 }}>
-                      {tutor && (
-                        <span className="avatar avatar-sm" style={{ '--h': tutor.hue } as CSSProperties}>
-                          {initials(tutor.name)}
-                        </span>
-                      )}
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 15, fontWeight: 600 }}>{s.title}</div>
-                        <div className="mono" style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-                          {fmtDate(s.startISO)} · {fmtTime(s.startISO)} · {tutor?.name ?? 'unassigned'} ·{' '}
-                          {s.attendees.length}/{s.capacity} saved
-                          {s.waitlist.length > 0 && ` · ${s.waitlist.length} waitlisted`}
-                        </div>
-                      </div>
-                    </div>
-                    <button className="btn btn-ghost btn-sm" onClick={() => cancelSession(s.id)}>
-                      Cancel
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+            <ClassesPanel db={db} />
+          </Reveal>
+        )}
+
+        {tab === 'students' && (
+          <Reveal>
+            <StudentsPanel db={db} live={store.live} />
           </Reveal>
         )}
 
@@ -381,11 +381,19 @@ export function Admin() {
 function LaunchChecklist({ db, onPublish }: { db: RelayState; onPublish: () => void }) {
   const items = [
     {
+      ok: LIVE,
+      label: 'Connected to Supabase',
+      detail: LIVE
+        ? 'Classes, signups and applications are shared by everyone through the database.'
+        : 'Not connected, so everything is saved in each visitor\'s own browser. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel and redeploy (see SUPABASE.md).',
+      action: null,
+    },
+    {
       ok: ADMIN_CODE_FROM_ENV,
       label: 'Passcode set outside the repo',
       detail: ADMIN_CODE_FROM_ENV
         ? 'Read from VITE_ADMIN_CODE, so it never appears in the source.'
-        : "Using the fallback in src/lib/config.ts. Set VITE_ADMIN_CODE in your host's environment variables (Vercel: Settings → Environment Variables), then redeploy.",
+        : 'Using the local "dev" passcode. Set VITE_ADMIN_CODE in Vercel (Settings → Environment Variables), then redeploy.',
       action: null,
     },
     {
@@ -466,7 +474,10 @@ function CrewPanel({
   const [editId, setEditId] = useState<string | null>(null);
   const [tagDraft, setTagDraft] = useState('');
   const [gradeDraft, setGradeDraft] = useState('');
+  const [emailDraft, setEmailDraft] = useState('');
+  const [whenDraft, setWhenDraft] = useState('');
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const { setTutorEmail, live } = useStore();
 
   // add-a-friend form
   const [nName, setNName] = useState('');
@@ -567,7 +578,7 @@ function CrewPanel({
         Taglines show on tutor cards — keep them human. Removing a tutor cancels their upcoming
         sessions; the past log (and everyone's hours) stays intact.
       </p>
-      {db.tutors.map((t) => {
+      {db.tutors.filter((t) => t.active !== false).map((t) => {
         const s = tutorStats(db, t.id);
         const editing = editId === t.id;
         const removing = removingId === t.id;
@@ -609,6 +620,23 @@ function CrewPanel({
                       onChange={(e) => setGradeDraft(e.target.value)}
                       placeholder="Grade / year"
                     />
+                    <input
+                      className="input"
+                      value={whenDraft}
+                      onChange={(e) => setWhenDraft(e.target.value)}
+                      placeholder="When they're free, e.g. Tuesdays 6–8pm"
+                    />
+                    <input
+                      className="input"
+                      type="email"
+                      value={emailDraft}
+                      onChange={(e) => setEmailDraft(e.target.value)}
+                      placeholder="Login email (private)"
+                    />
+                    <span className="hint">
+                      the email they sign in with to post classes and change links. Never shown on
+                      the site.
+                    </span>
                     <div className="row">
                       <button
                         className="btn btn-primary btn-sm"
@@ -616,7 +644,11 @@ function CrewPanel({
                           updateTutor(t.id, {
                             tagline: tagDraft.trim() || t.tagline,
                             grade: gradeDraft.trim() || t.grade,
+                            availability: whenDraft.trim() || undefined,
                           });
+                          if (emailDraft.trim().toLowerCase() !== t.email.toLowerCase()) {
+                            setTutorEmail(t.id, emailDraft);
+                          }
                           setEditId(null);
                         }}
                       >
@@ -634,7 +666,7 @@ function CrewPanel({
                 )}
               </div>
             </div>
-            {t.onRoster && (
+            {t.onRoster && !live && (
               <span className="hint" style={{ flex: 'none' }}>edit in roster.ts</span>
             )}
             {!editing && !t.onRoster && (
@@ -645,6 +677,8 @@ function CrewPanel({
                     setEditId(t.id);
                     setTagDraft(t.tagline);
                     setGradeDraft(t.grade);
+                    setEmailDraft(t.email);
+                    setWhenDraft(t.availability ?? '');
                     setRemovingId(null);
                   }}
                 >
@@ -684,9 +718,11 @@ function CrewPanel({
 // ── onboarding tracker ───────────────────────────────────────
 
 function OnboardingTracker({ db }: { db: RelayState }) {
-  const rows = ROSTER.map((t) => {
+  const { live } = useStore();
+  const rows = db.tutors.filter((t) => t.active !== false && !t.isFounder).map((t) => {
     const s = tutorStats(db, t.id);
     const gaps = onboardingGaps(t);
+    if (live && !t.email) gaps.push('login email');
     const stage =
       s.taught > 0
         ? 'teaching'
@@ -879,12 +915,16 @@ function ScheduleForm({
   const [duration, setDuration] = useState(60);
   const [capacity, setCapacity] = useState(12);
   const [link, setLink] = useState('');
+  const [meetingId, setMeetingId] = useState('');
+  const [passcode, setPasscode] = useState('');
+  const [minAge, setMinAge] = useState(DEFAULT_MIN_AGE);
   const [description, setDescription] = useState('');
   const [repeatWeeks, setRepeatWeeks] = useState(1);
+  const linkErr = link.trim() ? meetingLinkError(link) : null;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (title.trim().length < 4 || !date || !tutorId) return;
+    if (title.trim().length < 4 || !date || !tutorId || linkErr) return;
     const firstMs = new Date(`${date}T${time}`).getTime();
     const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 32);
     // same slot every week, for however many weeks were picked
@@ -899,11 +939,16 @@ function ScheduleForm({
         durationMin: duration,
         capacity,
         link: link.trim() || `https://meet.jit.si/relay-${slug}`,
+        meetingId: meetingId.trim() || undefined,
+        passcode: passcode.trim() || undefined,
+        minAge,
       });
     }
     setTitle('');
     setDescription('');
     setLink('');
+    setMeetingId('');
+    setPasscode('');
   };
 
   return (
@@ -982,16 +1027,26 @@ function ScheduleForm({
           </label>
         </div>
 
+        <MeetingFields
+          link={link}
+          meetingId={meetingId}
+          passcode={passcode}
+          onLink={setLink}
+          onMeetingId={setMeetingId}
+          onPasscode={setPasscode}
+        />
+
         <label className="field">
-          <span className="label">
-            Room link <span className="muted">(optional)</span>
-          </span>
+          <span className="label">Minimum age</span>
           <input
             className="input"
-            value={link}
-            onChange={(e) => setLink(e.target.value)}
-            placeholder="paste a Meet/Zoom link, or leave blank for a free Jitsi room"
+            type="number"
+            min={5}
+            max={25}
+            value={minAge}
+            onChange={(e) => setMinAge(Number(e.target.value) || DEFAULT_MIN_AGE)}
           />
+          <span className="hint">students younger than this can't save a spot</span>
         </label>
 
         <label className="field">
@@ -1001,7 +1056,7 @@ function ScheduleForm({
 
         <div className="row between">
           <span className="hint">blank link = a free Jitsi room is generated</span>
-          <button className="btn btn-primary" type="submit" disabled={title.trim().length < 4 || !date}>
+          <button className="btn btn-primary" type="submit" disabled={title.trim().length < 4 || !date || !!linkErr}>
             Publish session
           </button>
         </div>

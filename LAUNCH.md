@@ -8,8 +8,9 @@ live site. This file covers the rest.
 - [ ] **Set the founder passcode on your host.** The console reads
       `VITE_ADMIN_CODE`. On Vercel: **Settings → Environment Variables**, add
       `VITE_ADMIN_CODE`, then **redeploy** (Vite bakes env vars in at build time).
-      Without it the app falls back to the value in `src/lib/config.ts`, which is
-      readable by anyone with the repo link.
+      Without it the deployed console stays locked.
+- [ ] **Connect Supabase** by following [SUPABASE.md](SUPABASE.md), so classes,
+      signups and meeting links are shared instead of living in one browser.
 - [ ] **Publish one class** at `/#/guide/tutor`, then hit **copy invite** on its
       card and send that link to a few people. That is the whole launch: one
       class, one link.

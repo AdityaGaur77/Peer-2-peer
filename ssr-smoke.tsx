@@ -14,6 +14,7 @@ const ROUTES: Array<[string, string[]]> = [
   ['/dashboard', ['Your dashboard']],
   ['/certificate', ['Volunteer certificate']],
   ['/admin', ['Restricted to founders']],
+  ['/dashboard?x=1', ['Your dashboard', 'Sign in to see']],
   ['/guide/tutor', ['Set up your first class', 'The subject', 'live preview', 'draft preview']],
   ['/guide/student', ['by trying it', 'Pick your track', 'how it works']],
   ['/join', ['invite']], // no payload → the friendly error state

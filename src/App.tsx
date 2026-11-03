@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Footer } from './components/Footer';
+import { ClassBanner } from './components/NextClass';
 import { Nav } from './components/Nav';
 import { ScrollTop } from './components/ScrollTop';
 import { SignInModal } from './components/SignInModal';
@@ -77,6 +78,7 @@ export default function App() {
         </ErrorBoundary>
       </main>
       <Footer />
+      <ClassBanner />
       <SignInModal />
       <ToastHost />
     </>
