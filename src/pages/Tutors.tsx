@@ -13,7 +13,8 @@ export function Tutors() {
   const stats = globalStats(db);
 
   const tutors = useMemo(() => {
-    const list = filter === 'all' ? db.tutors : db.tutors.filter((t) => t.subjects.includes(filter));
+    const active = db.tutors.filter((t) => t.active !== false);
+    const list = filter === 'all' ? active : active.filter((t) => t.subjects.includes(filter));
     return [...list].sort((a, b) => Number(!!b.isFounder) - Number(!!a.isFounder));
   }, [db.tutors, filter]);
 

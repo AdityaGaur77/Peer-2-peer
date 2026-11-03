@@ -14,7 +14,7 @@ import { firstName, fmtLongDate, fmtTime, isPastSession } from '../lib/util';
 export function Join() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { acceptInvite, toast } = useStore();
+  const { acceptInvite, toast, live, db } = useStore();
   const [invite, setInvite] = useState<DecodedInvite | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -82,6 +82,16 @@ export function Join() {
   const who = firstName(invite.tutor.name);
 
   const accept = () => {
+    if (live) {
+      // every class is already on the shared board; find this one there
+      const match = db.sessions.find(
+        (s) =>
+          s.title === invite.session.title &&
+          new Date(s.startISO).getTime() === new Date(invite.session.startISO).getTime(),
+      );
+      navigate(match ? `/sessions?s=${match.id}` : '/sessions');
+      return;
+    }
     const id = acceptInvite(invite);
     toast(`Added to your board — ${who}'s class is yours to join.`);
     navigate(`/sessions?s=${id}`);

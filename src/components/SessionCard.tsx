@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { downloadSessionICS, googleCalUrl } from '../lib/ics';
 import { inviteUrl } from '../lib/invite';
+import { MeetingPanel } from './MeetingPanel';
 import { levelLabel, tutorById, useStore } from '../lib/store';
 import type { Session } from '../lib/types';
 import { subjectMeta, subjectShort } from '../lib/types';
@@ -20,7 +21,7 @@ export function SessionCard({
   /** Overrides the preview footer — an invite recipient isn't drafting. */
   previewNote?: string;
 }) {
-  const { db, profile, requireProfile, toggleRsvp, toggleWaitlist, toast } = useStore();
+  const { db, profile, requireProfile, toggleRsvp, toggleWaitlist, toast, live: liveDb, isAdmin } = useStore();
   const tutor = tutorById(db, session.tutorId);
   const past = isPastSession(session);
   const now = Date.now();
@@ -35,16 +36,22 @@ export function SessionCard({
   const meta = subjectMeta(session.subject);
   // the tutor running it gets the recruiting tools
   const isMine =
-    !!profile && !!tutor && tutor.email.toLowerCase() === profile.email.toLowerCase();
+    !!profile && !!tutor && !!tutor.email && tutor.email.toLowerCase() === profile.email.toLowerCase();
+  const canEditLink = isMine || isAdmin;
 
   // An invite link carries the whole class inside the URL, so it works even
   // for someone who has never opened Relay before (see lib/invite.ts).
+  // On the live database every class is already on everyone's board, so a
+  // plain link will do, and it never carries the meeting link.
   const share = async () => {
-    let url: string;
-    try {
-      url = await inviteUrl(session, tutor);
-    } catch {
-      url = `${window.location.origin}${window.location.pathname}#/sessions?s=${session.id}`;
+    const plain = `${window.location.origin}${window.location.pathname}#/sessions?s=${session.id}`;
+    let url = plain;
+    if (!liveDb) {
+      try {
+        url = await inviteUrl(session, tutor);
+      } catch {
+        url = plain;
+      }
     }
     try {
       await navigator.clipboard.writeText(url);
@@ -56,7 +63,7 @@ export function SessionCard({
       document.execCommand('copy');
       ta.remove();
     }
-    toast('Invite link copied — it works for anyone, even first-timers.');
+    toast(liveDb ? 'Link copied.' : 'Invite link copied — it works for anyone, even first-timers.');
   };
 
   return (
@@ -78,6 +85,7 @@ export function SessionCard({
               {subjectShort(session.subject)}
             </span>
             <span className="chip chip-ghost">{levelLabel(session.level)}</span>
+            {session.minAge ? <span className="chip chip-ghost">ages {session.minAge}+</span> : null}
             {live && <span className="chip chip-live">live now</span>}
           </div>
           {going && !past && <span className="mono small going-tag">✓ going</span>}
@@ -129,12 +137,11 @@ export function SessionCard({
               </span>
             </div>
 
+            {(going || canEditLink) && <MeetingPanel session={session} canEdit={canEditLink} />}
+
             <div className="row">
               {going ? (
                 <>
-                  <a className="btn btn-soft btn-sm" href={session.link} target="_blank" rel="noreferrer">
-                    {live ? 'Join now — it\'s on ↗' : 'Join the room ↗'}
-                  </a>
                   <button className="btn btn-ghost btn-sm" onClick={() => downloadSessionICS(session, tutor)}>
                     Add to calendar
                   </button>
@@ -173,12 +180,15 @@ export function SessionCard({
                   </button>
                 )
               ) : (
-                <button
-                  className="btn btn-primary btn-sm"
-                  onClick={() => requireProfile((p) => toggleRsvp(session.id, p))}
-                >
-                  Save my spot — free
-                </button>
+                <>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => requireProfile((p) => toggleRsvp(session.id, p))}
+                  >
+                    Save my spot — free
+                  </button>
+                  {!canEditLink && <span className="hint">you get the meeting link once you save a spot</span>}
+                </>
               )}
               <button className="btn-quiet" onClick={share} title="Copies a link that carries this class inside it">
                 copy invite

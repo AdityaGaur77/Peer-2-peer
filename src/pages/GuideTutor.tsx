@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GuideShell, type GuideStepDef } from '../components/GuideShell';
+import { MeetingFields } from '../components/MeetingPanel';
 import { SessionCard } from '../components/SessionCard';
+import { DEFAULT_MIN_AGE, meetingLinkError } from '../lib/meeting';
 import {
   applicationFor, certsFor, tutorByEmail, upcomingSessions, useStore,
 } from '../lib/store';
@@ -20,6 +22,9 @@ interface ClassDraft {
   date: string;
   time: string;
   link: string;
+  meetingId: string;
+  passcode: string;
+  minAge: number;
   /** 1 = one class. 4 = the same slot four weeks running. */
   repeatWeeks: number;
 }
@@ -34,6 +39,9 @@ const EMPTY_DRAFT: ClassDraft = {
   date: '',
   time: '17:00',
   link: '',
+  meetingId: '',
+  passcode: '',
+  minAge: DEFAULT_MIN_AGE,
   repeatWeeks: 1,
 };
 
@@ -190,7 +198,8 @@ export function GuideTutor() {
     true,
     true,
     startMs !== null && startMs > Date.now(),
-    true,
+    // a pasted link has to be a real meeting link; blank means a Jitsi room
+    !draft.link.trim() || !meetingLinkError(draft.link),
   ][step];
 
   // live preview built from the draft
@@ -213,6 +222,7 @@ export function GuideTutor() {
       attendees: [],
       waitlist: [],
       link: draft.link || 'https://meet.jit.si/relay-your-class',
+      minAge: draft.minAge,
       status: 'scheduled',
     };
   }, [draft, startMs, tutor?.id]);
@@ -244,6 +254,9 @@ export function GuideTutor() {
           durationMin: draft.durationMin,
           capacity: draft.capacity,
           link: draft.link.trim() || `https://meet.jit.si/relay-${slug}`,
+          meetingId: draft.meetingId.trim() || undefined,
+          passcode: draft.passcode.trim() || undefined,
+          minAge: draft.minAge,
         });
         if (w === 0) id = made;
       }
@@ -483,6 +496,17 @@ People scroll past topic names. They stop for what they will be able to do after
               small enough that asking a "dumb" question feels safe — 8 is perfect for a first class
             </span>
           </div>
+          <div className="field">
+            <span className="label">Minimum age</span>
+            <div className="optchips">
+              {[10, 12, 13, 14, 16].map((a) => (
+                <button key={a} className={cx('optchip', draft.minAge === a && 'on')} onClick={() => patch({ minAge: a })}>
+                  {a}+
+                </button>
+              ))}
+            </div>
+            <span className="hint">students younger than this can't save a spot</span>
+          </div>
         </div>
       )}
 
@@ -586,18 +610,18 @@ Sessions are free, and that is not going to change. Students pay it back by
           <p style={{ color: 'var(--ink-2)', fontSize: 15 }}>
             Check the preview one last time — that ticket is exactly what goes on the board.
           </p>
-          <label className="field">
-            <span className="label">
-              Video room link <span className="muted">(optional)</span>
-            </span>
-            <input
-              className="input"
-              value={draft.link}
-              onChange={(e) => patch({ link: e.target.value })}
-              placeholder="paste a Meet/Zoom link, or leave blank for a free Jitsi room"
-            />
-            <span className="hint">blank = we generate a free Jitsi room, no account needed</span>
-          </label>
+          <MeetingFields
+            link={draft.link}
+            meetingId={draft.meetingId}
+            passcode={draft.passcode}
+            onLink={(v) => patch({ link: v })}
+            onMeetingId={(v) => patch({ meetingId: v })}
+            onPasscode={(v) => patch({ passcode: v })}
+          />
+          <span className="hint">
+            no link yet? leave it blank and we make a free Jitsi room. You can change the link any
+            time from the class card, e.g. if a free call hits its time limit.
+          </span>
 
           {tutor ? (
             <div className="guide-tip">

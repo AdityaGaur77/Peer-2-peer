@@ -2,6 +2,7 @@ import { useMemo, useState, type CSSProperties } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { KudosModal } from '../components/KudosModal';
 import { Reveal } from '../components/Reveal';
+import { NextClass } from '../components/NextClass';
 import { SessionCard } from '../components/SessionCard';
 import {
   attendedSessions, certsFor, tutorByEmail, tutorById, tutorStats, upcomingSessions, useStore,
@@ -90,6 +91,10 @@ export function Dashboard() {
               </button>
             </div>
           </div>
+        </Reveal>
+
+        <Reveal delay={0.02}>
+          <NextClass />
         </Reveal>
 
         {/* unfinished class draft */}

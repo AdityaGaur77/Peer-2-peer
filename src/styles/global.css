@@ -1,27 +1,33 @@
 /* ═══════════════════════════════════════════════════════════
-   RELAY — design system
-   Concept: knowledge as a relay baton, drawn on graph paper.
-   Cool porcelain surfaces, blue ink, and ONE green accent —
-   the baton — that always means "go / the handoff". Live and
-   urgent states burn rose. No cream, no terracotta.
+   Design system
+   Brand palette (from the Peer 2 Peer logo):
+     sky   #ADD9FD  the main color: fills, highlights, the mark
+     navy  #0A2850  text, primary buttons, dark bands
+     white #F3F8FC  the page
+   Light blue is too pale to read as text on white, so text
+   accents and links use a deeper blue (--ember-deep). Live and
+   urgent states stay rose.
    Type: Bricolage Grotesque (voice) · Instrument Serif italic
    (the human aside) · JetBrains Mono (the log/telemetry).
    ═══════════════════════════════════════════════════════════ */
 
 :root {
   /* surfaces — cool notebook paper, easy on the eyes */
-  --paper: #f1f4f9;
-  --paper-2: #e8edf5;
-  --card: #fbfcfe;
-  --ink: #212b40;
-  --ink-2: #46536e;
-  --muted: #6e7d99;
+  --paper: #f3f8fc;
+  --paper-2: #e4f1fd;
+  --card: #ffffff;
+  --ink: #0a2850;
+  --ink-2: #2f4a6e;
+  --muted: #536a88;
 
-  /* the baton — green means go */
-  --ember: #29a55c;
-  --ember-deep: #1e7e46;
-  --ember-soft: #ddf2e4;
-  --baton-g: linear-gradient(90deg, #a3e655, #2fbe6e);
+  /* brand blue: --sky is the logo color for fills; --ember is a deeper
+     shade that stays visible as a line on white; --ember-deep is for text */
+  --sky: #add9fd;
+  --sky-hover: #94cdfb;
+  --ember: #2f80c9;
+  --ember-deep: #1a5a94;
+  --ember-soft: #ddefff;
+  --baton-g: linear-gradient(90deg, #add9fd, #4c9be0);
 
   /* live / urgent / destructive — rose, never green */
   --hot: #e14f72;
@@ -34,11 +40,11 @@
   --gold-soft: #f6edcf;
 
   /* lines + depth */
-  --border: #d7dee9;
-  --border-strong: #bfcadb;
-  --shadow-sm: 0 1px 2px rgba(33, 43, 64, 0.05);
-  --shadow-md: 0 2px 4px rgba(33, 43, 64, 0.04), 0 14px 34px -14px rgba(33, 43, 64, 0.16);
-  --shadow-lg: 0 4px 8px rgba(33, 43, 64, 0.05), 0 28px 60px -20px rgba(33, 43, 64, 0.24);
+  --border: #d3e3f2;
+  --border-strong: #b3cbe2;
+  --shadow-sm: 0 1px 2px rgba(10, 40, 80, 0.05);
+  --shadow-md: 0 2px 4px rgba(10, 40, 80, 0.04), 0 14px 34px -14px rgba(10, 40, 80, 0.18);
+  --shadow-lg: 0 4px 8px rgba(10, 40, 80, 0.05), 0 28px 60px -20px rgba(10, 40, 80, 0.26);
 
   --font-sans: 'Bricolage Grotesque Variable', system-ui, sans-serif;
   --font-serif: 'Instrument Serif', georgia, serif;
@@ -49,23 +55,25 @@
   --r-xl: 24px;
 
   /* the dark bands (footer, CTA) — identical in both themes */
-  --band-bg: #101828;
-  --band-fg: #edf2fb;
+  --band-bg: #0a2850;
+  --band-fg: #f3f8fc;
 }
 
 /* ── night meet — the track under floodlights ──────────────── */
 
 [data-theme='dark'] {
-  --paper: #0f1522;
-  --paper-2: #141b2b;
-  --card: #182136;
-  --ink: #dfe7f6;
-  --ink-2: #aab8d0;
-  --muted: #7889a6;
+  --paper: #071a33;
+  --paper-2: #0b2343;
+  --card: #0e2a4f;
+  --ink: #e6f1fb;
+  --ink-2: #b4cde6;
+  --muted: #86a3c2;
 
-  --ember: #46c97d;
-  --ember-deep: #7bdda4;
-  --ember-soft: rgba(70, 201, 125, 0.15);
+  --sky: #add9fd;
+  --sky-hover: #c4e4fe;
+  --ember: #7fc0f5;
+  --ember-deep: #add9fd;
+  --ember-soft: rgba(173, 217, 253, 0.14);
 
   --hot: #ff6d92;
   --hot-deep: #ff92ae;
@@ -74,25 +82,25 @@
   --gold: #dcbc6a;
   --gold-soft: rgba(200, 160, 60, 0.14);
 
-  --border: #232e47;
-  --border-strong: #35425f;
+  --border: #1a3a63;
+  --border-strong: #2a4f7e;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.25), 0 14px 34px -14px rgba(0, 0, 0, 0.55);
   --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.3), 0 28px 60px -20px rgba(0, 0, 0, 0.65);
 
-  --band-bg: #0a0f1b;
+  --band-bg: #051427;
 }
 
 [data-theme='dark'] .island {
-  background: rgba(13, 18, 30, 0.72);
+  background: rgba(7, 26, 51, 0.72);
 }
 
 [data-theme='dark'] .island.scrolled {
-  background: rgba(13, 18, 30, 0.92);
+  background: rgba(7, 26, 51, 0.92);
 }
 
 [data-theme='dark'] .nav-link:hover {
-  background: rgba(223, 231, 246, 0.07);
+  background: rgba(230, 241, 251, 0.07);
 }
 
 [data-theme='dark'] .hero::before {
@@ -348,7 +356,7 @@ button {
 }
 
 .btn-primary:hover {
-  background: #2b3650;
+  background: #133a6e;
   box-shadow: var(--shadow-md);
 }
 
@@ -363,12 +371,12 @@ button {
 }
 
 .btn-soft {
-  background: var(--ember-soft);
-  color: var(--ember-deep);
+  background: var(--sky);
+  color: #0a2850;
 }
 
 .btn-soft:hover {
-  background: #cbebd6;
+  background: var(--sky-hover);
 }
 
 .btn-sm {
@@ -388,8 +396,8 @@ button {
 
 /* buttons that live on the dark bands — identical in both themes */
 .btn-band-light {
-  background: var(--band-fg);
-  color: #101828;
+  background: var(--sky);
+  color: #0a2850;
 }
 
 .btn-band-light:hover {
@@ -728,6 +736,12 @@ button {
   position: relative;
   padding-top: clamp(120px, 16vw, 168px);
   overflow: hidden;
+  /* the logo's light blue, fading into the page */
+  background: linear-gradient(180deg, rgba(173, 217, 253, 0.6) 0%, rgba(173, 217, 253, 0.18) 55%, transparent 100%);
+}
+
+[data-theme='dark'] .hero {
+  background: linear-gradient(180deg, rgba(173, 217, 253, 0.12) 0%, transparent 100%);
 }
 
 /* faint graph-paper grid — the notebook the plan was drawn in */
@@ -736,8 +750,8 @@ button {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(to right, rgba(33, 43, 64, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(33, 43, 64, 0.05) 1px, transparent 1px);
+    linear-gradient(to right, rgba(10, 40, 80, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(10, 40, 80, 0.05) 1px, transparent 1px);
   background-size: 26px 26px;
   mask-image: radial-gradient(120% 90% at 50% 0%, #000 30%, transparent 78%);
   pointer-events: none;
@@ -1389,9 +1403,9 @@ button {
 }
 
 .q-code {
-  background: #101827;
-  border: 1px solid #26334d;
-  color: #e3eaf6;
+  background: #0a2850;
+  border: 1px solid #1d4475;
+  color: #e6f1fb;
   font-family: var(--font-mono);
   font-size: 13.5px;
   line-height: 1.7;
@@ -1441,9 +1455,9 @@ button {
 }
 
 .opt.sel .opt-key {
-  background: var(--ember);
+  background: var(--sky);
   border-color: var(--ember);
-  color: #fff;
+  color: #0a2850;
 }
 
 .review-item {
@@ -1647,7 +1661,7 @@ button {
 
 .footer {
   background: var(--band-bg);
-  color: #b6c2d8;
+  color: #c6dcf0;
   border-top: 1px solid rgba(237, 242, 251, 0.06);
   margin-top: clamp(60px, 9vw, 110px);
   position: relative;
@@ -1665,12 +1679,12 @@ button {
   font-size: 1.35rem;
   font-weight: 700;
   line-height: 1.2;
-  color: #edf2fb;
+  color: #f3f8fc;
   letter-spacing: -0.02em;
 }
 
 .footer-mark .dot {
-  color: var(--ember);
+  color: var(--sky);
 }
 
 .footer-cols {
@@ -1689,18 +1703,18 @@ button {
 .footer-col h4 {
   font-size: 13.5px;
   font-weight: 650;
-  color: #edf2fb;
+  color: #f3f8fc;
   margin-bottom: 4px;
 }
 
 .footer-col a {
   font-size: 14.5px;
-  color: #b6c2d8;
+  color: #c6dcf0;
   transition: color 0.2s;
 }
 
 .footer-col a:hover {
-  color: #edf2fb;
+  color: #f3f8fc;
 }
 
 .footer-base {
@@ -1711,7 +1725,7 @@ button {
   border-top: 1px dashed rgba(237, 242, 251, 0.14);
   padding-top: 22px;
   font-size: 13px;
-  color: #75849f;
+  color: #93b0cf;
 }
 
 /* ── CTA band ──────────────────────────────────────────────── */
@@ -1791,9 +1805,9 @@ button {
     --paper: #fff;
     --paper-2: #fff;
     --card: #fff;
-    --ink: #212b40;
-    --ink-2: #46536e;
-    --muted: #6e7d99;
+    --ink: #0a2850;
+    --ink-2: #2f4a6e;
+    --muted: #536a88;
     --border: #d9dfe9;
     --border-strong: #b9c4d5;
   }
@@ -2086,7 +2100,7 @@ details.faq .faq-a {
   border-style: solid;
   background: var(--baton-g);
   border-color: transparent;
-  color: #10331d;
+  color: #0a2850;
 }
 
 .guide-aside {
@@ -2546,4 +2560,163 @@ details.faq .faq-a {
   font-size: 14.5px;
   color: var(--ink-2);
   line-height: 1.6;
+}
+
+/* ── meeting panel ─────────────────────────────────────────── */
+
+.meet {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--paper);
+}
+
+.meet-open {
+  border-color: var(--ember);
+}
+
+.meet-fresh {
+  border-color: var(--hot);
+}
+
+.meet-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.meet-updated {
+  font-size: 13.5px;
+  color: var(--hot-deep);
+  background: color-mix(in oklab, var(--hot) 12%, transparent);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.meet-copy {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 6px 11px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 999px;
+  font-size: 13px;
+  background: var(--card);
+}
+
+.meet-copy:hover {
+  border-color: var(--ink-2);
+}
+
+.meet-copy-label {
+  color: var(--muted);
+}
+
+.meet-copy-value {
+  font-family: var(--font-mono);
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.meet-copy-icon {
+  font-size: 11.5px;
+  color: var(--ember-deep);
+}
+
+/* the "your class is starting" pill, just under the nav */
+.class-banner {
+  position: fixed;
+  left: 50%;
+  top: 84px;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: calc(100vw - 32px);
+  padding: 10px 12px 10px 18px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: var(--shadow-md);
+  font-size: 14px;
+}
+
+.class-banner .btn {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+@media (max-width: 560px) {
+  .class-banner {
+    border-radius: 16px;
+    top: 76px;
+  }
+}
+
+/* ── admin ─────────────────────────────────────────────────── */
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.stat-grid .stat {
+  border-bottom: 1.5px dashed var(--border-strong);
+}
+
+.stat-grid .stat:nth-child(4n + 1) {
+  border-left: 0;
+}
+
+@media (max-width: 720px) {
+  .stat-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .stat-grid .stat:nth-child(odd) {
+    border-left: 0;
+  }
+  .stat-grid .stat:nth-child(even) {
+    border-left: 1.5px dashed var(--border-strong);
+  }
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.admin-table th {
+  text-align: left;
+  font-weight: 620;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 0 10px 8px 0;
+  border-bottom: 1.5px solid var(--border);
+  white-space: nowrap;
+}
+
+.admin-table td {
+  padding: 10px 10px 10px 0;
+  border-bottom: 1.5px dashed var(--border);
+  vertical-align: top;
+}
+
+.row-blocked td {
+  opacity: 0.55;
+}
+
+.link-btn {
+  font-weight: 620;
+  text-align: left;
+}
+
+.link-btn:hover {
+  color: var(--ember-deep);
 }

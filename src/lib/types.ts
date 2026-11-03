@@ -130,6 +130,8 @@ export interface Tutor {
   availability?: string;
   /** Published in src/lib/roster.ts, so every visitor sees them. */
   onRoster?: boolean;
+  /** False once a teacher leaves. They drop off the site; their past hours stay. */
+  active?: boolean;
 }
 
 export interface Attendee {
@@ -150,6 +152,13 @@ export interface Session {
   attendees: Attendee[];
   waitlist: Attendee[];
   link: string;
+  /** Optional, for Zoom-style meetings that ask for them. */
+  meetingId?: string;
+  passcode?: string;
+  /** Set when the teacher changes the link after posting, so students notice. */
+  linkUpdatedISO?: string;
+  /** Set by the teacher. Students younger than this can't save a spot. */
+  minAge?: number;
   status: 'scheduled' | 'canceled';
 }
 
@@ -201,6 +210,18 @@ export interface Profile {
   email: string;
   /** Chosen at sign-in. Older saved profiles have none, so treat those as students. */
   role?: Role;
+  /** Asked at sign-in so classes can have a minimum age. Older profiles have none. */
+  age?: number;
+}
+
+/** One row on the admin's Students tab. */
+export interface StudentRecord {
+  email: string;
+  name: string;
+  age?: number;
+  role?: Role;
+  blocked?: boolean;
+  joinedISO?: string;
 }
 
 export interface RelayState {
@@ -210,6 +231,8 @@ export interface RelayState {
   certifications: Certification[];
   kudos: Kudos[];
   requests: TopicRequest[];
+  /** Everyone who has signed in. Only filled for admins on the live database. */
+  students?: StudentRecord[];
 }
 
 export function subjectMeta(id: SubjectId): SubjectMeta {

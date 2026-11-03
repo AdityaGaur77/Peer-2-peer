@@ -14,8 +14,9 @@ export function Home() {
   const dayOne = isDayOne(db);
   // Every class a listed teacher has said they'll run. Real content for the
   // page even before the first session is on the calendar.
-  const classes = db.tutors.flatMap((t) => (t.courses ?? []).map((c) => ({ ...c, tutor: t })));
-  const subjectsTaught = new Set(db.tutors.flatMap((t) => t.subjects)).size;
+  const teachers = db.tutors.filter((t) => t.active !== false);
+  const classes = teachers.flatMap((t) => (t.courses ?? []).map((c) => ({ ...c, tutor: t })));
+  const subjectsTaught = new Set(teachers.flatMap((t) => t.subjects)).size;
   const withSessions = SUBJECTS.filter((s) => subjectSessions(db, s.id).length > 0);
   const [toured, setToured] = useState(() => localStorage.getItem('relay.toured') === '1');
   const dismissTour = () => {
