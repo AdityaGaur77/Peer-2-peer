@@ -170,8 +170,8 @@ export function RelayChain() {
       <svg viewBox="0 0 1000 208" role="img">
         <defs>
           <linearGradient id="batonGrad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="#a3e655" />
-            <stop offset="1" stopColor="#2fbe6e" />
+            <stop offset="0" stopColor="#add9fd" />
+            <stop offset="1" stopColor="#4c9be0" />
           </linearGradient>
         </defs>
 
