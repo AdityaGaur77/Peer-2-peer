@@ -64,9 +64,16 @@ there are no passwords.
    get that one.
 3. **Authentication → URL Configuration**
    - **Site URL**: your live Vercel address, e.g. `https://peer-2-peer.vercel.app`
-   - **Redirect URLs**: add `https://peer-2-peer.vercel.app/**`,
-     `https://*-adityagaur12077-5370s-projects.vercel.app/**` (preview deploys)
-     and `http://localhost:5173/**`
+   - **Redirect URLs**: add each of these as its own entry. Every one starts
+     with `https://` (or `http://` for localhost) and ends with `/**`:
+     - `https://peer-2-peer.vercel.app/**` (the live site)
+     - `https://*-peer2-peer1.vercel.app/**` (preview deploys on the team account)
+     - `https://*-adityagaur12077-5370s-projects.vercel.app/**` (preview deploys
+       on the personal account, only while it still deploys this repo)
+     - `http://localhost:5173/**` (running it on your own computer)
+
+     A single deploy address like `peer-2-peer-c73bym6rl-....vercel.app` isn't
+     needed; the wildcard lines cover every preview.
 
 ## 4. Email sending (before real students)
 
@@ -83,8 +90,10 @@ Before you post the link publicly:
 - **Gmail** (no domain needed): on the project Gmail turn on 2-step
   verification, then create an **App password** (Google Account → Security →
   App passwords). Host `smtp.gmail.com`, port `465`, user = the project Gmail
-  address, password = the app password, sender = the same address. Gmail
-  allows about 500 emails a day, which is plenty to start.
+  address, password = the app password **with the spaces removed** (Google
+  shows it as four groups of four; it's really 16 letters), sender email = the
+  same Gmail address (Gmail refuses to send as any other address). Gmail allows
+  about 500 emails a day, which is plenty to start.
 
 Then **Authentication → Rate Limits** and raise "emails sent per hour" to
 something like 100.
@@ -121,6 +130,22 @@ something like 100.
 4. Post a test class from **Publish**, open the site on your phone, sign in as
    a student and save a spot. It should show up under **Classes → Who signed
    up** on your computer within a few seconds.
+
+## If sign-in says "Error sending confirmation email"
+
+That means Supabase couldn't hand the email to Gmail. Check, in order:
+
+1. **Logs → Auth** in Supabase shows the exact reason next to the failed
+   request (for example "535 Username and Password not accepted").
+2. The app password has **no spaces**.
+3. **Username** and **Sender email** are both the full project Gmail address.
+4. Host `smtp.gmail.com`, port `465`.
+5. 2-step verification is still on for that Google account (turning it off
+   deletes every app password).
+6. If it still fails, make a fresh app password and paste that in.
+
+To check sign-in itself works while you sort out email, turn **custom SMTP
+off** for a moment: Supabase's own sender works for a few emails an hour.
 
 ## Things to know
 
