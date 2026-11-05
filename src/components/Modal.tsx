@@ -8,22 +8,39 @@ interface ModalProps {
   labelledBy?: string;
 }
 
+// Open dialogs, newest last. Escape closes only the top one, so a sign-in
+// box opened over a thank-you note doesn't take the note with it.
+const stack: number[] = [];
+let nextId = 1;
+
 const FOCUSABLE =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export function Modal({ onClose, children, wide, labelledBy }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
+  const id = useRef(0);
+  if (!id.current) id.current = nextId++;
+
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKey);
+    const me = id.current;
+    stack.push(me);
+    // put focus back where it was (e.g. the "Save my spot" button) on close
+    const opener = document.activeElement as HTMLElement | null;
     document.body.style.overflow = 'hidden';
     return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
+      stack.splice(stack.indexOf(me), 1);
+      if (stack.length === 0) document.body.style.overflow = '';
+      if (opener && document.contains(opener)) opener.focus();
     };
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && stack[stack.length - 1] === id.current) onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
   // keep keyboard focus inside the dialog

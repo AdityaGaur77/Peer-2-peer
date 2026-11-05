@@ -12,7 +12,7 @@ import {
 import { supabase } from './backend';
 import { SEED_VERSION } from './config';
 import type { DecodedInvite } from './invite';
-import { isFree } from './price';
+import { countsForHours } from './price';
 import { fetchState, remote } from './remote';
 import { ROSTER, ROSTER_IDS } from './roster';
 import { buildSeed } from './seed';
@@ -84,7 +84,7 @@ interface StoreValue {
   /** Live mode: email a sign-in code. Name and age are asked after, first time only. */
   sendSignInCode: (email: string) => Promise<void>;
   verifySignInCode: (email: string, code: string) => Promise<void>;
-  saveProfile: (p: Profile) => void;
+  saveProfile: (p: Profile) => Promise<void>;
   updateMeeting: (
     sessionId: string,
     m: { link: string; meetingId?: string; passcode?: string },
@@ -277,12 +277,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (error) throw new Error(error.message);
   }, []);
 
+  /**
+   * Resolves once the profile is in the database. Callers that go on to save
+   * a spot must wait for it: the database checks the age on the signup, and
+   * would otherwise see no age yet and turn the student away.
+   */
   const saveProfile = useCallback(
-    (p: Profile) => {
+    async (p: Profile) => {
       setProfile(p);
-      sync((sb) => remote.saveProfile(sb, p));
+      if (!supabase) return;
+      try {
+        await remote.saveProfile(supabase, p);
+      } finally {
+        void reload();
+      }
     },
-    [sync],
+    [reload],
   );
 
   const openSignIn = useCallback((after?: (p: Profile) => void) => {
@@ -362,13 +372,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ? promoted?.name
             ? `Spot released. ${promoted.name.split(' ')[0]} moves up from the waitlist.`
             : 'Spot released.'
-          : `You're going: ${session.title}`,
+          : session.price
+            ? `You're going: ${session.title}. It's $${session.price}; ${
+                tutorById(db, session.tutorId)?.name.split(' ')[0] ?? 'the teacher'
+              } will tell you how to pay.`
+            : `You're going: ${session.title}`,
       );
       sync((sb) =>
         going ? remote.leaveClass(sb, sessionId, p.email) : remote.joinClass(sb, sessionId, p),
       );
     },
-    [db.sessions, toast, sync],
+    [db, toast, sync],
   );
 
   const toggleWaitlist = useCallback(
@@ -434,7 +448,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...prev,
         applications: [
           ...prev.applications.filter((x) => x.email.toLowerCase() !== a.email.toLowerCase()),
-          { ...a, id: uid('app'), status: 'pending', submittedISO },
+          {
+            ...a,
+            id: uid('app'),
+            status: prior?.status === 'approved' ? ('approved' as const) : ('pending' as const),
+            submittedISO,
+          },
         ],
       }));
       return prior ? ('updated' as const) : ('added' as const);
@@ -471,14 +490,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         subject,
         by,
         votes: 1,
-        votedBy: myEmail.current ? [myEmail.current] : [],
+        votedBy: myEmail.current ? [myEmail.current] : profile ? [profile.email] : [],
         atISO: new Date().toISOString(),
       };
       setDb((prev) => ({ ...prev, requests: [r, ...prev.requests] }));
       sync((sb) => remote.addRequest(sb, r, myEmail.current ?? ''));
       toast('Requested. Tutors build sessions from this list.');
     },
-    [toast, sync],
+    [toast, sync, profile],
   );
 
   const voteRequest = useCallback(
@@ -623,18 +642,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         toast(`${tutor.name} removed. Their past classes and hours are kept.`);
         return;
       }
+      // Same as the live database: hidden from the site and upcoming classes
+      // canceled, but the tutor, their past classes, kudos and certificate stay.
       setDb((prev) => ({
         ...prev,
-        tutors: prev.tutors.filter((t) => t.id !== id),
-        // their upcoming sessions come off the board; the past log stays
+        tutors: prev.tutors.map((t) => (t.id === id ? { ...t, active: false } : t)),
         sessions: prev.sessions.map((s) =>
           s.tutorId === id && !isPastSession(s) && s.status === 'scheduled'
             ? { ...s, status: 'canceled' as const }
             : s,
-        ),
-        kudos: prev.kudos.filter((k) => k.tutorId !== id),
-        certifications: prev.certifications.filter(
-          (c) => c.email.toLowerCase() !== tutor.email.toLowerCase(),
         ),
       }));
       toast(`${tutor.name} removed from the crew.`);
@@ -672,7 +688,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     (d: DecodedInvite) => {
       // the live board already has every class; old invite links just land there
       if (supabase) return '';
-      const newId = uid('session');
+      const already = db.sessions.find(
+        (s) => s.title === d.session.title && s.startISO === d.session.startISO,
+      );
+      const newId = already?.id ?? uid('session');
       setDb((prev) => {
         const existing = d.tutor.email
           ? prev.tutors.find((t) => t.email.toLowerCase() === d.tutor.email.toLowerCase())
@@ -697,7 +716,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       });
       return newId;
     },
-    [],
+    [db.sessions],
   );
 
   /** Students and tutors see a slightly different site; this is the switch. */
@@ -910,11 +929,17 @@ export interface TutorStats {
   lastISO: string | null;
 }
 
-export function tutorStats(db: RelayState, tutorId: string): TutorStats {
-  const past = pastSessions(db).filter((s) => s.tutorId === tutorId);
+/**
+ * `volunteerOnly` limits everything to classes that count as service (free,
+ * and someone came), which is what the certificate reports.
+ */
+export function tutorStats(db: RelayState, tutorId: string, volunteerOnly = false): TutorStats {
+  const past = pastSessions(db).filter(
+    (s) => s.tutorId === tutorId && (!volunteerOnly || countsForHours(s)),
+  );
   const upcoming = upcomingSessions(db).filter((s) => s.tutorId === tutorId);
-  // volunteering means unpaid, so paid classes don't add hours
-  const minutes = past.filter(isFree).reduce((acc, s) => acc + s.durationMin, 0);
+  // volunteering means unpaid, and only classes someone came to count
+  const minutes = past.filter(countsForHours).reduce((acc, s) => acc + s.durationMin, 0);
   const emails = new Set(past.flatMap((s) => s.attendees.map((a) => a.email)));
   const dates = past.map((s) => s.startISO).sort();
   return {
@@ -939,7 +964,7 @@ export interface GlobalStats {
 export function globalStats(db: RelayState): GlobalStats {
   const past = pastSessions(db);
   const emails = new Set(past.flatMap((s) => s.attendees.map((a) => a.email)));
-  const minutes = past.filter(isFree).reduce((acc, s) => acc + s.durationMin, 0);
+  const minutes = past.filter(countsForHours).reduce((acc, s) => acc + s.durationMin, 0);
   return {
     sessionsHosted: past.length,
     learnersHelped: emails.size,

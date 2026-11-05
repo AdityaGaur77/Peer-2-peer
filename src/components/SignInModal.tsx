@@ -67,13 +67,22 @@ export function SignInModal() {
     return { name: n, age: a, role };
   };
 
-  const finish = (e: FormEvent) => {
+  const finish = async (e: FormEvent) => {
     e.preventDefault();
     const d = details();
-    if (!d || !profile) return;
+    if (!d || !profile || busy) return;
     const p = { ...profile, ...d };
-    if (live) saveProfile(p);
-    completeSignIn(p);
+    setBusy(true);
+    try {
+      // must be saved before whatever they were doing (e.g. saving a spot)
+      // carries on, because the database checks their age
+      if (live) await saveProfile(p);
+      completeSignIn(p);
+    } catch (x) {
+      setErr((x as Error).message || "Couldn't save that. Try again.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const sendCode = async (e: FormEvent) => {
@@ -102,7 +111,12 @@ export function SignInModal() {
     try {
       await verifySignInCode(codeSentTo, code);
     } catch (x) {
-      setErr((x as Error).message || 'That code did not work. Check it and try again.');
+      const m = (x as Error).message || '';
+      setErr(
+        /expired|invalid/i.test(m) || !m
+          ? 'That code is wrong or has expired. Check it, or go back and ask for a new one.'
+          : m,
+      );
     } finally {
       setBusy(false);
     }
@@ -189,8 +203,8 @@ export function SignInModal() {
           {rolePicker}
           {nameAndAge}
           {errLine}
-          <button className="btn btn-primary" type="submit">
-            Save
+          <button className="btn btn-primary" type="submit" disabled={busy}>
+            {busy ? 'Saving…' : 'Save'}
           </button>
         </form>
       </Modal>

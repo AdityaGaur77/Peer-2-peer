@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Reveal } from '../components/Reveal';
 import { SessionCard } from '../components/SessionCard';
 import { pastSessions, tutorById, upcomingSessions, useStore } from '../lib/store';
-import { SUBJECTS, type Level, type SubjectId } from '../lib/types';
+import { SUBJECTS, type Level, type Session, type SubjectId } from '../lib/types';
 import { cx } from '../lib/util';
 
 const LEVEL_FILTERS: Array<{ id: 'all' | Level; label: string }> = [
@@ -40,24 +40,25 @@ export function Sessions() {
     setParams(next, { replace: true });
   };
 
-  const upcoming = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return upcomingSessions(db).filter((s) => {
+  // the same filters apply to upcoming and past classes
+  const matches = useCallback(
+    (s: Session) => {
+      const q = query.trim().toLowerCase();
       if (subject !== 'all' && s.subject !== subject) return false;
       if (level !== 'all' && s.level !== level && s.level !== 'all') return false;
       if (tutorFilter && s.tutorId !== tutorFilter) return false;
       if (!q) return true;
       const tutorName = tutorById(db, s.tutorId)?.name ?? '';
       return `${s.title} ${s.description} ${tutorName}`.toLowerCase().includes(q);
-    });
-  }, [db, subject, level, tutorFilter, query]);
+    },
+    [db, subject, level, tutorFilter, query],
+  );
+
+  const upcoming = useMemo(() => upcomingSessions(db).filter(matches), [db, matches]);
 
   const past = useMemo(
-    () =>
-      showPast
-        ? pastSessions(db).filter((s) => !tutorFilter || s.tutorId === tutorFilter).slice(0, 8)
-        : [],
-    [db, showPast, tutorFilter],
+    () => (showPast ? pastSessions(db).filter(matches).slice(0, 8) : []),
+    [db, showPast, matches],
   );
 
   const requests = [...db.requests].sort((a, b) => b.votes - a.votes);
@@ -66,8 +67,11 @@ export function Sessions() {
   const shared = params.get('s');
   useEffect(() => {
     if (!shared) return;
+    // on the live site the classes arrive a moment after the page; this
+    // runs again when they do
     const el = document.getElementById(`session-${shared}`);
-    if (!el) return;
+    if (!el || el.dataset.highlighted) return;
+    el.dataset.highlighted = '1';
     const t = window.setTimeout(() => {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       el.classList.add('ticket-target');
@@ -77,7 +81,7 @@ export function Sessions() {
       window.clearTimeout(t);
       window.clearTimeout(off);
     };
-  }, [shared]);
+  }, [shared, upcoming.length]);
 
   const submitTopic = (e: FormEvent) => {
     e.preventDefault();
@@ -97,9 +101,9 @@ export function Sessions() {
             <span className="eyebrow">the session board</span>
           </Reveal>
           <Reveal delay={0.05}>
-            <h2 className="h2">
+            <h1 className="h2">
               Most seats are free. Take one.
-            </h2>
+            </h1>
           </Reveal>
           <Reveal delay={0.1}>
             <p className="lede">
@@ -208,6 +212,7 @@ Tutors pick what to teach from this list. Most requested goes first.
               <form className="stack" style={{ gap: 10 }} onSubmit={submitTopic}>
                 <input
                   className="input"
+                  aria-label="Topic you'd like a class on"
                   placeholder="e.g. recursion, but slowly"
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
@@ -216,6 +221,7 @@ Tutors pick what to teach from this list. Most requested goes first.
                   <select
                     className="select"
                     style={{ width: 'auto' }}
+                    aria-label="Subject of the topic"
                     value={topicSubject}
                     onChange={(e) => setTopicSubject(e.target.value as typeof topicSubject)}
                   >

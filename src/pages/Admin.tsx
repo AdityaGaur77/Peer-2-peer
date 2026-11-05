@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 
 import { useSearchParams } from 'react-router-dom';
 import { MeetingFields } from '../components/MeetingPanel';
 import { Reveal } from '../components/Reveal';
-import { DEFAULT_MIN_AGE, meetingLinkError } from '../lib/meeting';
+import { DEFAULT_MIN_AGE, freshJitsiLink, meetingLinkError, weeklyStarts } from '../lib/meeting';
 import { MAX_PRICE, priceLabel } from '../lib/price';
 import {
   AttentionPanel, ClassesPanel, StatsPanel, StudentsPanel, TeacherTable,
@@ -17,7 +17,8 @@ import {
   tutorById, tutorStats, upcomingSessions, useStore,
 } from '../lib/store';
 import {
-  SUBJECTS, subjectMeta, subjectShort, type Level, type RelayState, type SubjectId,
+  SUBJECTS, subjectMeta, subjectShort, type Level, type RelayState, type Session, type SubjectId,
+  type Tutor,
 } from '../lib/types';
 import { cx, downloadText, initials, plural } from '../lib/util';
 
@@ -26,8 +27,23 @@ type Tab = 'overview' | 'applications' | 'sessions' | 'students' | 'schedule' | 
 function looksLikeState(x: unknown): x is RelayState {
   if (!x || typeof x !== 'object') return false;
   const s = x as Record<string, unknown>;
-  return ['tutors', 'sessions', 'applications', 'certifications', 'kudos', 'requests'].every(
-    (k) => Array.isArray(s[k]),
+  const lists = ['tutors', 'sessions', 'applications', 'certifications', 'kudos', 'requests'];
+  if (!lists.every((k) => Array.isArray(s[k]))) return false;
+  // a backup that only has the right lists but broken entries would crash
+  // every page after import, so check the fields pages rely on
+  const str = (o: unknown, ...keys: string[]) =>
+    !!o && typeof o === 'object' && keys.every((k) => typeof (o as Record<string, unknown>)[k] === 'string');
+  const tutors = s.tutors as unknown[];
+  const sessions = s.sessions as unknown[];
+  return (
+    tutors.length > 0 &&
+    tutors.every((t) => str(t, 'id', 'name', 'email', 'grade', 'tagline') && Array.isArray((t as Tutor).subjects)) &&
+    sessions.every(
+      (x) =>
+        str(x, 'id', 'title', 'subject', 'tutorId', 'startISO', 'description') &&
+        typeof (x as Session).durationMin === 'number' &&
+        typeof (x as Session).capacity === 'number',
+    )
   );
 }
 
@@ -71,6 +87,10 @@ export function Admin() {
   if (!authed) {
     const tryCode = (e: FormEvent) => {
       e.preventDefault();
+      if (!code.trim()) {
+        toast('Type the passcode first.');
+        return;
+      }
       if (ADMIN_CODE && code.trim() === ADMIN_CODE) {
         sessionStorage.setItem('relay.admin', '1');
         setAuthed(true);
@@ -85,9 +105,9 @@ export function Admin() {
           <div className="card card-pad stack" style={{ gap: 16 }}>
             <div>
               <span className="eyebrow">founder console</span>
-              <h2 className="h3" style={{ marginTop: 12 }}>
+              <h1 className="h3" style={{ marginTop: 12 }}>
                 Restricted to founders
-              </h2>
+              </h1>
             </div>
             <p className="muted" style={{ fontSize: 14.5 }}>
               This is where applications get reviewed and sessions get published. Enter the
@@ -128,7 +148,7 @@ export function Admin() {
       <div className="section" style={{ paddingTop: 'clamp(120px, 16vw, 160px)' }}>
         <div className="container" style={{ maxWidth: 460 }}>
           <div className="card card-pad stack" style={{ gap: 14 }}>
-            <h2 className="h3">Sign in with a team email</h2>
+            <h1 className="h3">Sign in with a team email</h1>
             {store.profile ? (
               <p className="muted" style={{ fontSize: 14.5 }}>
                 You're signed in as <b>{store.profile.email}</b>, which isn't on the team list. Add
@@ -174,9 +194,9 @@ export function Admin() {
           <div className="row between" style={{ marginBottom: 24 }}>
             <div>
               <span className="eyebrow">founder console</span>
-              <h2 className="h2" style={{ fontSize: 'clamp(1.6rem, 3vw, 2.1rem)', marginTop: 10 }}>
+              <h1 className="h2" style={{ fontSize: 'clamp(1.6rem, 3vw, 2.1rem)', marginTop: 10 }}>
                 Mission control
-              </h2>
+              </h1>
             </div>
             <button
               className="btn-quiet"
@@ -278,8 +298,15 @@ export function Admin() {
                           <span className={cx('status-pill', `status-${a.status}`)}>{a.status}</span>
                         </div>
                         <div className="mono" style={{ fontSize: 11.5, color: 'var(--muted)', margin: '4px 0 8px' }}>
-                          {a.email} · {a.grade} · teaches{' '}
-                          {a.subjects.map((s) => SUBJECTS.find((x) => x.id === s)?.name).join(', ')}
+                          {[
+                            a.email,
+                            a.grade,
+                            a.subjects.length
+                              ? `teaches ${a.subjects.map((s) => SUBJECTS.find((x) => x.id === s)?.name).join(', ')}`
+                              : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
                         </div>
                         {a.courseTitle && (
                           <div style={{ fontSize: 14.5, fontWeight: 600, marginBottom: 4 }}>{a.courseTitle}</div>
@@ -305,7 +332,7 @@ export function Admin() {
                           </div>
                         )}
                       </div>
-                      {a.status === 'approved' && (
+                      {a.status === 'approved' && !store.live && (
                         <button
                           className="btn btn-ghost btn-sm"
                           style={{ flex: 'none' }}
@@ -352,7 +379,10 @@ export function Admin() {
 
         {tab === 'schedule' && (
           <Reveal>
-            <ScheduleForm onCreate={store.createSession} tutors={db.tutors} />
+            <ScheduleForm
+              onCreate={store.createSession}
+              tutors={db.tutors.filter((t) => t.active !== false)}
+            />
           </Reveal>
         )}
 
@@ -478,7 +508,7 @@ function CrewPanel({
   const [emailDraft, setEmailDraft] = useState('');
   const [whenDraft, setWhenDraft] = useState('');
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const { setTutorEmail, live } = useStore();
+  const { setTutorEmail, live, toast } = useStore();
 
   // add-a-friend form
   const [nName, setNName] = useState('');
@@ -509,8 +539,10 @@ function CrewPanel({
           <h3 className="h3">Add a tutor</h3>
           <p className="muted small" style={{ marginTop: 4 }}>
             For friends who told you what they want to teach. They do not need to sign up
-            themselves. This adds them on this device only; to show them to everyone, add them
-            to src/lib/roster.ts.
+            themselves.{' '}
+            {live
+              ? 'They show up on the site straight away.'
+              : 'This adds them on this device only; to show them to everyone, add them to src/lib/roster.ts.'}
           </p>
         </div>
         <div className="grid-2">
@@ -645,10 +677,20 @@ function CrewPanel({
                           updateTutor(t.id, {
                             tagline: tagDraft.trim() || t.tagline,
                             grade: gradeDraft.trim() || t.grade,
-                            availability: whenDraft.trim() || undefined,
+                            availability: whenDraft.trim(),
                           });
-                          if (emailDraft.trim().toLowerCase() !== t.email.toLowerCase()) {
-                            setTutorEmail(t.id, emailDraft);
+                          const newEmail = emailDraft.trim().toLowerCase();
+                          if (newEmail !== t.email.toLowerCase()) {
+                            if (newEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+                              toast("That login email doesn't look right, so it wasn't saved.");
+                            } else if (
+                              newEmail &&
+                              db.tutors.some((x) => x.id !== t.id && x.email.toLowerCase() === newEmail)
+                            ) {
+                              toast('Another teacher already uses that login email.');
+                            } else {
+                              setTutorEmail(t.id, newEmail);
+                            }
                           }
                           setEditId(null);
                         }}
@@ -794,7 +836,7 @@ function DataPanel({
 
   const onExport = () => {
     downloadText(
-      `relay-backup-${new Date().toISOString().slice(0, 10)}.json`,
+      `peer2peer-backup-${new Date().toISOString().slice(0, 10)}.json`,
       JSON.stringify({ version: SEED_VERSION, state: db }, null, 2),
       'application/json',
     );
@@ -823,9 +865,19 @@ function DataPanel({
   return (
     <div className="stack" style={{ gap: 16 }}>
       <p className="muted small">
-        Peer 2 Peer's pilot keeps everything in <b>this browser's storage</b> — {db.tutors.length} tutors,{' '}
-        {db.sessions.length} sessions, {db.kudos.length} kudos, {db.applications.length} applications.
-        Export before switching devices or clearing the browser; import to restore.
+        {LIVE ? (
+          <>
+            Everything lives in Supabase — {db.tutors.length} tutors, {db.sessions.length} sessions,{' '}
+            {db.kudos.length} kudos, {db.applications.length} applications. Export downloads a copy
+            for safekeeping; import and clearing only work in the offline version.
+          </>
+        ) : (
+          <>
+            The offline version keeps everything in <b>this browser's storage</b> — {db.tutors.length}{' '}
+            tutors, {db.sessions.length} sessions, {db.kudos.length} kudos, {db.applications.length}{' '}
+            applications. Export before switching devices or clearing the browser; import to restore.
+          </>
+        )}
       </p>
 
       <div className="grid-3">
@@ -907,6 +959,7 @@ function ScheduleForm({
   onCreate: ReturnType<typeof useStore>['createSession'];
   tutors: ReturnType<typeof useStore>['db']['tutors'];
 }) {
+  const { toast } = useStore();
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState<SubjectId>('python');
   const [level, setLevel] = useState<Level>('intro');
@@ -927,20 +980,25 @@ function ScheduleForm({
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (title.trim().length < 4 || !date || !tutorId || linkErr) return;
-    const firstMs = new Date(`${date}T${time}`).getTime();
-    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 32);
-    // same slot every week, for however many weeks were picked
-    for (let w = 0; w < Math.max(1, repeatWeeks); w++) {
+    const first = new Date(`${date}T${time}`);
+    if (Number.isNaN(first.getTime()) || first.getTime() < Date.now()) {
+      toast('Pick a date and time in the future.');
+      return;
+    }
+    // one room for the whole series, so students keep the same link each week
+    const room = link.trim() || freshJitsiLink(title);
+    // same local time every week, for however many weeks were picked
+    for (const startISO of weeklyStarts(first, repeatWeeks)) {
       onCreate({
         title: title.trim(),
         subject,
         level,
         description: description.trim() || 'A live session. Book a seat.',
         tutorId,
-        startISO: new Date(firstMs + w * 7 * 86_400_000).toISOString(),
+        startISO,
         durationMin: duration,
         capacity,
-        link: link.trim() || `https://meet.jit.si/relay-${slug}`,
+        link: room,
         meetingId: meetingId.trim() || undefined,
         passcode: passcode.trim() || undefined,
         minAge,

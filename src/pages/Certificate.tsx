@@ -9,14 +9,14 @@ import { fmtLongDate, plural } from '../lib/util';
 export function Certificate() {
   const { db, profile, openSignIn } = useStore();
   const tutor = profile ? tutorByEmail(db, profile.email) : undefined;
-  const stats = tutor ? tutorStats(db, tutor.id) : null;
+  const stats = tutor ? tutorStats(db, tutor.id, true) : null;
   const certs = profile ? certsFor(db, profile.email) : [];
 
   if (!profile) {
     return (
       <div className="section" style={{ paddingTop: 'clamp(120px, 16vw, 160px)', textAlign: 'center' }}>
         <div className="container stack" style={{ gap: 18, maxWidth: 440, margin: '0 auto' }}>
-          <h2 className="h2">Volunteer certificate</h2>
+          <h1 className="h2">Volunteer certificate</h1>
           <p className="lede" style={{ margin: '0 auto' }}>
             Sign in with your tutor email to generate a service certificate backed by your logged
             session hours.

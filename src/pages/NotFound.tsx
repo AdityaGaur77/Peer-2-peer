@@ -10,11 +10,11 @@ export function NotFound() {
         <span className="mono muted" style={{ letterSpacing: '0.2em' }}>
           ERROR 404
         </span>
-        <h2 className="display" style={{ fontSize: 'clamp(2.4rem, 6vw, 3.6rem)' }}>
-          Dropped the <em className="em-ember">baton.</em>
-        </h2>
+        <h1 className="display" style={{ fontSize: 'clamp(2.4rem, 6vw, 3.6rem)' }}>
+          Page not found
+        </h1>
         <p className="lede" style={{ margin: '0 auto' }}>
-          That page ran off the track. Let's get you back to somewhere useful.
+          That link doesn't go anywhere. Let's get you back to somewhere useful.
         </p>
         <div className="row" style={{ justifyContent: 'center' }}>
           <Link to="/" className="btn btn-primary">

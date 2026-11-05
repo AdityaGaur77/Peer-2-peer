@@ -63,24 +63,50 @@ function hidden(sessionId: string, kind: string, n: number): Attendee[] {
   }));
 }
 
+/**
+ * For the extras (kudos, requests, applications...): if one of them fails,
+ * log it and carry on with an empty list rather than blanking the whole
+ * board. Teachers, classes and seat counts still have to load.
+ */
+function soft<T>(
+  q: PromiseLike<{ data: T | null; error: { message: string } | null }>,
+  what: string,
+): PromiseLike<{ data: T | null; error: { message: string } | null }> {
+  return q.then((r) => {
+    if (r.error) {
+      console.warn(`Couldn't load ${what}:`, r.error.message);
+      return { data: [] as unknown as T, error: null };
+    }
+    return r;
+  });
+}
+
 export async function fetchState(sb: SupabaseClient, myEmail: string | null): Promise<LiveSnapshot> {
-  const [tutors, emails, sessions, rooms, counts, signups, apps, certs, kudos, reqs, admin, profiles] =
+  const [tutors, emails, sessions, rooms, counts, signups, apps, certs, kudos, reqs, admin, profiles, votes] =
     await Promise.all([
       sb.from('tutors').select('*'),
-      sb.from('tutor_emails').select('*'),
+      soft(sb.from('tutor_emails').select('*'), 'login emails'),
       sb.from('sessions').select('*'),
-      sb.from('session_rooms').select('*'),
+      soft(sb.from('session_rooms').select('*'), 'meeting links'),
       sb.rpc('session_counts'),
-      sb.from('signups').select('*').order('created_at'),
-      sb.from('applications').select('*').order('submitted_at'),
-      sb.from('certifications').select('*'),
-      sb.from('kudos').select('*').order('at', { ascending: false }),
-      sb.from('requests').select('*').order('at', { ascending: false }),
+      soft(sb.from('signups').select('*').order('created_at'), 'signups'),
+      soft(sb.from('applications').select('*').order('submitted_at'), 'applications'),
+      soft(sb.from('certifications').select('*'), 'certifications'),
+      soft(sb.from('kudos').select('*').order('at', { ascending: false }), 'kudos'),
+      soft(
+        sb.from('requests').select('id, topic, subject, by_name, votes, at').order('at', { ascending: false }),
+        'topic requests',
+      ),
       sb.rpc('is_admin'),
-      sb.from('profiles').select('*'),
+      soft(sb.from('profiles').select('*'), 'profiles'),
+      myEmail ? soft(sb.rpc('my_votes'), 'your votes') : Promise.resolve({ data: [] as string[], error: null }),
     ]);
 
   const isAdmin = !!must(admin);
+  // who voted is private; the database only tells each person their own votes
+  const myVotes = new Set((must(votes) as unknown as Array<string | { my_votes: string }>).map((v) =>
+    typeof v === 'string' ? v : v.my_votes,
+  ));
   const emailOf = new Map(
     (must(emails) as Array<{ tutor_id: string; email: string }>).map((e) => [e.tutor_id, e.email]),
   );
@@ -185,7 +211,7 @@ export async function fetchState(sb: SupabaseClient, myEmail: string | null): Pr
     ).map((k): Kudos => ({ id: k.id, tutorId: k.tutor_id, from: k.from_name, message: k.message, atISO: k.at })),
     requests: (
       must(reqs) as Array<{
-        id: string; topic: string; subject: string; by_name: string; votes: number; voted_by: string[]; at: string;
+        id: string; topic: string; subject: string; by_name: string; votes: number; at: string;
       }>
     ).map((r): TopicRequest => ({
       id: r.id,
@@ -193,7 +219,7 @@ export async function fetchState(sb: SupabaseClient, myEmail: string | null): Pr
       subject: r.subject as TopicRequest['subject'],
       by: r.by_name,
       votes: r.votes,
-      votedBy: r.voted_by,
+      votedBy: myEmail && myVotes.has(r.id) ? [myEmail] : [],
       atISO: r.at,
     })),
     students: isAdmin
@@ -263,16 +289,23 @@ export const remote = {
     );
   },
 
+  // An upsert, so a class that somehow has no room row yet still gets one
+  // instead of the change silently matching nothing.
   updateMeeting: (
     sb: SupabaseClient,
     sessionIds: string[],
     m: { link: string; meetingId?: string; passcode?: string },
   ) =>
     ok(
-      sb
-        .from('session_rooms')
-        .update({ link: m.link, meeting_id: m.meetingId || null, passcode: m.passcode || null })
-        .in('session_id', sessionIds),
+      sb.from('session_rooms').upsert(
+        sessionIds.map((id) => ({
+          session_id: id,
+          link: m.link,
+          meeting_id: m.meetingId || null,
+          passcode: m.passcode || null,
+        })),
+        { onConflict: 'session_id' },
+      ),
     ),
 
   cancelSession: (sb: SupabaseClient, id: string) =>

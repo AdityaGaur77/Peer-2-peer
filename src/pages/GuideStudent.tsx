@@ -192,7 +192,7 @@ export function GuideStudent() {
             How Peer 2 Peer works, <em className="em-ember">by trying it.</em>
           </>
         }
-intro="Five short steps: pick a subject, practise booking a seat on a fake card, see what a session is like, vote on what gets taught next, and find out why none of it costs anything."
+intro="Five short steps: pick a subject, practise booking a seat on a fake card, see what a session is like, vote on what gets taught next, and find out why most of it costs nothing."
         steps={STEPS}
         current={step}
         maxVisited={maxVisited}
@@ -203,8 +203,7 @@ intro="Five short steps: pick a subject, practise booking a seat on a fake card,
           <div className="stack" style={{ gap: 16 }}>
             <h3 className="h3">What do you want to get good at?</h3>
             <p style={{ color: 'var(--ink-2)', fontSize: 15 }}>
-              Two tracks are live right now — Math, Physics, and Web Dev are on the way. Pick one
-              and we'll show you what's actually coming up.
+              Pick a subject and we'll show you what's actually coming up in it.
             </p>
             <div className="row" style={{ gap: 10 }}>
               {SUBJECTS.map((s) => (

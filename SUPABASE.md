@@ -39,7 +39,11 @@ Takes about 20 minutes. Do it from the project email account.
    To remove one: `delete from admins where email = 'someone@gmail.com';`
 
 Both files are safe to run again later. **Whenever an update changes
-`schema.sql`, run it again** so the database gets the new columns (for
+`schema.sql`, run it again, but only after Vercel has finished deploying
+that update.** The database rules and the website change together; new rules
+with the old website can stop pages loading. So: merge the PR, wait for the
+deploy to show "Ready", then run `schema.sql`. (Whenever an update changes
+`schema.sql`, run it again so the database gets the new columns (for
 example, class prices were added this way).
 
 ## 3. Set up sign-in

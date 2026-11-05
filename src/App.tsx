@@ -36,6 +36,8 @@ const TITLES: Record<string, string> = {
   '/join': "You're invited — Peer 2 Peer",
 };
 
+const KNOWN = new Set(Object.keys(TITLES));
+
 function RouteMeta() {
   const { pathname } = useLocation();
   useEffect(() => {
@@ -43,6 +45,8 @@ function RouteMeta() {
       TITLES[pathname] ??
       (pathname.startsWith('/flyer/')
         ? 'Session flyer — Peer 2 Peer'
+        : !KNOWN.has(pathname)
+        ? 'Page not found — Peer 2 Peer'
         : 'Peer 2 Peer — tutoring by students');
   }, [pathname]);
   return null;

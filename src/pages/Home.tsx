@@ -331,7 +331,7 @@ export function Home() {
             </Reveal>
             <Reveal delay={0.12}>
               <p className="lede" style={{ fontSize: '1.05rem' }}>
-                This started as Peer2Peer, where I charged $8 to $20 a class. It worked well
+                This started as a paid tutoring app, where I charged $8 to $20 a class. It worked well
                 enough, but the students who needed help most were the ones least likely to pay
                 for it. So classes are free by default now. Teachers can charge a little, never
                 more than $19, and only free classes count toward their volunteer hours.
@@ -348,7 +348,7 @@ export function Home() {
 
           <Reveal delay={0.1}>
             <div className="card card-pad" style={{ maxWidth: 380, justifySelf: 'center' }}>
-              <span className="small muted">What Peer2Peer used to charge</span>
+              <span className="small muted">What it used to cost</span>
               <div className="stack" style={{ gap: 12, marginTop: 16 }}>
                 {[
                   ['Intro to Python', '$15'],

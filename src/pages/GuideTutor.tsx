@@ -1,17 +1,24 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GuideShell, type GuideStepDef } from '../components/GuideShell';
 import { MeetingFields } from '../components/MeetingPanel';
 import { SessionCard } from '../components/SessionCard';
-import { DEFAULT_MIN_AGE, meetingLinkError } from '../lib/meeting';
+import { DEFAULT_MIN_AGE, freshJitsiLink, meetingLinkError, weeklyStarts } from '../lib/meeting';
 import { MAX_PRICE, priceLabel } from '../lib/price';
 import {
   applicationFor, certsFor, tutorByEmail, upcomingSessions, useStore,
 } from '../lib/store';
 import { SUBJECTS, subjectMeta, type Level, type Session, type SubjectId } from '../lib/types';
-import { cx, fmtDate, fmtTime, uid } from '../lib/util';
+import { cx, fmtDate, fmtTime } from '../lib/util';
 
 const DRAFT_KEY = 'relay.classdraft';
+
+/** Today as YYYY-MM-DD in the teacher's own timezone (toISOString is UTC). */
+function localToday(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
 
 interface ClassDraft {
   subject: SubjectId | null;
@@ -197,6 +204,20 @@ export function GuideTutor() {
     !draft.link.trim() || !meetingLinkError(draft.link),
   ][step];
 
+  // Every rule a class has to meet, checked again at post time: the step
+  // rail lets people jump around, and a draft can be resumed weeks later.
+  const problem = useMemo((): { step: number; msg: string } | null => {
+    if (!draft.subject) return { step: 0, msg: 'Pick a subject first.' };
+    if (draft.title.trim().length < 8) return { step: 1, msg: 'The class name needs at least 8 characters.' };
+    if (draft.description.trim().length < 30)
+      return { step: 2, msg: 'The pitch needs a couple of sentences (30+ characters).' };
+    if (!startMs || startMs <= Date.now()) return { step: 5, msg: 'Pick a date and time in the future.' };
+    if (draft.link.trim() && meetingLinkError(draft.link))
+      return { step: 6, msg: meetingLinkError(draft.link) ?? 'Check the meeting link.' };
+    return null;
+  }, [draft, startMs]);
+  const posting = useRef(false);
+
   // live preview built from the draft
   const previewSession: Session = useMemo(() => {
     const fallback = new Date();
@@ -216,7 +237,7 @@ export function GuideTutor() {
       capacity: draft.capacity,
       attendees: [],
       waitlist: [],
-      link: draft.link || 'https://meet.jit.si/relay-your-class',
+      link: draft.link || 'https://meet.jit.si/peer2peer-your-class',
       minAge: draft.minAge,
       price: draft.price,
       status: 'scheduled',
@@ -224,24 +245,32 @@ export function GuideTutor() {
   }, [draft, startMs, tutor?.id]);
 
   const publish = () => {
+    if (problem) {
+      go(problem.step);
+      toast(problem.msg);
+      return;
+    }
+    if (posting.current) return; // a double click would post everything twice
     requireProfile((p) => {
       const me = tutorByEmail(db, p.email);
-      if (!me || !draft.subject || !startMs) return;
-      const slug = draft.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 32) || uid('class');
+      if (!me || !draft.subject || !startMs || posting.current) return;
+      posting.current = true;
       const weeks = Math.max(1, draft.repeatWeeks || 1);
       let id = '';
       // same slot every week; the first one is where we land afterwards
-      for (let w = 0; w < weeks; w++) {
+      const room = draft.link.trim() || freshJitsiLink(draft.title);
+      const starts = weeklyStarts(new Date(startMs), weeks);
+      for (let w = 0; w < starts.length; w++) {
         const made = createSession({
           title: draft.title.trim(),
           subject: draft.subject,
           level: draft.level,
           description: draft.description.trim(),
           tutorId: me.id,
-          startISO: new Date(startMs + w * 7 * 86_400_000).toISOString(),
+          startISO: starts[w],
           durationMin: draft.durationMin,
           capacity: draft.capacity,
-          link: draft.link.trim() || `https://meet.jit.si/relay-${slug}`,
+          link: room,
           meetingId: draft.meetingId.trim() || undefined,
           passcode: draft.passcode.trim() || undefined,
           minAge: draft.minAge,
@@ -268,7 +297,7 @@ export function GuideTutor() {
           {step === 0 && !stepValid ? 'Pick a subject first' : 'Next →'}
         </button>
       ) : tutor ? (
-        <button className="btn btn-primary" disabled={!draft.subject || !startMs} onClick={publish}>
+        <button className="btn btn-primary" disabled={!!problem} onClick={publish} title={problem?.msg}>
           Post it to the board
         </button>
       ) : (
@@ -543,7 +572,7 @@ People scroll past topic names. They stop for what they will be able to do after
               <input
                 className="input"
                 type="date"
-                min={new Date().toISOString().slice(0, 10)}
+                min={localToday()}
                 value={draft.date}
                 onChange={(e) => patch({ date: e.target.value })}
               />

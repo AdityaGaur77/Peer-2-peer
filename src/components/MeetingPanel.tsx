@@ -35,7 +35,20 @@ function CopyChip({ label, value }: { label: string; value: string }) {
  */
 export function MeetingPanel({ session, canEdit }: { session: Session; canEdit: boolean }) {
   const [editing, setEditing] = useState(false);
-  if (!session.link) return null;
+  if (!session.link) {
+    if (!canEdit) return null;
+    return (
+      <div className="meet meet-fresh">
+        <div className="meet-row">
+          <span className="small">This class has no meeting link yet.</span>
+          <button className="btn btn-soft btn-sm" onClick={() => setEditing(true)}>
+            Add the meeting link
+          </button>
+        </div>
+        {editing && <LinkEditor session={session} onClose={() => setEditing(false)} />}
+      </div>
+    );
+  }
   const state = joinWindow(session);
   const provider = meetingProvider(session.link) ?? 'the meeting';
   const fresh = linkRecentlyUpdated(session);

@@ -43,9 +43,9 @@ export function Join() {
       <div className="section" style={{ paddingTop: 'clamp(120px, 16vw, 160px)', textAlign: 'center' }}>
         <div className="container stack" style={{ gap: 18, maxWidth: 440, margin: '0 auto' }}>
           <span className="mono muted" style={{ letterSpacing: '0.2em' }}>
-            BATON MISSED
+            LINK PROBLEM
           </span>
-          <h2 className="h2">Couldn't read that invite</h2>
+          <h1 className="h2">Couldn't read that invite</h1>
           <p className="lede" style={{ margin: '0 auto' }}>
             {error} Links can get chopped short when they're forwarded — the full one is long on
             purpose, since it carries the whole class inside it.
@@ -105,15 +105,17 @@ export function Join() {
             <span className="eyebrow">you've been handed the baton</span>
           </Reveal>
           <Reveal delay={0.05}>
-            <h2 className="h2">
+            <h1 className="h2">
               {who} invited you to a {invite.session.price ? 'class' : 'free class'}.
-            </h2>
+            </h1>
           </Reveal>
           <Reveal delay={0.1}>
             <p className="lede">
               {invite.tutor.name} ({invite.tutor.grade}) is running this on{' '}
-              {fmtLongDate(invite.session.startISO)} at {fmtTime(invite.session.startISO)}. No fee,
-              no account, no catch — that's the entire model.
+              {fmtLongDate(invite.session.startISO)} at {fmtTime(invite.session.startISO)}.{' '}
+              {invite.session.price
+                ? `It's $${invite.session.price} a class, paid to the teacher directly.`
+                : "It's free."}
             </p>
           </Reveal>
         </div>
@@ -135,9 +137,9 @@ export function Join() {
               </div>
             ) : (
               <div className="guide-tip">
-                Adding it puts the class on <b>your</b> copy of the board, where you can save a
-                spot and grab the room link. Peer 2 Peer keeps everything in your own browser — nothing
-                about you gets sent anywhere.
+                {live
+                  ? 'Open it on the board to save a spot. You get the meeting link once you have one.'
+                  : 'Adding it puts the class on your board, where you can save a spot and get the meeting link.'}
               </div>
             )}
             <div className="row">

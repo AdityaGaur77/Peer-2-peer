@@ -192,9 +192,19 @@ declare
   p profiles%rowtype;
   taken int;
 begin
-  select * into s from sessions where id = new.session_id;
-  if s.status <> 'scheduled' then
+  -- Checked first, so the messages below never reveal anything about
+  -- someone else's account (their age, or whether they're blocked).
+  if not is_admin() and new.email <> my_email() then
+    raise exception 'You can only save a spot for yourself.';
+  end if;
+  -- Lock the class row: two people grabbing the last seat at the same
+  -- moment take turns here instead of both getting in.
+  select * into s from sessions where id = new.session_id for update;
+  if not found or s.status <> 'scheduled' then
     raise exception 'This class was canceled.';
+  end if;
+  if s.start_at + make_interval(mins => s.duration_min) < now() then
+    raise exception 'This class has already happened.';
   end if;
   if is_admin() then
     return new;
@@ -206,8 +216,12 @@ begin
   if p.age is null or p.age < s.min_age then
     raise exception 'This class is for ages %+.', s.min_age;
   end if;
+  select count(*) into taken from signups where session_id = new.session_id and not waitlist;
+  -- nobody waits for a class with free seats
+  if new.waitlist and taken < s.capacity then
+    new.waitlist := false;
+  end if;
   if not new.waitlist then
-    select count(*) into taken from signups where session_id = new.session_id and not waitlist;
     if taken >= s.capacity then
       raise exception 'That class is full. Join the waitlist instead.';
     end if;
@@ -229,6 +243,7 @@ begin
      where (session_id, email) = (
        select session_id, email from signups
         where session_id = old.session_id and waitlist
+          and email not in (select email from profiles where blocked)
         order by created_at limit 1
      );
   end if;
@@ -246,6 +261,10 @@ begin
   if not is_admin() and new.blocked is distinct from coalesce(old.blocked, false) then
     raise exception 'Only the team can change that.';
   end if;
+  if not is_admin() and tg_op = 'UPDATE' and old.age is not null
+     and new.age is distinct from old.age then
+    raise exception 'To change your age, email the team.';
+  end if;
   return new;
 end $$;
 
@@ -257,17 +276,114 @@ create trigger profile_guard before insert or update on public.profiles
 create or replace function public.stamp_room() returns trigger
 language plpgsql as $$
 begin
-  if new.link is distinct from old.link
+  if tg_op = 'INSERT' then
+    new.updated_at := null;
+  elsif new.link is distinct from old.link
      or new.meeting_id is distinct from old.meeting_id
      or new.passcode is distinct from old.passcode then
     new.updated_at := now();
+  else
+    new.updated_at := old.updated_at;
   end if;
   return new;
 end $$;
 
 drop trigger if exists room_stamp on public.session_rooms;
-create trigger room_stamp before update on public.session_rooms
+create trigger room_stamp before insert or update on public.session_rooms
   for each row execute function public.stamp_room();
+
+-- Same list of providers the website accepts. NOT VALID: applies to new and
+-- changed rows without failing on anything already saved.
+alter table public.session_rooms drop constraint if exists session_rooms_provider;
+alter table public.session_rooms add constraint session_rooms_provider check (
+  link ~* '^https://(meet\.google\.com|([a-z0-9-]+\.)?zoom\.(us|com)|teams\.(microsoft|live)\.com|meet\.jit\.si|discord\.(gg|com))(/|$)'
+) not valid;
+
+-- ── rules on classes for teachers ────────────────────────────
+-- Teachers manage their own upcoming classes. They can't backdate a class
+-- (which would add volunteer hours), edit one that already happened, bring
+-- back a class the team canceled, or shrink it below who's signed up.
+create or replace function public.guard_session() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  seated int;
+begin
+  if is_admin() then
+    return new;
+  end if;
+  if tg_op = 'INSERT' then
+    if new.start_at < now() then
+      raise exception 'Classes have to be in the future.';
+    end if;
+    new.status := 'scheduled';
+    new.created_at := now();
+    return new;
+  end if;
+  if old.start_at < now() then
+    raise exception 'A class that already started can''t be changed.';
+  end if;
+  if new.start_at < now() then
+    raise exception 'Classes have to be in the future.';
+  end if;
+  if old.status = 'canceled' and new.status <> 'canceled' then
+    raise exception 'Only the team can bring back a canceled class.';
+  end if;
+  new.created_at := old.created_at;
+  select count(*) into seated from signups where session_id = old.id and not waitlist;
+  if new.capacity < seated then
+    raise exception 'That''s fewer seats than people already signed up (%).', seated;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists session_guard on public.sessions;
+create trigger session_guard before insert or update on public.sessions
+  for each row execute function public.guard_session();
+
+-- ── kudos and requests: real time, real name, real subject ───
+create or replace function public.stamp_note() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  who text;
+begin
+  if is_admin() then
+    return new;
+  end if;
+  select name into who from profiles where email = my_email();
+  new.at := now();
+  if tg_table_name = 'kudos' then
+    new.from_name := coalesce(who, new.from_name);
+  else
+    new.by_name := coalesce(who, new.by_name);
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists kudos_stamp on public.kudos;
+create trigger kudos_stamp before insert on public.kudos
+  for each row execute function public.stamp_note();
+drop trigger if exists requests_stamp on public.requests;
+create trigger requests_stamp before insert on public.requests
+  for each row execute function public.stamp_note();
+
+alter table public.requests drop constraint if exists requests_subject;
+alter table public.requests add constraint requests_subject check (subject in (
+  'python', 'webdev', 'ai', 'math', 'physics', 'chemistry', 'biology', 'english',
+  'history', 'spanish', 'testprep', 'cad', 'other'
+)) not valid;
+
+-- Quizzes are graded in the browser, so at least keep scores sane.
+alter table public.certifications drop constraint if exists certifications_sane;
+alter table public.certifications add constraint certifications_sane check (
+  subject in ('python', 'ai') and total between 1 and 50 and score between 0 and total
+) not valid;
+
+-- Who voted for a topic stays private: everyone sees the count, and each
+-- person can ask which topics they voted for.
+create or replace function public.my_votes() returns setof text
+language sql stable security definer set search_path = public as $$
+  select id from requests where my_email() <> '' and my_email() = any (voted_by)
+$$;
 
 -- ── row-level security ───────────────────────────────────────
 
@@ -295,7 +411,8 @@ end $$;
 create policy admins_self on public.admins for select using (email = my_email() or is_admin());
 
 create policy profiles_read  on public.profiles for select using (email = my_email() or is_admin());
-create policy profiles_new   on public.profiles for insert with check (email = my_email());
+create policy profiles_new   on public.profiles for insert
+  with check (my_email() <> '' and email = my_email());
 create policy profiles_edit  on public.profiles for update
   using (email = my_email() or is_admin())
   with check (email = my_email() or is_admin());
@@ -308,9 +425,13 @@ create policy temail_read  on public.tutor_emails for select using (is_admin() o
 create policy temail_admin on public.tutor_emails for all using (is_admin()) with check (is_admin());
 
 create policy sessions_read on public.sessions for select using (true);
-create policy sessions_write on public.sessions for all
+create policy sessions_new on public.sessions for insert
+  with check (is_admin() or tutor_id = my_tutor_id());
+create policy sessions_edit on public.sessions for update
   using (is_admin() or tutor_id = my_tutor_id())
   with check (is_admin() or tutor_id = my_tutor_id());
+-- teachers cancel instead; deleting would erase signups and hours
+create policy sessions_delete on public.sessions for delete using (is_admin());
 
 create policy rooms_read on public.session_rooms for select
   using (is_admin() or teaches(session_id) or in_class(session_id));
@@ -321,21 +442,22 @@ create policy rooms_write on public.session_rooms for all
 create policy signups_read on public.signups for select
   using (email = my_email() or is_admin() or teaches(session_id));
 create policy signups_join on public.signups for insert
-  with check (email = my_email() or is_admin());
+  with check ((my_email() <> '' and email = my_email()) or is_admin());
 create policy signups_leave on public.signups for delete
   using (email = my_email() or is_admin() or teaches(session_id));
 create policy signups_admin on public.signups for update using (is_admin()) with check (is_admin());
 
 create policy apps_read  on public.applications for select using (email = my_email() or is_admin());
 create policy apps_new   on public.applications for insert
-  with check (email = my_email() and status = 'pending');
+  with check (my_email() <> '' and email = my_email() and status = 'pending');
 create policy apps_mine  on public.applications for update
   using (email = my_email() and status = 'pending')
   with check (email = my_email() and status = 'pending');
 create policy apps_admin on public.applications for all using (is_admin()) with check (is_admin());
 
 create policy certs_read  on public.certifications for select using (email = my_email() or is_admin());
-create policy certs_write on public.certifications for insert with check (email = my_email());
+create policy certs_write on public.certifications for insert
+  with check (my_email() <> '' and email = my_email());
 create policy certs_redo  on public.certifications for update
   using (email = my_email()) with check (email = my_email());
 
@@ -352,6 +474,10 @@ grant usage on schema public to anon, authenticated;
 grant select on all tables in schema public to anon, authenticated;
 grant insert, update, delete on all tables in schema public to authenticated;
 grant execute on all functions in schema public to anon, authenticated;
+
+-- voted_by holds emails: readable only through my_votes()
+revoke select on public.requests from anon, authenticated;
+grant select (id, topic, subject, by_name, votes, at) on public.requests to anon, authenticated;
 
 -- ── live updates ─────────────────────────────────────────────
 -- Lets an open page hear about a changed link or a new signup straight away.

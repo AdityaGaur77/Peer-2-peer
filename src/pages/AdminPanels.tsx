@@ -2,6 +2,7 @@
 import { Fragment, useMemo, useState, type CSSProperties } from 'react';
 import { LinkEditor } from '../components/MeetingPanel';
 import { ago, meetingProvider } from '../lib/meeting';
+import { countsForHours } from '../lib/price';
 import { pastSessions, tutorById, tutorStats, upcomingSessions, useStore } from '../lib/store';
 import type { RelayState, Session, StudentRecord } from '../lib/types';
 import { cx, fmtDate, fmtTime, initials, plural } from '../lib/util';
@@ -36,7 +37,7 @@ export function siteStats(db: RelayState, now = Date.now()) {
     fill: capacity ? Math.round((seats / capacity) * 100) : 0,
     waitlisted: upcoming.reduce((n, s) => n + s.waitlist.length, 0),
     completed: past.length,
-    hours: Math.round(past.reduce((n, s) => n + s.durationMin, 0) / 6) / 10,
+    hours: Math.round(past.filter(countsForHours).reduce((n, s) => n + s.durationMin, 0) / 6) / 10,
     learners: learners.size,
     pendingApps: db.applications.filter((a) => a.status === 'pending').length,
     linkChanges: db.sessions.filter(

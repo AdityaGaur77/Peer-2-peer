@@ -166,7 +166,7 @@ export function RelayChain() {
   }, [reduced]);
 
   return (
-    <div className="chain" ref={wrapRef} aria-label="How the relay works: each learner becomes a tutor">
+    <div className="chain" ref={wrapRef} aria-label="How Peer 2 Peer works: each learner becomes a tutor">
       <svg viewBox="0 0 1000 208" role="img">
         <defs>
           <linearGradient id="batonGrad" x1="0" y1="0" x2="1" y2="0">

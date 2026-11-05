@@ -28,6 +28,9 @@ interface Payload {
   h: number; // tutor hue
   e: string; // tutor email
   p?: number; // price in dollars, missing on older links = free
+  a?: number; // minimum age
+  i?: string; // meeting ID
+  x?: string; // meeting passcode
 }
 
 // ── base64url over bytes ─────────────────────────────────────
@@ -94,6 +97,9 @@ export async function encodeInvite(session: Session, tutor: Tutor | undefined): 
     h: tutor?.hue ?? 200,
     e: tutor?.email ?? '',
     p: session.price ?? 0,
+    a: session.minAge,
+    i: session.meetingId,
+    x: session.passcode,
   };
   return squeeze(JSON.stringify(p));
 }
@@ -118,6 +124,9 @@ export async function decodeInvite(payload: string): Promise<DecodedInvite> {
       tutorId: '', // filled in when the invite is accepted
       link: String(p.k ?? ''),
       price: clampPrice(p.p),
+      minAge: Number(p.a) > 0 ? Math.min(25, Math.round(Number(p.a))) : undefined,
+      meetingId: p.i ? String(p.i).slice(0, 60) : undefined,
+      passcode: p.x ? String(p.x).slice(0, 60) : undefined,
     },
     tutor: {
       name: String(p.n ?? 'A Peer 2 Peer tutor'),
