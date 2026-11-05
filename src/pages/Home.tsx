@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { KudosMarquee } from '../components/KudosMarquee';
 import { RelayChain } from '../components/RelayChain';
 import { Reveal } from '../components/Reveal';
+import { CountUp } from '../components/ScrollFx';
 import { CONTACT_EMAIL } from '../lib/config';
 import { globalStats, isDayOne, subjectSessions, useStore } from '../lib/store';
 import { SUBJECTS, subjectMeta, subjectShort } from '../lib/types';
@@ -78,7 +79,9 @@ export function Home() {
           </div>
 
           <Reveal delay={0.3}>
-            <RelayChain />
+            <div className="parallax">
+              <RelayChain />
+            </div>
           </Reveal>
         </div>
       </header>
@@ -91,15 +94,15 @@ export function Home() {
               {dayOne ? (
                 <>
                   <div className="stat">
-                    <span className="stat-num">{stats.tutorCount}</span>
+                    <span className="stat-num"><CountUp to={stats.tutorCount} /></span>
                     <span className="stat-label">student teachers</span>
                   </div>
                   <div className="stat">
-                    <span className="stat-num">{classes.length}</span>
+                    <span className="stat-num"><CountUp to={classes.length} /></span>
                     <span className="stat-label">classes starting this fall</span>
                   </div>
                   <div className="stat">
-                    <span className="stat-num">{subjectsTaught}</span>
+                    <span className="stat-num"><CountUp to={subjectsTaught} /></span>
                     <span className="stat-label">subjects covered</span>
                   </div>
                   <div className="stat">
@@ -110,15 +113,15 @@ export function Home() {
               ) : (
                 <>
                   <div className="stat">
-                    <span className="stat-num">{stats.sessionsHosted}</span>
+                    <span className="stat-num"><CountUp to={stats.sessionsHosted} /></span>
                     <span className="stat-label">sessions hosted</span>
                   </div>
                   <div className="stat">
-                    <span className="stat-num">{stats.learnersHelped}</span>
+                    <span className="stat-num"><CountUp to={stats.learnersHelped} /></span>
                     <span className="stat-label">learners helped</span>
                   </div>
                   <div className="stat">
-                    <span className="stat-num">{stats.volunteerHours}h</span>
+                    <span className="stat-num"><CountUp to={stats.volunteerHours} suffix="h" /></span>
                     <span className="stat-label">hours volunteered</span>
                   </div>
                   <div className="stat">
@@ -254,7 +257,7 @@ export function Home() {
           </div>
 
           <div className="bento-grid">
-            <Reveal className="b-7" delay={0}>
+            <Reveal className="b-7" delay={0} from="left">
               <div className="card bento" style={{ height: '100%' }}>
                 <span className="step-no">Step 1</span>
                 <h3 className="h3">Find a session and sign up</h3>
@@ -265,7 +268,7 @@ export function Home() {
                 </p>
               </div>
             </Reveal>
-            <Reveal className="b-5" delay={0.07}>
+            <Reveal className="b-5" delay={0.07} from="right">
               <div className="card bento" style={{ height: '100%' }}>
                 <span className="step-no">Step 2</span>
                 <h3 className="h3">Small groups, no judgement</h3>
@@ -275,7 +278,7 @@ export function Home() {
                 </p>
               </div>
             </Reveal>
-            <Reveal className="b-5" delay={0.07}>
+            <Reveal className="b-5" delay={0.07} from="left">
               <div className="card bento" style={{ height: '100%' }}>
                 <span className="step-no">Step 3</span>
                 <h3 className="h3">Every teacher is reviewed</h3>
@@ -285,7 +288,7 @@ export function Home() {
                 </p>
               </div>
             </Reveal>
-            <Reveal className="b-7" delay={0.14}>
+            <Reveal className="b-7" delay={0.14} from="right">
               <div className="card bento" style={{ height: '100%' }}>
                 <span className="step-no">Step 4</span>
                 <h3 className="h3">Your hours get counted</h3>
@@ -399,7 +402,7 @@ export function Home() {
                 `Email ${CONTACT_EMAIL}. One of the founders reads every message.`,
               ],
             ].map(([q, a], i) => (
-              <Reveal key={q} delay={i * 0.05}>
+              <Reveal key={q} delay={i * 0.06} from="zoom">
                 <div className="card faq-item">
                   <h3>{q}</h3>
                   <p>{a}</p>

@@ -5,6 +5,7 @@ import { Footer } from './components/Footer';
 import { ClassBanner } from './components/NextClass';
 import { Nav } from './components/Nav';
 import { ScrollTop } from './components/ScrollTop';
+import { ScrollFx } from './components/ScrollFx';
 import { SignInModal } from './components/SignInModal';
 import { ToastHost } from './components/ToastHost';
 import { About } from './pages/About';
@@ -52,6 +53,7 @@ export default function App() {
   return (
     <>
       <ScrollTop />
+      <ScrollFx />
       <RouteMeta />
       <a href="#main" className="skip-link">
         Skip to content
