@@ -17,7 +17,7 @@ import { Modal } from './Modal';
 export function SignInModal() {
   const {
     signInOpen, closeSignIn, completeSignIn, profile, live, sendSignInCode, verifySignInCode,
-    saveProfile,
+    saveProfile, isAdmin,
   } = useStore();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -43,13 +43,15 @@ export function SignInModal() {
   }, [signInOpen, profile]);
 
   // Once Supabase confirms the code the store sets the profile. Someone we
-  // already know is done; someone new still needs to finish their profile.
+  // already know is done, and so is an admin signing in to the console (they
+  // only need an age if they save a spot in a class themselves). Anyone else
+  // new still has to finish their profile.
   useEffect(() => {
     if (!codeSentTo || profile?.email !== codeSentTo) return;
     setCodeSentTo(null);
     setCode('');
-    if (profile.age != null) completeSignIn(profile);
-  }, [codeSentTo, profile, completeSignIn]);
+    if (profile.age != null || isAdmin) completeSignIn(profile);
+  }, [codeSentTo, profile, completeSignIn, isAdmin]);
 
   if (!signInOpen) return null;
 

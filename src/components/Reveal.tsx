@@ -5,10 +5,12 @@ interface RevealProps {
   children: ReactNode;
   delay?: number; // seconds
   className?: string;
+  /** Which way it arrives from. Default is a short rise. */
+  from?: 'up' | 'left' | 'right' | 'zoom';
 }
 
-/** Calm fade-up when the element first scrolls into view. */
-export function Reveal({ children, delay = 0, className }: RevealProps) {
+/** Calm entrance when the element first scrolls into view. */
+export function Reveal({ children, delay = 0, className, from = 'up' }: RevealProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
 
@@ -31,7 +33,7 @@ export function Reveal({ children, delay = 0, className }: RevealProps) {
   return (
     <div
       ref={ref}
-      className={cx('reveal', inView && 'in', className)}
+      className={cx('reveal', from !== 'up' && `reveal-${from}`, inView && 'in', className)}
       style={{ '--rd': `${delay}s` } as CSSProperties}
     >
       {children}
