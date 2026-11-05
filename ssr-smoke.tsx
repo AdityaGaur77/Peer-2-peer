@@ -19,7 +19,7 @@ const ROUTES: Array<[string, string[]]> = [
   ['/guide/student', ['by trying it', 'Pick your track', 'how it works']],
   ['/join', ['invite']], // no payload → the friendly error state
   ['/flyer/nope', ['No such session']], // unknown id → graceful fallback
-  ['/definitely-not-a-page', ['Dropped the']],
+  ['/definitely-not-a-page', ['Page not found']],
 ];
 
 export function runSmoke() {

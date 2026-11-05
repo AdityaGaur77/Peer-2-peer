@@ -10,6 +10,8 @@ import { applicationFor, certsFor, tutorByEmail, useStore } from '../lib/store';
 import { SUBJECTS, subjectMeta, subjectShort, type Application, type SubjectId } from '../lib/types';
 import { cx, fmtDate } from '../lib/util';
 
+const APPLIED_KEY = 'relay.myApplication';
+
 const AVAIL = ['Weekday afternoons', 'Weekday evenings', 'Weekend mornings', 'Weekend afternoons'];
 
 export function Teach() {
@@ -31,12 +33,23 @@ export function Teach() {
   const [editing, setEditing] = useState(false);
 
   const myCerts = profile ? certsFor(db, profile.email) : [];
-  // Signed-out applicants are found by the email they just typed.
+  // Signed-out applicants are found by the email they applied with, which is
+  // remembered so the "send it to the team" step survives a reload.
+  const [lastAppliedEmail] = useState(() => {
+    try {
+      return localStorage.getItem(APPLIED_KEY) ?? '';
+    } catch {
+      return '';
+    }
+  });
   const existing = profile
     ? applicationFor(db, profile.email)
     : sent
       ? applicationFor(db, email)
-      : undefined;
+      : lastAppliedEmail
+        ? applicationFor(db, lastAppliedEmail)
+        : undefined;
+  const [formErr, setFormErr] = useState('');
   const alreadyTutor = profile ? !!tutorByEmail(db, profile.email) : false;
 
   const startEditing = () => {
@@ -60,8 +73,21 @@ export function Teach() {
 
   const apply = (e: FormEvent) => {
     e.preventDefault();
-    if (name.trim().length < 2 || subjects.length === 0) return;
+    if (name.trim().length < 2) {
+      setFormErr('Add your name (at least 2 letters).');
+      return;
+    }
+    if (subjects.length === 0) {
+      setFormErr('Pick at least one subject.');
+      return;
+    }
+    setFormErr('');
     const send = (from: string) => {
+      try {
+        localStorage.setItem(APPLIED_KEY, from);
+      } catch {
+        /* private mode: they'll just need to stay on the page */
+      }
       submitApplication({
         name: name.trim(),
         email: from,
@@ -84,6 +110,7 @@ export function Teach() {
     }
     const from = email.trim().toLowerCase();
     if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(from)) send(from);
+    else setFormErr("That email doesn't look right.");
   };
 
   // What lives inside the Step-02 card, depending on where this person is.
@@ -208,7 +235,7 @@ Usually it just means come to a few sessions first so we know you. Try again aft
       <div className="section" style={{ paddingTop: 'clamp(120px, 16vw, 160px)', textAlign: 'center' }}>
         <div className="container stack" style={{ gap: 18, maxWidth: 460, margin: '0 auto' }}>
           <span className="eyebrow" style={{ justifyContent: 'center' }}>for tutors</span>
-          <h2 className="h2">Want to teach as well?</h2>
+          <h1 className="h2">Want to teach as well?</h1>
           <p className="lede" style={{ margin: '0 auto' }}>
             You signed up to learn, so we keep the tutor pages out of your way. You can change
             that whenever you like — plenty of people do both.
@@ -234,9 +261,9 @@ Usually it just means come to a few sessions first so we know you. Try again aft
             <span className="eyebrow">become a tutor</span>
           </Reveal>
           <Reveal delay={0.05}>
-            <h2 className="h2">
+            <h1 className="h2">
               You learned it. <em className="em-ember">Now teach it.</em>
-            </h2>
+            </h1>
           </Reveal>
           <Reveal delay={0.1}>
             <p className="lede">
@@ -435,9 +462,15 @@ Teaching something is the fastest way to properly learn it, and the hours count
 
                 <div className="row between">
                   <span className="hint">
-                    {subjects.length === 0
-                      ? 'pick at least one subject'
-                      : 'next you will send this to the team'}
+                    {formErr ? (
+                      <span style={{ color: 'var(--hot-deep)' }}>{formErr}</span>
+                    ) : subjects.length === 0 ? (
+                      'pick at least one subject'
+                    ) : live ? (
+                      'this goes straight to the team'
+                    ) : (
+                      'next you will send this to the team'
+                    )}
                   </span>
                   <button className="btn btn-primary" type="submit" disabled={subjects.length === 0}>
                     Submit application

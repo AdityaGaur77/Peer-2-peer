@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { downloadSessionICS, googleCalUrl } from '../lib/ics';
 import { inviteUrl } from '../lib/invite';
-import { priceLabel } from '../lib/price';
+import { countsForHours, priceLabel } from '../lib/price';
 import { MeetingPanel } from './MeetingPanel';
 import { levelLabel, tutorById, useStore } from '../lib/store';
 import type { Session } from '../lib/types';
@@ -121,7 +121,8 @@ export function SessionCard({
           </div>
         ) : past ? (
           <div className="spots-label">
-            completed · {session.attendees.length} learners · counts toward volunteer hours
+            completed · {session.attendees.length} learners
+            {countsForHours(session) ? ' · counts toward volunteer hours' : ''}
           </div>
         ) : (
           <>
@@ -142,6 +143,8 @@ export function SessionCard({
             </div>
 
             {(going || canEditLink) && <MeetingPanel session={session} canEdit={canEditLink} />}
+
+            {canEditLink && <Roster session={session} />}
 
             <div className="row">
               {going ? (
@@ -207,5 +210,36 @@ export function SessionCard({
         )}
       </div>
     </article>
+  );
+}
+
+/** For the class's teacher (and admins): who is coming and who is waiting. */
+function Roster({ session }: { session: Session }) {
+  const people = [
+    ...session.attendees.map((a) => ({ ...a, waiting: false })),
+    ...session.waitlist.map((a) => ({ ...a, waiting: true })),
+  ].filter((a) => !a.email.startsWith('hidden:'));
+  return (
+    <details className="roster">
+      <summary>
+        Who's coming ({session.attendees.length}
+        {session.waitlist.length ? `, ${session.waitlist.length} waiting` : ''})
+      </summary>
+      {people.length === 0 ? (
+        <p className="small muted">Nobody yet. Share the class link to fill it.</p>
+      ) : (
+        <ul>
+          {people.map((a) => (
+            <li key={a.email}>
+              <span>{a.name || a.email}</span>
+              <span className="small muted">
+                {a.email}
+                {a.waiting ? ' · waiting' : ''}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </details>
   );
 }

@@ -13,17 +13,22 @@ import { fmtLongDate, fmtTime, fmtWeekday } from '../lib/util';
  */
 export function Flyer() {
   const { id } = useParams();
-  const { db } = useStore();
+  const { db, live } = useStore();
   const session = db.sessions.find((s) => s.id === id);
   const tutor = session ? tutorById(db, session.tutorId) : undefined;
   const [link, setLink] = useState('');
 
   useEffect(() => {
     if (!session) return;
+    const plain = `${window.location.origin}${window.location.pathname}#/sessions?s=${session.id}`;
+    if (live) {
+      setLink(plain);
+      return;
+    }
     inviteUrl(session, tutor)
       .then(setLink)
       .catch(() => setLink(`${window.location.origin}${window.location.pathname}`));
-  }, [session, tutor]);
+  }, [session, tutor, live]);
 
   if (!session) {
     return (
@@ -127,13 +132,14 @@ export function Flyer() {
 
           <p className="flyer-foot">
             Taught by a student who learned it recently and remembers exactly which part was
-            confusing. When it clicks for you, you teach the next person. That's the whole fee.
+            confusing. When it clicks for you, you can teach the next person.
           </p>
         </div>
 
         {link && (
           <p className="hint no-print" style={{ marginTop: 16, wordBreak: 'break-all', maxWidth: '70ch' }}>
-            direct invite link (for messages, not posters): {link}
+            direct invite link (for messages, not posters):{' '}
+            <span className="flyer-link">{link}</span>
           </p>
         )}
       </div>

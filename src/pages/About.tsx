@@ -25,7 +25,7 @@ const FAQ = [
   },
   {
     q: 'What subjects can I get help with?',
-    a: "Python and AI have the most going on, since that's what the first tutors knew. Math, physics, chemistry, biology, English, history, Spanish, web development and test prep are all open too. If nothing is scheduled in your subject, request it on the session board and a tutor can pick it up.",
+    a: "Math has the most going on right now, along with English, Spanish and engineering/CAD. Physics, chemistry, biology, history, coding and test prep are open too. If nothing is scheduled in your subject, request it on the Sessions page and a teacher can pick it up.",
   },
 ];
 
@@ -33,7 +33,7 @@ const FAQ = [
 const TIMELINE = [
   {
     when: 'before',
-    title: 'Peer2Peer, $8 to $20 a class',
+    title: 'A paid tutoring app, $8 to $20 a class',
     body: 'I ran a small tutoring marketplace where high schoolers taught younger kids for a fee. It worked well enough. The problem was who it quietly turned away: the students who needed the help most were the ones least likely to pay for it.',
   },
   {
@@ -61,9 +61,9 @@ export function About() {
             <span className="eyebrow">the story</span>
           </Reveal>
           <Reveal delay={0.05}>
-            <h2 className="display" style={{ fontSize: 'clamp(2.2rem, 5vw, 3.4rem)' }}>
+            <h1 className="display" style={{ fontSize: 'clamp(2.2rem, 5vw, 3.4rem)' }}>
               Free by default, <em className="em-ember">on purpose.</em>
-            </h2>
+            </h1>
           </Reveal>
           <Reveal delay={0.1}>
             <p className="lede">
@@ -132,7 +132,7 @@ export function About() {
                     schoolhouse.world
                   </a>
                   , the free peer-tutoring nonprofit that proved this works at scale. Peer 2 Peer is our
-                  small, Python-and-AI-shaped take on the same idea, built for our own community.
+                  small take on the same idea, built for our own community.
                 </p>
               </div>
               <span className="serif-i" style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', color: 'var(--hot)', flex: 'none' }}>
@@ -169,7 +169,7 @@ export function About() {
         {/* faq */}
         <div className="section-head" style={{ marginBottom: 20 }}>
           <Reveal>
-            <span className="eyebrow">faq</span>
+            <span className="eyebrow">Questions people ask</span>
           </Reveal>
           <Reveal delay={0.05}>
             <h2 className="h2">Questions people ask</h2>

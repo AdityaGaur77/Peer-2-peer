@@ -31,7 +31,9 @@ export function Dashboard() {
   const myRsvps = useMemo(
     () =>
       profile
-        ? upcomingSessions(db).filter((s) => s.attendees.some((a) => a.email === profile.email))
+        ? upcomingSessions(db).filter((s) =>
+            [...s.attendees, ...s.waitlist].some((a) => a.email === profile.email),
+          )
         : [],
     [db, profile],
   );
@@ -45,7 +47,7 @@ export function Dashboard() {
     return (
       <div className="section" style={{ paddingTop: 'clamp(120px, 16vw, 160px)', textAlign: 'center' }}>
         <div className="container stack" style={{ gap: 18, maxWidth: 440, margin: '0 auto' }}>
-          <h2 className="h2">Your dashboard</h2>
+          <h1 className="h2">Your dashboard</h1>
           <p className="lede" style={{ margin: '0 auto' }}>
             Sign in to see your saved sessions, certifications, and — if you're a tutor — your
             volunteer hours.
@@ -71,9 +73,9 @@ export function Dashboard() {
                 {initials(profile.name)}
               </span>
               <div>
-                <h2 className="h2" style={{ fontSize: 'clamp(1.6rem, 3vw, 2.1rem)' }}>
+                <h1 className="h2" style={{ fontSize: 'clamp(1.6rem, 3vw, 2.1rem)' }}>
                   Hey, {profile.name.split(' ')[0]}.
-                </h2>
+                </h1>
                 <p className="mono small muted">
                   {tutor ? `${tutor.grade} · tutor` : profile.role === 'tutor' ? 'signed up to tutor' : 'student'} · {profile.email}
                 </p>

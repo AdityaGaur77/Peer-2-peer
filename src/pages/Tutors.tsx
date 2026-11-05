@@ -26,9 +26,9 @@ export function Tutors() {
             <span className="eyebrow">the founding crew</span>
           </Reveal>
           <Reveal delay={0.05}>
-            <h2 className="h2">
+            <h1 className="h2">
               Students who <em className="em-ember">volunteer their time.</em>
-            </h2>
+            </h1>
           </Reveal>
           <Reveal delay={0.1}>
             <p className="lede">

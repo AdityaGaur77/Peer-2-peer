@@ -17,6 +17,7 @@
   --paper-2: #e4f1fd;
   --card: #ffffff;
   --ink: #0a2850;
+  --ink-hover: #133a6e;
   --ink-2: #2f4a6e;
   --muted: #536a88;
 
@@ -36,7 +37,7 @@
 
   /* subjects */
   /* subject colors are generated from each subject's hue — see types.ts */
-  --gold: #a87b18;
+  --gold: #7a5608;
   --gold-soft: #f6edcf;
 
   /* lines + depth */
@@ -66,6 +67,7 @@
   --paper-2: #0b2343;
   --card: #0e2a4f;
   --ink: #e6f1fb;
+  --ink-hover: #ffffff;
   --ink-2: #b4cde6;
   --muted: #86a3c2;
 
@@ -358,7 +360,7 @@ button {
 }
 
 .btn-primary:hover {
-  background: #133a6e;
+  background: var(--ink-hover);
   box-shadow: var(--shadow-md);
 }
 
@@ -1826,7 +1828,7 @@ button {
     --border-strong: #b9c4d5;
   }
 
-  .island-wrap, .footer, .no-print, .toast-host {
+  .island-wrap, .footer, .no-print, .toast-host, .class-banner, .scroll-progress {
     display: none !important;
   }
 
@@ -1937,7 +1939,7 @@ button {
 
 @media (max-width: 960px) {
   .sessions-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -2016,6 +2018,10 @@ details.faq .faq-a {
 
   .scroll-progress {
     display: none;
+  }
+
+  .chip-live::before {
+    animation: none;
   }
 
   .parallax {
@@ -2712,10 +2718,39 @@ details.faq .faq-a {
   color: var(--ink);
 }
 
-@media (max-width: 560px) {
+.class-banner-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
   .class-banner {
+    top: auto;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    transform: none;
+    max-width: none;
+    flex-wrap: nowrap;
+    justify-content: space-between;
     border-radius: 16px;
-    top: 76px;
+    padding: 8px 8px 8px 14px;
+    gap: 8px;
+  }
+
+  .class-banner-details {
+    display: none;
+  }
+
+  body.has-class-banner .toast-host {
+    bottom: 86px;
+  }
+
+  /* keep the end of the page reachable above the bar */
+  body.has-class-banner main {
+    padding-bottom: 72px;
   }
 }
 
@@ -2779,4 +2814,39 @@ details.faq .faq-a {
 
 .link-btn:hover {
   color: var(--ember-deep);
+}
+
+/* teacher's list of who signed up, on their own class card */
+.roster summary {
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 620;
+  color: var(--ember-deep);
+}
+
+.roster ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.roster li {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 14px;
+}
+
+/* long words and pasted links wrap instead of widening the page */
+.ticket-title, .ticket-desc, .ticket-body, .flyer-title, .flyer-desc, .flyer-link,
+.class-card h3, .class-card p, .tutor-course-sum, .tutor-tagline, .meet-updated,
+.roster li, .admin-table td {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.grid-2 > *, .grid-3 > * {
+  min-width: 0;
 }

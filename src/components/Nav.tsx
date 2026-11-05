@@ -41,6 +41,16 @@ export function Nav() {
 
   useEffect(() => setOpen(false), [location.pathname]);
 
+  // the phone menu closes with Escape, like a dialog
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]);
+
   const isStudent = profile?.role === 'student';
   const links = LINKS.filter((l) => !(l.tutorOnly && isStudent)).map((l) => (
     <NavLink key={l.to} to={l.to} className={({ isActive }) => cx('nav-link', isActive && 'active')}>
@@ -82,13 +92,18 @@ export function Nav() {
           </button>
         )}
 
-        <button className="burger" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <button
+          className="burger"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-controls="nav-sheet"
+        >
           {open ? 'CLOSE' : 'MENU'}
         </button>
       </nav>
 
       {/* lives outside the pill — backdrop-filter would otherwise trap it */}
-      <div className="island-sheet">
+      <div className="island-sheet" id="nav-sheet">
         {links}
         <button className="nav-link" onClick={flipTheme} style={{ textAlign: 'left' }}>
           {theme === 'dark' ? '☀ Day mode' : '☾ Night mode'}

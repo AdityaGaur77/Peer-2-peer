@@ -45,7 +45,7 @@ export function downloadSessionICS(session: Session, tutor: Tutor | undefined): 
     'END:VCALENDAR',
   ];
   downloadText(
-    `relay-${session.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40)}.ics`,
+    `peer2peer-${session.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40)}.ics`,
     lines.join('\r\n'),
     'text/calendar',
   );

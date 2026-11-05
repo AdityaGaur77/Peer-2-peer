@@ -158,7 +158,8 @@ export function rosterSnippet(app: Application): string {
   const [first, ...rest] = app.name.trim().split(/\s+/);
   const last = rest.at(-1);
   const name = last ? `${first} ${last[0].toUpperCase()}.` : first;
-  const slug = first.toLowerCase().replace(/[^a-z0-9]/g, '') || 'tutor';
+  const slug =
+    [first, last?.[0]].filter(Boolean).join('-').toLowerCase().replace(/[^a-z0-9-]/g, '') || 'tutor';
   const entry = {
     id: `roster-${slug}`,
     name,

@@ -31,7 +31,7 @@ export function GuideShell({
             <span className="eyebrow">{eyebrow}</span>
           </Reveal>
           <Reveal delay={0.05}>
-            <h2 className="h2">{title}</h2>
+            <h1 className="h2">{title}</h1>
           </Reveal>
           <Reveal delay={0.1}>
             <p className="lede">{intro}</p>

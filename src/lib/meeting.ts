@@ -62,3 +62,29 @@ export function ago(iso: string, now = Date.now()): string {
   const d = Math.round(h / 24);
   return `${d} day${d === 1 ? '' : 's'} ago`;
 }
+
+/**
+ * A free Jitsi room for a class posted without a link. The random part
+ * matters: a room named only after the class title could be guessed by
+ * anyone who can see the title, which is everyone.
+ */
+export function freshJitsiLink(title: string): string {
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 24) || 'class';
+  const rand =
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID().slice(0, 8)
+      : Math.random().toString(36).slice(2, 10);
+  return `https://meet.jit.si/peer2peer-${slug}-${rand}`;
+}
+
+/**
+ * The same local time every week. Adding 7 x 24 hours drifts by an hour
+ * across a daylight-saving change; stepping the calendar date doesn't.
+ */
+export function weeklyStarts(firstLocal: Date, weeks: number): string[] {
+  return Array.from({ length: Math.max(1, weeks) }, (_, w) => {
+    const d = new Date(firstLocal);
+    d.setDate(d.getDate() + 7 * w);
+    return d.toISOString();
+  });
+}

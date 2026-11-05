@@ -17,3 +17,11 @@ export function priceLabel(price: number | undefined): string {
 export function isFree(s: { price?: number }): boolean {
   return !s.price;
 }
+
+/**
+ * A past class adds volunteer hours when it was free and somebody actually
+ * came. Without the second part, posting empty classes would add hours.
+ */
+export function countsForHours(s: { price?: number; attendees: unknown[] }): boolean {
+  return isFree(s) && s.attendees.length > 0;
+}

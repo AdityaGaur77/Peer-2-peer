@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useEffect, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
-import { joinWindow, meetingProvider } from '../lib/meeting';
+import { joinWindow } from '../lib/meeting';
 import { tutorById, useStore } from '../lib/store';
 import type { Profile, RelayState, Session } from '../lib/types';
 import { fmtRelativeDay, fmtTime, initials, sessionEnd } from '../lib/util';
@@ -82,21 +82,35 @@ export function ClassBanner() {
   const now = useNow(20_000);
   const [hidden, setHidden] = useState<string | null>(null);
   const next = myClasses(db, profile, now)[0];
-  if (!next || !next.link || joinWindow(next, now) !== 'open' || hidden === next.id) return null;
+  const visible =
+    !!next && !!next.link && joinWindow(next, now) === 'open' && hidden !== next.id;
+
+  // lets the page make room for the bar on phones (and lift toasts above it)
+  useEffect(() => {
+    document.body.classList.toggle('has-class-banner', visible);
+    return () => document.body.classList.remove('has-class-banner');
+  }, [visible]);
+
+  if (!visible || !next) return null;
   const started = new Date(next.startISO).getTime() <= now;
 
   return (
     <div className="class-banner" role="status">
-      <span>
+      <span className="class-banner-title">
         <b>{next.title}</b> {started ? 'has started' : `starts at ${fmtTime(next.startISO)}`}
       </span>
       <a className="btn btn-sm" href={next.link} target="_blank" rel="noreferrer">
-        Join on {meetingProvider(next.link) ?? 'the call'} ↗
+        Join ↗
       </a>
-      <Link to="/dashboard" className="btn-quiet" style={{ color: 'inherit' }}>
+      <Link to="/dashboard" className="btn-quiet class-banner-details" style={{ color: 'inherit' }}>
         details
       </Link>
-      <button className="btn-quiet" style={{ color: 'inherit' }} onClick={() => setHidden(next.id)} aria-label="Hide">
+      <button
+        className="btn-quiet"
+        style={{ color: 'inherit' }}
+        onClick={() => setHidden(next.id)}
+        aria-label="Hide"
+      >
         ✕
       </button>
     </div>

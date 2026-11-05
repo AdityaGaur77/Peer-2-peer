@@ -19,7 +19,7 @@ const proxy = http.createServer((req, res) => {
     (r) => { res.writeHead(r.statusCode, r.headers); r.pipe(res); },
   );
   req.pipe(up);
-}).listen(3056);
+}).listen(3057);
 
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
 const { createClient } = await import('@supabase/supabase-js');
@@ -27,7 +27,7 @@ const { fetchState, remote } = await vite.ssrLoadModule('/src/lib/remote.ts');
 
 const anonKey = jwt({ role: 'anon' });
 const as = (email) =>
-  createClient('http://127.0.0.1:3056', anonKey, {
+  createClient('http://127.0.0.1:3057', anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: { headers: email ? { Authorization: `Bearer ${jwt({ role: 'authenticated', email })}` } : {} },
   });
@@ -92,8 +92,9 @@ try {
   check('the teacher sees who signed up by name', mine.attendees[0]?.name === 'Sam' && mine.waitlist[0]?.name === 'Olu');
   check('the teacher sees their own login email', st.state.tutors.find((t) => t.id === 'roster-abhiram').email === 'abhiram@x.com');
 
+  // refused outright (it's an upsert now); either way the link must not move
+  await err(remote.updateMeeting(s, ['sess_e2e'], { link: 'https://meet.google.com/evil-evil-evi' }));
   check('a student cannot change the link',
-    (await err(remote.updateMeeting(s, ['sess_e2e'], { link: 'https://meet.google.com/evil-evil-evi' }))) === null &&
     (await fetchState(s, 'sam@x.com')).state.sessions.find((x) => x.id === 'sess_e2e').link.includes('aaa-bbbb-ccc'));
   await remote.updateMeeting(teach, ['sess_e2e'], { link: 'https://meet.google.com/new-link-abc', meetingId: '', passcode: '' });
   st = await fetchState(s, 'sam@x.com');
@@ -144,6 +145,31 @@ try {
   await remote.saveCertification(s, { email: 'sam@x.com', subject: 'python', score: 10, total: 10 });
   st = await fetchState(s, 'sam@x.com');
   check('quiz retakes replace the old score', st.state.certifications.length === 1 && st.state.certifications[0].score === 10);
+
+  // ── holes found by the QA pass, now closed ──
+  const raw = (c) => c; // supabase-js clients, used directly below
+  check('a student cannot raise their own age to get into a class',
+    !!(await err(remote.saveProfile(k, { email: 'kid@x.com', name: 'Kid', age: 30, role: 'student' }))));
+  const leak = await err(remote.joinClass(s, 'sess_e2e', { email: 'olu@x.com', name: 'x' }));
+  check('signing up someone else reveals nothing about them', /only save a spot for yourself/.test(leak ?? ''), leak);
+  const anonVotes = await anon.from('requests').select('voted_by');
+  check('nobody can read who voted on a topic', !!anonVotes.error);
+  check('a teacher cannot backdate a class',
+    !!(await err(remote.createSession(teach, { ...session, id: 'sess_old', startISO: '2026-01-01T17:00:00Z' }))));
+  const del = await teach.from('sessions').delete().eq('id', 'sess_e2e').select();
+  check('a teacher cannot delete a class', !del.error && (del.data ?? []).length === 0);
+  await raw(teach).from('session_rooms').update({ updated_at: '2000-01-01T00:00:00Z' }).eq('session_id', 'sess_e2e');
+  const stamp = (await fetchState(teach, 'abhiram@x.com')).state.sessions.find((x) => x.id === 'sess_e2e').linkUpdatedISO;
+  check('the "link changed" time cannot be forged', !stamp || !stamp.startsWith('2000'));
+  check('a class link must be a real meeting provider',
+    !!(await err(remote.updateMeeting(teach, ['sess_e2e'], { link: 'https://evil.example.com/x' }))));
+  await remote.addKudos(s, { id: 'k_fake', tutorId: 'roster-abhiram', from: 'The Principal', message: 'hi', atISO: '' });
+  const fake = (await fetchState(anon, null)).state.kudos.find((x) => x.id === 'k_fake');
+  check('kudos carry the sender\'s real name', fake?.from === 'Sam');
+  // only the team can put a class in the past; nobody can then sign up for it
+  await remote.createSession(boss, { ...session, id: 'sess_past', startISO: '2026-01-01T17:00:00Z' });
+  const pastErr = await err(remote.joinClass(s, 'sess_past', { email: 'sam@x.com', name: 'Sam' }));
+  check('a class that already happened cannot be signed up for', /already happened/.test(pastErr ?? ''), pastErr);
 
   await remote.cancelSession(teach, 'sess_e2e');
   st = await fetchState(anon, null);
