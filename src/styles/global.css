@@ -2896,3 +2896,72 @@ details.faq .faq-a {
   font-weight: 450;
   font-size: 15px;
 }
+
+/* ── analytics ─────────────────────────────────────────────── */
+
+.bar-row {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px;
+  font-size: 13.5px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--ember-soft);
+  z-index: 0;
+}
+
+.bar-label, .bar-num {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.bar-num {
+  flex: none;
+  font-weight: 650;
+}
+
+.day-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 160px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.day-bar {
+  flex: 1 0 22px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.day-bar-fill {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 6px 6px 0 0;
+  background: linear-gradient(180deg, #add9fd, #4c9be0);
+  max-height: calc(100% - 34px);
+}
+
+.journey {
+  margin: 4px 0 4px 18px;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+  font-size: 13.5px;
+}

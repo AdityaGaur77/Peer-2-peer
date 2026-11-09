@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { setAnalyticsToken, track } from './analytics';
 import { supabase } from './backend';
 import { SEED_VERSION } from './config';
 import type { DecodedInvite } from './invite';
@@ -232,10 +233,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
 
     sb.auth.getSession().then(({ data }) => {
+      setAnalyticsToken(data.session?.access_token ?? null);
       const u = data.session?.user;
       void adopt(u?.email?.toLowerCase() ?? null);
     });
     const { data: sub } = sb.auth.onAuthStateChange((event, session) => {
+      setAnalyticsToken(session?.access_token ?? null);
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
         const u = session?.user;
         const email = u?.email?.toLowerCase() ?? null;
@@ -320,6 +323,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const after = pendingAction.current;
       pendingAction.current = null;
       toast(`You're in, ${p.name.split(' ')[0]}.`);
+      track('signin', { label: p.role ?? 'student' });
       if (after) after(p);
     },
     [toast],
@@ -382,6 +386,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             : 'Spot released.'
           : `You're going: ${session.title}`,
       );
+      if (!going) track('rsvp', { label: session.title.slice(0, 200) });
       sync((sb) =>
         going ? remote.leaveClass(sb, sessionId, p.email) : remote.joinClass(sb, sessionId, p),
       );
@@ -431,6 +436,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         (x) => x.email.toLowerCase() === a.email.toLowerCase() && x.status === 'pending',
       );
       sync((sb) => remote.submitApplication(sb, a, id, pending?.id));
+      track('apply', { label: a.subjects.join(', ').slice(0, 200) });
       setDb((prev) => ({
         ...prev,
         applications: [
@@ -481,6 +487,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const k = { id: uid('kudos'), tutorId, from, message, atISO: new Date().toISOString() };
       setDb((prev) => ({ ...prev, kudos: [k, ...prev.kudos] }));
       sync((sb) => remote.addKudos(sb, k));
+      track('kudos');
       toast("Sent. That will make their day.");
     },
     [toast, sync],
@@ -499,6 +506,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       };
       setDb((prev) => ({ ...prev, requests: [r, ...prev.requests] }));
       sync((sb) => remote.addRequest(sb, r, myEmail.current ?? ''));
+      track('request', { label: topic.slice(0, 200) });
       toast('Requested. Tutors build sessions from this list.');
     },
     [toast, sync, profile],
@@ -814,6 +822,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       };
       setDb((prev) => ({ ...prev, tutoringRequests: [r, ...(prev.tutoringRequests ?? [])] }));
       sync((sb) => remote.requestTutoring(sb, r));
+      track('tutoring', { label: tutorById(db, tutorId)?.name.slice(0, 200) });
       const t = tutorById(db, tutorId);
       toast(`Sent to ${t?.name.split(' ')[0] ?? 'the teacher'}. They'll email you to pick a time.`);
     },

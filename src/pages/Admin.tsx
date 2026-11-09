@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 
 import { useSearchParams } from 'react-router-dom';
 import { MeetingFields } from '../components/MeetingPanel';
 import { AllTutoringRequests } from '../components/Tutoring';
+import { AnalyticsPanel } from './AnalyticsPanel';
 import { Reveal } from '../components/Reveal';
 import { DEFAULT_MIN_AGE, freshJitsiLink, meetingLinkError, weeklyStarts } from '../lib/meeting';
 import {
@@ -22,7 +23,9 @@ import {
 } from '../lib/types';
 import { cx, downloadText, initials, plural } from '../lib/util';
 
-type Tab = 'overview' | 'applications' | 'sessions' | 'students' | 'tutoring' | 'schedule' | 'crew' | 'data';
+type Tab =
+  | 'overview' | 'analytics' | 'applications' | 'sessions' | 'students' | 'tutoring' | 'schedule' | 'crew'
+  | 'data';
 
 function looksLikeState(x: unknown): x is RelayState {
   if (!x || typeof x !== 'object') return false;
@@ -178,6 +181,7 @@ export function Admin() {
 
   const TABS: Array<{ id: Tab; label: string; badge?: number }> = [
     { id: 'overview', label: 'Overview' },
+    { id: 'analytics', label: 'Analytics' },
     { id: 'sessions', label: 'Classes' },
     { id: 'students', label: 'Students' },
     {
@@ -371,6 +375,12 @@ export function Admin() {
         {tab === 'sessions' && (
           <Reveal>
             <ClassesPanel db={db} />
+          </Reveal>
+        )}
+
+        {tab === 'analytics' && (
+          <Reveal>
+            <AnalyticsPanel />
           </Reveal>
         )}
 

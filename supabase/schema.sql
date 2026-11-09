@@ -149,6 +149,34 @@ create table if not exists public.requests (
   at         timestamptz not null default now()
 );
 
+-- Site analytics: one row per page view, click, page exit or key action.
+-- Anyone can add rows (that's how a visit is recorded); only admins can
+-- read them. No IP addresses are stored.
+create table if not exists public.events (
+  id           bigserial primary key,
+  at           timestamptz not null default now(),
+  visitor_id   text not null check (char_length(visitor_id) between 8 and 64),
+  session_id   text not null check (char_length(session_id) between 8 and 64),
+  kind         text not null check (kind in ('pageview', 'click', 'leave', 'signin', 'rsvp', 'apply', 'tutoring', 'kudos', 'request')),
+  path         text check (char_length(path) <= 300),
+  label        text check (char_length(label) <= 200),
+  href         text check (char_length(href) <= 500),
+  referrer     text check (char_length(referrer) <= 500),
+  source       text check (char_length(source) <= 100),
+  medium       text check (char_length(medium) <= 100),
+  campaign     text check (char_length(campaign) <= 100),
+  landing      text check (char_length(landing) <= 300),
+  device       text check (char_length(device) <= 20),
+  browser      text check (char_length(browser) <= 40),
+  os           text check (char_length(os) <= 40),
+  screen       text check (char_length(screen) <= 20),
+  lang         text check (char_length(lang) <= 20),
+  tz           text check (char_length(tz) <= 60),
+  duration_ms  int check (duration_ms between 0 and 86400000),
+  user_email   text
+);
+create index if not exists events_at on public.events (at desc);
+
 -- ── helpers ──────────────────────────────────────────────────
 -- security definer: they read tables the caller can't, and return only
 -- a yes/no or a count.
@@ -458,6 +486,20 @@ drop trigger if exists tutoring_request_guard on public.tutoring_requests;
 create trigger tutoring_request_guard before insert or update on public.tutoring_requests
   for each row execute function public.guard_tutoring_request();
 
+-- The server decides the time and who was signed in; a visitor can't fake
+-- either.
+create or replace function public.stamp_event() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  new.at := now();
+  new.user_email := nullif(my_email(), '');
+  return new;
+end $$;
+
+drop trigger if exists event_stamp on public.events;
+create trigger event_stamp before insert on public.events
+  for each row execute function public.stamp_event();
+
 -- Who voted for a topic stays private: everyone sees the count, and each
 -- person can ask which topics they voted for.
 create or replace function public.my_votes() returns setof text
@@ -479,6 +521,7 @@ alter table public.certifications enable row level security;
 alter table public.kudos          enable row level security;
 alter table public.requests       enable row level security;
 alter table public.tutoring_requests enable row level security;
+alter table public.events         enable row level security;
 
 do $$
 declare r record;
@@ -560,9 +603,16 @@ create policy tutreq_status on public.tutoring_requests for update
   with check (tutor_id = my_tutor_id() or is_admin());
 create policy tutreq_admin on public.tutoring_requests for delete using (is_admin());
 
+create policy events_add  on public.events for insert with check (true);
+create policy events_read on public.events for select using (is_admin());
+create policy events_drop on public.events for delete using (is_admin());
+
 grant usage on schema public to anon, authenticated;
 grant select on all tables in schema public to anon, authenticated;
 grant insert, update, delete on all tables in schema public to authenticated;
+-- visitors who aren't signed in can record their visit, nothing else
+grant insert on public.events to anon;
+grant usage on sequence public.events_id_seq to anon, authenticated;
 grant execute on all functions in schema public to anon, authenticated;
 
 -- voted_by holds emails: readable only through my_votes()

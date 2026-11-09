@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { startAnalytics, trackPageview } from './lib/analytics';
 import { Footer } from './components/Footer';
 import { ClassBanner } from './components/NextClass';
 import { Nav } from './components/Nav';
@@ -38,6 +39,20 @@ const TITLES: Record<string, string> = {
 
 const KNOWN = new Set(Object.keys(TITLES));
 
+/** A page view per route change, plus click and time-on-page tracking. */
+function Analytics() {
+  const { pathname, search } = useLocation();
+  useEffect(() => {
+    startAnalytics();
+  }, []);
+  useEffect(() => {
+    // after the title updates, so the event reflects the page
+    const t = window.setTimeout(trackPageview, 0);
+    return () => window.clearTimeout(t);
+  }, [pathname, search]);
+  return null;
+}
+
 function RouteMeta() {
   const { pathname } = useLocation();
   useEffect(() => {
@@ -59,6 +74,7 @@ export default function App() {
       <ScrollTop />
       <ScrollFx />
       <RouteMeta />
+      <Analytics />
       <a href="#main" className="skip-link">
         Skip to content
       </a>

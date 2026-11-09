@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { AnalyticsEvent } from './analytics';
 import type {
   Application, Attendee, Certification, Course, Kudos, Profile, RelayState, Session,
   StudentRecord, SubjectId, TopicRequest, Tutor, TutoringRequest,
@@ -454,6 +455,24 @@ export const remote = {
 
   setTutoringStatus: (sb: SupabaseClient, id: string, status: TutoringRequest['status']) =>
     ok(sb.from('tutoring_requests').update({ status }).eq('id', id)),
+
+  /** Analytics for the console. Pages through, since the API returns 1,000 rows at a time. */
+  fetchEvents: async (sb: SupabaseClient, sinceISO: string, max = 50_000): Promise<AnalyticsEvent[]> => {
+    const out: AnalyticsEvent[] = [];
+    const page = 1000;
+    for (let from = 0; from < max; from += page) {
+      const { data, error } = await sb
+        .from('events')
+        .select('*')
+        .gte('at', sinceISO)
+        .order('at', { ascending: false })
+        .range(from, from + page - 1);
+      if (error) throw new Error(error.message);
+      out.push(...((data ?? []) as AnalyticsEvent[]));
+      if (!data || data.length < page) break;
+    }
+    return out;
+  },
 
   setBlocked: (sb: SupabaseClient, email: string, blocked: boolean) =>
     ok(sb.from('profiles').update({ blocked }).eq('email', email)),
