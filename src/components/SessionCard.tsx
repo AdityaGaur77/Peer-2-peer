@@ -64,7 +64,7 @@ export function SessionCard({
       document.execCommand('copy');
       ta.remove();
     }
-    toast(liveDb ? 'Link copied.' : 'Invite link copied — it works for anyone, even first-timers.');
+    toast('Link copied. Send it to a friend.');
   };
 
   return (
@@ -88,9 +88,9 @@ export function SessionCard({
             <span className="chip chip-ghost">{levelLabel(session.level)}</span>
             {session.minAge ? <span className="chip chip-ghost">ages {session.minAge}+</span> : null}
             <span className="chip chip-ghost">Free</span>
-            {live && <span className="chip chip-live">live now</span>}
+            {live && <span className="chip chip-live">Happening now</span>}
           </div>
-          {going && !past && <span className="mono small going-tag">✓ going</span>}
+          {going && !past && <span className="small going-tag">✓ You're going</span>}
         </div>
 
         <h3 className="ticket-title">{session.title}</h3>
@@ -99,8 +99,8 @@ export function SessionCard({
         <div className="ticket-meta">
           <span style={live ? { color: 'var(--hot-deep)', fontWeight: 700 } : undefined}>
             {live
-              ? `happening now — until ${fmtTime(new Date(sessionEnd(session)).toISOString())}`
-              : `${fmtRelativeDay(session.startISO)} · ${fmtTime(session.startISO)} · ${session.durationMin}min`}
+              ? `Happening now, until ${fmtTime(new Date(sessionEnd(session)).toISOString())}`
+              : `${fmtRelativeDay(session.startISO)} · ${fmtTime(session.startISO)} · ${session.durationMin} min`}
           </span>
           {tutor && (
             <span className="row" style={{ gap: 7 }}>
@@ -115,11 +115,11 @@ export function SessionCard({
         {preview ? (
           <div className="spots-label">
             {previewNote ??
-              `draft preview · ${session.capacity} spots · goes live on the board when you post it`}
+              `Preview · ${session.capacity} spots`}
           </div>
         ) : past ? (
           <div className="spots-label">
-            completed · {session.attendees.length} learners
+            Finished · {session.attendees.length} {session.attendees.length === 1 ? 'student' : 'students'}
             {countsForHours(session) ? ' · counts toward volunteer hours' : ''}
           </div>
         ) : (
@@ -135,8 +135,8 @@ export function SessionCard({
               </div>
               <span className={cx('spots-label', spotsLeft <= 3 && !full && 'tight')}>
                 {full
-                  ? `full — every spot passed on${session.waitlist.length ? ` · ${session.waitlist.length} waiting` : ''}`
-                  : `${spotsLeft} of ${session.capacity} spots left${spotsLeft <= 3 ? ' — almost gone' : ''}`}
+                  ? `Full${session.waitlist.length ? ` · ${session.waitlist.length} on the waitlist` : ''}`
+                  : `${spotsLeft} of ${session.capacity} spots left`}
               </span>
             </div>
 
@@ -145,10 +145,10 @@ export function SessionCard({
             {canEditLink && <Roster session={session} />}
 
             <div className="row">
-              {going ? (
+              {isMine ? null : going ? (
                 <>
                   <button className="btn btn-ghost btn-sm" onClick={() => downloadSessionICS(session, tutor)}>
-                    Add to calendar
+                    Download calendar file
                   </button>
                   <a
                     className="btn-quiet"
@@ -156,24 +156,24 @@ export function SessionCard({
                     target="_blank"
                     rel="noreferrer"
                   >
-                    google cal
+                    Add to Google Calendar
                   </a>
                   <button
                     className="btn-quiet"
                     onClick={() => requireProfile((p) => toggleRsvp(session.id, p))}
                   >
-                    can't make it?
+                    Can't make it?
                   </button>
                 </>
               ) : full ? (
                 waitPos > 0 ? (
                   <>
-                    <span className="chip chip-founder">waitlist #{waitPos}</span>
+                    <span className="chip chip-founder">Waitlist #{waitPos}</span>
                     <button
                       className="btn-quiet"
                       onClick={() => requireProfile((p) => toggleWaitlist(session.id, p))}
                     >
-                      leave waitlist
+                      Leave waitlist
                     </button>
                   </>
                 ) : (
@@ -192,15 +192,15 @@ export function SessionCard({
                   >
                     Save my spot
                   </button>
-                  {!canEditLink && <span className="hint">you get the meeting link once you save a spot</span>}
+                  {!canEditLink && <span className="hint">You get the class link after you save a spot.</span>}
                 </>
               )}
-              <button className="btn-quiet" onClick={share} title="Copies a link that carries this class inside it">
-                copy invite
+              <button className="btn-quiet" onClick={share} title="Copies a link to this class">
+                Copy link to share
               </button>
               {isMine && (
                 <Link className="btn-quiet" to={`/flyer/${session.id}`}>
-                  flyer
+                  Flyer
                 </Link>
               )}
             </div>

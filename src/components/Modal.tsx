@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { cx } from '../lib/util';
 
 interface ModalProps {
@@ -70,7 +71,7 @@ export function Modal({ onClose, children, wide, labelledBy }: ModalProps) {
     return () => panel.removeEventListener('keydown', trap);
   }, []);
 
-  return (
+  const dialog = (
     <div
       className="modal-backdrop"
       onMouseDown={(e) => {
@@ -85,10 +86,13 @@ export function Modal({ onClose, children, wide, labelledBy }: ModalProps) {
         aria-labelledby={labelledBy}
       >
         <button className="modal-x" onClick={onClose} aria-label="Close">
-          ESC ✕
+          ✕ Close
         </button>
         {children}
       </div>
     </div>
   );
+  // Rendered at the end of <body>, so a card's overflow or hover transform
+  // can never clip it or trap it inside the card.
+  return typeof document === 'undefined' ? dialog : createPortal(dialog, document.body);
 }

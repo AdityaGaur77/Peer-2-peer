@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Reveal } from '../components/Reveal';
 import { SessionCard } from '../components/SessionCard';
 import { pastSessions, tutorById, upcomingSessions, useStore } from '../lib/store';
-import { SUBJECTS, type Level, type Session, type SubjectId } from '../lib/types';
+import { SUBJECTS, subjectMeta, type Level, type Session, type SubjectId } from '../lib/types';
 import { cx } from '../lib/util';
 
 const LEVEL_FILTERS: Array<{ id: 'all' | Level; label: string }> = [
@@ -115,10 +115,10 @@ export function Sessions() {
             <input
               className="input"
               style={{ width: 210, padding: '8px 14px', borderRadius: 999, fontSize: 13.5 }}
-              placeholder="search the board…"
+              placeholder="Search classes"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              aria-label="Search sessions"
+              aria-label="Search classes"
             />
             <select
               className="select"
@@ -163,11 +163,11 @@ export function Sessions() {
           <div className="stack" style={{ gap: 16 }}>
             {upcoming.length === 0 && (
               <div className="card card-pad" style={{ textAlign: 'center', padding: 48 }}>
-                <p className="serif-i" style={{ fontSize: 22, color: 'var(--ink-2)' }}>
-                  Nothing scheduled there yet.
+                <p style={{ fontSize: 19, fontWeight: 600, color: 'var(--ink-2)' }}>
+                  No classes here yet.
                 </p>
                 <p className="muted small" style={{ marginTop: 8 }}>
-                  Request it on the right and a tutor can pick it up. New here?{' '}
+                  Ask for one in "Request a topic" below and a teacher may pick it up. New here?{' '}
                   <Link to="/guide/student" style={{ color: 'var(--ember-deep)', borderBottom: '1.5px dotted' }}>
                     Take the 2-minute tour
                   </Link>
@@ -184,7 +184,7 @@ export function Sessions() {
             ))}
             {!showAll && upcoming.length > 30 && (
               <button className="btn btn-ghost" onClick={() => setShowAll(true)}>
-                Show all {upcoming.length} sessions
+                Show all {upcoming.length} classes
               </button>
             )}
 
@@ -204,13 +204,14 @@ export function Sessions() {
             <div className="card card-pad stack" style={{ gap: 14 }}>
               <h3 className="h3">Request a topic</h3>
               <p className="muted" style={{ fontSize: 13.5 }}>
-Tutors pick what to teach from this list. Most requested goes first.
+Teachers look at this list when they plan classes. Tap ▲ to vote for one.
               </p>
               <form className="stack" style={{ gap: 10 }} onSubmit={submitTopic}>
                 <input
                   className="input"
                   aria-label="Topic you'd like a class on"
-                  placeholder="e.g. recursion, but slowly"
+                  placeholder="e.g. Fractions, or essay writing"
+                  maxLength={160}
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
                 />
@@ -246,14 +247,15 @@ Tutors pick what to teach from this list. Most requested goes first.
                   <div key={r.id} className="line-item" style={{ padding: '11px 0' }}>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 14.5, fontWeight: 580 }}>{r.topic}</div>
-                      <div className="mono" style={{ fontSize: 11, color: 'var(--muted)' }}>
-                        {r.subject} · asked by {r.by}
+                      <div className="small muted">
+                        {r.subject === 'other' ? 'Other' : subjectMeta(r.subject).name} · asked by {r.by}
                       </div>
                     </div>
                     <button
                       className={cx('chip chip-btn', voted && 'on')}
                       onClick={() => requireProfile((p) => voteRequest(r.id, p.email))}
-                      title={voted ? 'you +1’d this' : '+1 this topic'}
+                      title={voted ? 'You voted for this' : 'Vote for this topic'}
+                      aria-label={`${voted ? 'You voted for' : 'Vote for'} ${r.topic}, ${r.votes} votes`}
                     >
                       ▲ {r.votes}
                     </button>

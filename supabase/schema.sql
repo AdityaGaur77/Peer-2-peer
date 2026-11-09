@@ -490,6 +490,12 @@ begin
     if not exists (select 1 from tutors where id = new.tutor_id and tutoring_price is not null and active) then
       raise exception 'That teacher isn''t offering 1-on-1 tutoring right now.';
     end if;
+    if exists (select 1 from tutor_emails where tutor_id = new.tutor_id and email = my_email()) then
+      raise exception 'That''s your own 1-on-1 offer.';
+    end if;
+    if char_length(btrim(coalesce(new.message, ''))) < 10 then
+      raise exception 'Tell them a little about what you need help with.';
+    end if;
     if (select count(*) from tutoring_requests
          where student_email = new.student_email and created_at > now() - interval '1 day') >= 5 then
       raise exception 'That''s a lot of requests for one day. Try again tomorrow.';
@@ -503,6 +509,13 @@ begin
   new.message := old.message;
   new.times := old.times;
   new.created_at := old.created_at;
+  -- requests only move forward: new → accepted/declined, accepted → done/declined
+  if new.status is distinct from old.status and not (
+       (old.status = 'new' and new.status in ('accepted', 'declined'))
+    or (old.status = 'accepted' and new.status in ('done', 'declined'))
+  ) then
+    raise exception 'That request can''t go back to %.', new.status;
+  end if;
   return new;
 end $$;
 
@@ -517,6 +530,11 @@ language plpgsql security definer set search_path = public as $$
 begin
   new.at := now();
   new.user_email := nullif(my_email(), '');
+  -- sign-ins, signups, applications and so on only come from signed-in
+  -- people, so an anonymous one is made up: drop it quietly
+  if new.kind not in ('pageview', 'click', 'leave') and new.user_email is null then
+    return null;
+  end if;
   return new;
 end $$;
 

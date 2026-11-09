@@ -1,4 +1,3 @@
-import { clampPrice } from './price';
 import { SUBJECT_IDS, type Application, type Level, type Session, type SubjectId, type Tutor } from './types';
 
 /**
@@ -123,7 +122,7 @@ export async function decodeInvite(payload: string): Promise<DecodedInvite> {
       capacity: Number(p.c) || 10,
       tutorId: '', // filled in when the invite is accepted
       link: String(p.k ?? ''),
-      price: clampPrice(p.p),
+      price: 0, // group classes are always free (old links may carry a price)
       minAge: Number(p.a) > 0 ? Math.min(25, Math.round(Number(p.a))) : undefined,
       meetingId: p.i ? String(p.i).slice(0, 60) : undefined,
       passcode: p.x ? String(p.x).slice(0, 60) : undefined,

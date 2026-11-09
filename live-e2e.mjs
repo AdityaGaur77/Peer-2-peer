@@ -182,7 +182,7 @@ try {
   await remote.setMyTutoring(teach, 15, 'Geometry and algebra');
   const t15 = (await fetchState(anon, null)).state.tutors.find((t) => t.id === 'roster-abhiram');
   check('a teacher sets their own 1-on-1 price', t15?.tutoringPrice === 15 && t15?.tutoringNote === 'Geometry and algebra');
-  const tr = { id: 'tr_1', tutorId: 'roster-abhiram', studentEmail: 'sam@x.com', studentName: 'Sam', message: 'Help with proofs please', times: 'Mon', status: 'new', createdISO: '' };
+  const tr = { id: 'tr_1', tutorId: 'roster-abhiram', studentEmail: 'sam@x.com', studentName: 'Peer 2 Peer Team', message: 'Help with proofs please', times: 'Mon', status: 'new', createdISO: '' };
   check('a student can ask for 1-on-1', (await err(remote.requestTutoring(s, tr))) === null);
   check('nobody can ask as someone else', !!(await err(remote.requestTutoring(o, { ...tr, id: 'tr_2' }))));
   check('cannot ask a teacher who offers no 1-on-1',
@@ -196,9 +196,17 @@ try {
   check('the teacher can accept, but not rewrite the request', tr1?.status === 'accepted' && tr1?.message === 'Help with proofs please');
   await remote.setTutoringStatus(s, 'tr_1', 'done');
   check('a student cannot change the status', (await fetchState(s, 'sam@x.com')).state.tutoringRequests?.find((r) => r.id === 'tr_1')?.status === 'accepted');
+  check("the student's name comes from their profile, not the request", tr1?.studentName !== 'Peer 2 Peer Team', tr1?.studentName);
+  check('a request needs a real message', /little about/.test((await err(remote.requestTutoring(s, { ...tr, id: 'tr_5', message: 'hi' }))) ?? ''));
+  check('a teacher cannot ask themselves', !!(await err(remote.requestTutoring(teach, { ...tr, id: 'tr_6', studentEmail: 'abhiram@x.com' }))));
+  check('the teacher can mark it finished', (await err(remote.setTutoringStatus(teach, 'tr_1', 'done'))) === null);
+  check('a finished request cannot go back to new', !!(await err(remote.setTutoringStatus(teach, 'tr_1', 'new'))));
 
-  const ev = { visitor_id: 'visitor-12345', session_id: 'session-12345', kind: 'pageview', path: '/', user_email: 'fake@x.com', at: '2000-01-01T00:00:00Z' };
+  const ev = { visitor_id: 'visitor-12345', session_id: 'session-12345', kind: 'pageview', path: '/' };
   check('a visitor can record a page view', !(await anon.from('events').insert(ev)).error);
+  check('a visitor cannot choose the time or email of an event',
+    !!(await anon.from('events').insert({ ...ev, user_email: 'fake@x.com' })).error &&
+    !!(await anon.from('events').insert({ ...ev, at: '2000-01-01T00:00:00Z' })).error);
   check('a visitor cannot read analytics', ((await anon.from('events').select('*')).data ?? []).length === 0);
   check('a student cannot read analytics', ((await s.from('events').select('*')).data ?? []).length === 0);
   await s.from('events').insert({ ...ev, session_id: 'session-67890' });
@@ -207,7 +215,23 @@ try {
   check('event time and email come from the server, not the visitor',
     seen.every((e) => !e.at.startsWith('2000')) && seen.find((e) => e.session_id === 'session-12345')?.user_email == null &&
     seen.find((e) => e.session_id === 'session-67890')?.user_email === 'sam@x.com');
-  check('junk event types are refused', !!(await anon.from('events').insert({ ...ev, kind: 'hack' })).error);
+  check('junk event types are refused', !!(await s.from('events').insert({ ...ev, kind: 'hack' })).error);
+  await anon.from('events').insert({ ...ev, kind: 'hack', session_id: 'session-junk' });
+  check('junk events from visitors are not stored', !(await remote.fetchEvents(boss, '1999-01-01T00:00:00Z')).some((e) => e.session_id === 'session-junk'));
+  await anon.from('events').insert({ ...ev, kind: 'signin', session_id: 'session-fake-signin' });
+  await s.from('events').insert({ ...ev, kind: 'rsvp', session_id: 'session-real-rsvp' });
+  const after = await remote.fetchEvents(boss, '1999-01-01T00:00:00Z');
+  check('a made-up sign-in from a visitor is dropped', !after.some((e) => e.session_id === 'session-fake-signin'));
+  check("a signed-in student's action is kept", after.some((e) => e.session_id === 'session-real-rsvp'));
+  check('more than 50 events in one request are refused',
+    !!(await anon.from('events').insert(Array.from({ length: 51 }, () => ({ ...ev })))).error);
+  // rows sent together share a time; paging must still return each row once
+  for (let i = 0; i < 26; i++) {
+    await anon.from('events').insert(Array.from({ length: 50 }, (_, j) => ({ ...ev, label: `L${i * 50 + j}` })));
+  }
+  const many = await remote.fetchEvents(boss, '1999-01-01T00:00:00Z');
+  const labels = many.filter((e) => /^L\d+$/.test(e.label ?? '')).map((e) => e.label);
+  check('analytics paging returns every row exactly once', labels.length === 1300 && new Set(labels).size === 1300, `${labels.length} rows, ${new Set(labels).size} unique`);
 
   await remote.cancelSession(teach, 'sess_e2e');
   st = await fetchState(anon, null);

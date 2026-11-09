@@ -18,8 +18,7 @@ export function Certificate() {
         <div className="container stack" style={{ gap: 18, maxWidth: 440, margin: '0 auto' }}>
           <h1 className="h2">Volunteer certificate</h1>
           <p className="lede" style={{ margin: '0 auto' }}>
-            Sign in with your tutor email to generate a service certificate backed by your logged
-            session hours.
+            Sign in with your teacher email to get a certificate of your volunteer hours.
           </p>
           <div>
             <button className="btn btn-primary" onClick={() => openSignIn()}>
@@ -35,16 +34,14 @@ export function Certificate() {
     return (
       <div className="section" style={{ paddingTop: 'clamp(120px, 16vw, 160px)', textAlign: 'center' }}>
         <div className="container stack" style={{ gap: 18, maxWidth: 480, margin: '0 auto' }}>
-          <span className="serif-i" style={{ fontSize: 26, color: 'var(--ink-2)' }}>
-            No hours logged yet.
-          </span>
+          <h1 className="h2">No hours yet</h1>
           <p className="lede" style={{ margin: '0 auto' }}>
-            Your certificate fills in automatically once you've taught your first session. Certify
-            in a subject, get approved, and host a session — Peer 2 Peer tracks the rest.
+            Your certificate fills in once you've taught your first class. Apply to teach, get
+            approved, and post a class. We count the hours for you.
           </p>
           <div className="row" style={{ justifyContent: 'center' }}>
             <Link to="/teach" className="btn btn-primary">
-              Become a tutor
+              Teach a class
             </Link>
             <Link to="/dashboard" className="btn btn-ghost">
               Back to dashboard
@@ -63,6 +60,7 @@ export function Certificate() {
   return (
     <div className="section" style={{ paddingTop: 'clamp(110px, 15vw, 150px)' }}>
       <div className="container">
+        <h1 className="sr-only">Volunteer certificate for {profile.name}</h1>
         <Reveal>
           <div className="row between no-print" style={{ marginBottom: 24 }}>
             <div>
@@ -98,10 +96,10 @@ export function Certificate() {
               </div>
 
               <p style={{ fontSize: 17, lineHeight: 1.7, color: 'var(--ink-2)', maxWidth: '54ch' }}>
-                volunteered as a peer tutor with Peer 2 Peer, a free student-run tutoring community,
+                volunteered as a tutor with Peer 2 Peer, a free tutoring program run by students,
                 contributing{' '}
                 <b style={{ color: 'var(--ink)' }}>{plural(stats.hours, 'hour')}</b> of instruction
-                across <b style={{ color: 'var(--ink)' }}>{plural(stats.taught, 'live session')}</b>{' '}
+                across <b style={{ color: 'var(--ink)' }}>{plural(stats.taught, 'online class', 'online classes')}</b>{' '}
                 and reaching <b style={{ color: 'var(--ink)' }}>{plural(stats.learners, 'student')}</b>
                 {certs.length > 0 && (
                   <>
@@ -111,7 +109,7 @@ export function Certificate() {
                     </b>
                   </>
                 )}
-                . Every hour was given freely, in the spirit of passing knowledge on.
+                . All hours were volunteered.
               </p>
 
               <div className="stat-strip" style={{ border: '1.5px dashed var(--border-strong)', borderRadius: 12, overflow: 'hidden' }}>
@@ -125,7 +123,7 @@ export function Certificate() {
                   <span className="stat-num" style={{ fontSize: '1.8rem' }}>
                     {stats.taught}
                   </span>
-                  <span className="stat-label">sessions</span>
+                  <span className="stat-label">classes</span>
                 </div>
                 <div className="stat">
                   <span className="stat-num" style={{ fontSize: '1.8rem' }}>
@@ -137,7 +135,7 @@ export function Certificate() {
                   <span className="stat-num" style={{ fontSize: '1.8rem' }}>
                     {stats.kudosCount}
                   </span>
-                  <span className="stat-label">kudos</span>
+                  <span className="stat-label">thank-yous</span>
                 </div>
               </div>
 
@@ -151,7 +149,7 @@ export function Certificate() {
                   </div>
                 </div>
                 <div className="mono small muted" style={{ textAlign: 'right' }}>
-                  <div>service period</div>
+                  <div>Dates</div>
                   <div style={{ color: 'var(--ink-2)' }}>{range}</div>
                 </div>
               </div>
@@ -161,8 +159,8 @@ export function Certificate() {
 
         <Reveal delay={0.12}>
           <p className="muted small no-print" style={{ textAlign: 'center', marginTop: 20, maxWidth: '52ch', marginInline: 'auto' }}>
-            This certificate is generated from Peer 2 Peer's live session log. For an official
-            countersigned copy for college or scholarship applications, mention it to a founder.
+            This certificate comes from Peer 2 Peer's class records. If you need a signed copy for
+            a college or scholarship application, email the team.
           </p>
         </Reveal>
       </div>

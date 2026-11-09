@@ -70,7 +70,7 @@ export function NextClass() {
       {next.link ? (
         <MeetingPanel session={next} canEdit={teaching || isAdmin} />
       ) : (
-        <span className="hint">the meeting link shows up here once the teacher adds it</span>
+        <span className="hint">The class link will show up here once the teacher adds it.</span>
       )}
     </div>
   );

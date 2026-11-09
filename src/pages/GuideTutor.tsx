@@ -70,13 +70,13 @@ function loadDraft(): { draft: ClassDraft; step: number } {
 }
 
 const STEPS: GuideStepDef[] = [
-  { id: 'subject', label: 'The subject' },
-  { id: 'name', label: 'The name' },
-  { id: 'pitch', label: 'The pitch' },
-  { id: 'shape', label: 'The shape' },
-  { id: 'price', label: 'Free for all' },
-  { id: 'when', label: 'The when' },
-  { id: 'post', label: 'Post it' },
+  { id: 'subject', label: 'Subject' },
+  { id: 'name', label: 'Class name' },
+  { id: 'pitch', label: 'Description' },
+  { id: 'shape', label: 'Size and length' },
+  { id: 'price', label: 'Free classes' },
+  { id: 'when', label: 'Date and time' },
+  { id: 'post', label: 'Meeting link' },
 ];
 
 /**
@@ -98,7 +98,7 @@ const TEMPLATES: Partial<Record<SubjectId, Template[]>> = {
       label: 'Absolute beginners',
       title: 'Python from zero — your first program',
       description:
-        "We'll install nothing, open one browser tab, and write a program that talks back to you. Variables, print(), and why the computer is so painfully literal. Zero experience needed — genuinely zero.",
+        "We'll write a short program in the browser that asks your name and answers back. Nothing to install. We'll cover variables and print(). No experience needed.",
       level: 'intro',
       durationMin: 60,
       capacity: 8,
@@ -107,7 +107,7 @@ const TEMPLATES: Partial<Record<SubjectId, Template[]>> = {
       label: 'Build-along',
       title: 'Build a number-guessing game, start to finish',
       description:
-        "One session, one finished game you can send your friends. We'll wire up loops, conditionals and random numbers, break it on purpose, then fix it together. Bring a laptop and a competitive streak.",
+        "In one class we build a small game you can share with friends. We'll use loops, if statements and random numbers. Bring a laptop.",
       level: 'intro',
       durationMin: 90,
       capacity: 8,
@@ -116,7 +116,7 @@ const TEMPLATES: Partial<Record<SubjectId, Template[]>> = {
       label: 'Open clinic',
       title: 'Debugging clinic — bring your broken code',
       description:
-        "Your bug goes on the shared screen and we solve it as a room. No prep, no slides — just whatever is currently ruining your evening. Everyone leaves having learned from somebody else's crime scene.",
+        "Bring code that isn't working. We put it on the shared screen and fix it together, so everyone learns from each other's mistakes. No prep needed.",
       level: 'all',
       durationMin: 75,
       capacity: 6,
@@ -127,7 +127,7 @@ const TEMPLATES: Partial<Record<SubjectId, Template[]>> = {
       label: 'No-math intro',
       title: 'What *is* AI, actually?',
       description:
-        "No math, no hype, no sci-fi. What machine learning genuinely is, what it definitely isn't, and why your feed knows you better than your friends do. Come with questions you think are too basic.",
+        "A plain-language intro to AI: what machine learning is, what it can't do, and how apps use it to pick what you see. No math. Basic questions welcome.",
       level: 'intro',
       durationMin: 60,
       capacity: 12,
@@ -136,7 +136,7 @@ const TEMPLATES: Partial<Record<SubjectId, Template[]>> = {
       label: 'Hands-on',
       title: 'Train your first model — no math required',
       description:
-        "We'll train an image classifier live, watch it fail hilariously, feed it better data, and watch it get smart. If you can drag files into a folder you're qualified. You leave with a working model.",
+        "We'll train a simple image model together, see where it gets things wrong, and improve it with better examples. No math or coding needed. You leave with a model that works.",
       level: 'intro',
       durationMin: 75,
       capacity: 10,
@@ -145,7 +145,7 @@ const TEMPLATES: Partial<Record<SubjectId, Template[]>> = {
       label: 'Discussion',
       title: "AI ethics: when the model is wrong, who's responsible?",
       description:
-        'A discussion, not a lecture. Real cases — biased hiring tools, invented citations, deepfakes — and what we would have done differently. Strong opinions welcome, certainty optional.',
+        'A discussion, not a lecture. We look at real cases, like unfair hiring tools, made-up citations and deepfakes, and talk about what should have happened instead.',
       level: 'all',
       durationMin: 60,
       capacity: 14,
@@ -165,9 +165,15 @@ export function GuideTutor() {
   const myCerts = profile ? certsFor(db, profile.email) : [];
   const myApp = profile ? applicationFor(db, profile.email) : undefined;
 
-  // autosave the draft — it survives reloads and waits on the dashboard
+  // autosave the draft so it survives reloads and waits on the dashboard
+  // (an untouched form isn't a draft, so nothing is saved for it)
   useEffect(() => {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify({ draft, step }));
+    try {
+      if (JSON.stringify(draft) === JSON.stringify(EMPTY_DRAFT)) localStorage.removeItem(DRAFT_KEY);
+      else localStorage.setItem(DRAFT_KEY, JSON.stringify({ draft, step }));
+    } catch {
+      /* storage blocked: the draft just won't survive a reload */
+    }
   }, [draft, step]);
 
   const patch = (p: Partial<ClassDraft>) => setDraft((d) => ({ ...d, ...p }));
@@ -212,16 +218,19 @@ export function GuideTutor() {
     if (draft.description.trim().length < 30)
       return { step: 2, msg: 'The pitch needs a couple of sentences (30+ characters).' };
     if (!startMs || startMs <= Date.now()) return { step: 5, msg: 'Pick a date and time in the future.' };
-    // one class a week to start: not within six days of another of theirs
+    // one class a week to start: no week of the series within six days of
+    // another class of theirs
     if (tutor) {
-      const clash = upcomingSessions(db).find(
-        (x) => x.tutorId === tutor.id && Math.abs(new Date(x.startISO).getTime() - startMs) < 6 * 86_400_000,
-      );
-      if (clash)
-        return {
-          step: 5,
-          msg: `Teachers run one class a week to start, and you already have one on ${fmtDate(clash.startISO)}.`,
-        };
+      const mine = upcomingSessions(db).filter((x) => x.tutorId === tutor.id);
+      for (const iso of weeklyStarts(new Date(startMs), Math.max(1, draft.repeatWeeks || 1))) {
+        const at = new Date(iso).getTime();
+        const clash = mine.find((x) => Math.abs(new Date(x.startISO).getTime() - at) < 6 * 86_400_000);
+        if (clash)
+          return {
+            step: 5,
+            msg: `Teachers run one class a week to start. You already have a class on ${fmtDate(clash.startISO)}, so pick a different day${draft.repeatWeeks > 1 ? ' or fewer weeks' : ''}.`,
+          };
+      }
     }
     if (draft.link.trim() && meetingLinkError(draft.link))
       return { step: 6, msg: meetingLinkError(draft.link) ?? 'Check the meeting link.' };
@@ -284,9 +293,10 @@ export function GuideTutor() {
           meetingId: draft.meetingId.trim() || undefined,
           passcode: draft.passcode.trim() || undefined,
           minAge: draft.minAge,
-        });
+        }, true);
         if (w === 0) id = made;
       }
+      toast(starts.length > 1 ? `Posted ${starts.length} classes, one a week.` : 'Your class is posted.');
       localStorage.removeItem(DRAFT_KEY);
       navigate(`/sessions?s=${id}`);
     });
@@ -307,19 +317,19 @@ export function GuideTutor() {
         </button>
       ) : tutor ? (
         <button className="btn btn-primary" disabled={!!problem} onClick={publish} title={problem?.msg}>
-          Post it to the board
+          Post my class
         </button>
       ) : (
-        <span className="hint">finish the tutor steps below and this button unlocks</span>
+        <span className="hint">You can post once you're approved to teach.</span>
       )}
     </>
   );
 
   const aside = (
     <>
-      <span className="aside-note">live preview — updates as you type</span>
+      <span className="aside-note">Preview</span>
       <SessionCard session={previewSession} preview />
-      <p className="hint">this is exactly the ticket learners will see on the board</p>
+      <p className="hint">This is how your class will look to students.</p>
     </>
   );
 
@@ -330,7 +340,7 @@ export function GuideTutor() {
           Set up your class
         </>
       }
-      intro="Answer a few questions and your class goes on the Classes page. The preview on the right shows what students will see."
+      intro="Answer a few questions and your class goes on the Classes page. The preview shows what students will see."
       steps={STEPS}
       current={step}
       maxVisited={maxVisited}
@@ -342,8 +352,7 @@ export function GuideTutor() {
         <div className="stack" style={{ gap: 16 }}>
           <h3 className="h3">What are you teaching?</h3>
           <p style={{ color: 'var(--ink-2)', fontSize: 15 }}>
-            Pick the subject you're certified in — or the one you're about to certify in. One
-            class, one subject, one idea. Resist the urge to teach everything at once.
+            Pick one subject. A class works best when it covers one idea, not the whole subject.
           </p>
           <div className="row" style={{ gap: 10 }}>
             {SUBJECTS.map((s) => (
@@ -390,15 +399,15 @@ export function GuideTutor() {
 
       {step === 1 && (
         <div className="stack" style={{ gap: 16 }}>
-          <h3 className="h3">Name the outcome, not the topic</h3>
+          <h3 className="h3">What's your class called?</h3>
           <p style={{ color: 'var(--ink-2)', fontSize: 15 }}>
-People scroll past topic names. They stop for what they will be able to do afterwards.
+Good names say what students will be able to do after the class.
           </p>
 
           {draft.subject && TEMPLATES[draft.subject] && (
             <div className="stack" style={{ gap: 8 }}>
               <span className="mono small muted">
-                or start from one of these and edit it:
+                Or start from an example and change it:
               </span>
               <div className="row" style={{ gap: 8 }}>
                 {TEMPLATES[draft.subject]!.map((t) => (
@@ -413,7 +422,7 @@ People scroll past topic names. They stop for what they will be able to do after
                         durationMin: t.durationMin,
                         capacity: t.capacity,
                       });
-                      toast(`"${t.label}" loaded — make it yours.`);
+                      toast(`Example added. Change anything you like.`);
                     }}
                   >
                     {t.label}
@@ -433,25 +442,25 @@ People scroll past topic names. They stop for what they will be able to do after
               autoFocus
             />
             <span className="hint">
-              {draft.title.trim().length}/70 — watch it appear on the ticket →
+              {draft.title.trim().length}/70 characters
             </span>
           </label>
           <div className="eg-row">
             <div className="eg good">
-              <span className="verdict">YES</span>
-              <span>"Build a number-guessing game, start to finish" — a promise</span>
+              <span className="verdict">Good</span>
+              <span>"Build a number-guessing game, start to finish"</span>
             </div>
             <div className="eg good">
               <span className="verdict">YES</span>
-              <span>"Debugging clinic — bring your broken code" — an invitation</span>
+              <span>"Debugging clinic: bring your broken code"</span>
+            </div>
+            <div className="eg bad">
+              <span className="verdict">Avoid</span>
+              <span>"Python lesson 3" (doesn't say what you'll learn)</span>
             </div>
             <div className="eg bad">
               <span className="verdict">NO</span>
-              <span>"Python lesson 3" — a chore with a number on it</span>
-            </div>
-            <div className="eg bad">
-              <span className="verdict">NO</span>
-              <span>"Tutoring session" — the beige of titles</span>
+              <span>"Tutoring session" (too vague)</span>
             </div>
           </div>
         </div>
@@ -459,11 +468,10 @@ People scroll past topic names. They stop for what they will be able to do after
 
       {step === 2 && (
         <div className="stack" style={{ gap: 16 }}>
-          <h3 className="h3">Pitch it in three sentences</h3>
+          <h3 className="h3">Describe your class</h3>
           <div className="guide-tip">
-            The formula: <b>1)</b> what you'll actually do together, <b>2)</b> who it's for,{' '}
-            <b>3)</b> what they leave with. Write like you're texting a friend, because
-            functionally you are.
+            Two or three sentences: <b>1)</b> what you'll do together, <b>2)</b> who it's for,{' '}
+            <b>3)</b> what they'll be able to do afterwards.
           </div>
           <label className="field">
             <span className="label">Description</span>
@@ -471,14 +479,14 @@ People scroll past topic names. They stop for what they will be able to do after
               className="textarea"
               value={draft.description}
               onChange={(e) => patch({ description: e.target.value })}
-              placeholder="We'll train an image classifier live, watch it fail, feed it better data, and watch it get smart. No math needed — if you can drag files into a folder, you're qualified. You leave with a working model."
+              placeholder="We'll practice solving two-step equations with lots of examples. Good for grades 6 to 8. You'll leave knowing how to check your own answers."
               style={{ minHeight: 130 }}
               autoFocus
             />
             <span className="hint">
               {draft.description.trim().length < 30
-                ? `${30 - draft.description.trim().length} more characters — one honest sentence gets you there`
-                : '✓ that reads like a real person — nice'}
+                ? `${30 - draft.description.trim().length} more characters needed`
+                : '✓ Looks good'}
             </span>
           </label>
         </div>
@@ -486,7 +494,7 @@ People scroll past topic names. They stop for what they will be able to do after
 
       {step === 3 && (
         <div className="stack" style={{ gap: 18 }}>
-          <h3 className="h3">Shape the room</h3>
+          <h3 className="h3">Level, length and size</h3>
           <div className="field">
             <span className="label">Level</span>
             <div className="optchips">
@@ -496,7 +504,7 @@ People scroll past topic names. They stop for what they will be able to do after
                 </button>
               ))}
             </div>
-            <span className="hint">first class? intro-friendly fills fastest and forgives everything</span>
+            <span className="hint">For a first class, Intro friendly is a good choice.</span>
           </div>
           <div className="field">
             <span className="label">Duration</span>
@@ -507,7 +515,7 @@ People scroll past topic names. They stop for what they will be able to do after
                 </button>
               ))}
             </div>
-            <span className="hint">60 is the sweet spot — 90 only for build-alongs with a finished thing at the end</span>
+            <span className="hint">Most classes are 60 minutes.</span>
           </div>
           <div className="field">
             <span className="label">Capacity</span>
@@ -519,7 +527,7 @@ People scroll past topic names. They stop for what they will be able to do after
               ))}
             </div>
             <span className="hint">
-              small enough that asking a "dumb" question feels safe — 8 is perfect for a first class
+              Small groups make it easier to ask questions. 8 is a good size for a first class.
             </span>
           </div>
           <div className="field">
@@ -531,7 +539,7 @@ People scroll past topic names. They stop for what they will be able to do after
                 </button>
               ))}
             </div>
-            <span className="hint">students younger than this can't save a spot</span>
+            <span className="hint">Students younger than this can't save a spot.</span>
           </div>
         </div>
       )}
@@ -544,19 +552,19 @@ People scroll past topic names. They stop for what they will be able to do after
             hours.
           </p>
           <div className="eg-row">
-            <div className="eg good"><span className="verdict">01</span><span><b>Your hours add up on their own.</b> Each class someone comes to is logged, and you can print a certificate of your hours any time.</span></div>
-            <div className="eg good"><span className="verdict">02</span><span><b>Want to tutor someone 1-on-1?</b> You can offer private sessions for up to ${MAX_PRICE} each. Set that up on your dashboard after you post this class.</span></div>
-            <div className="eg good"><span className="verdict">03</span><span><b>One class a week to start.</b> Pick a time you can keep every week.</span></div>
+            <div className="eg good"><span className="verdict">1</span><span><b>Your hours add up on their own.</b> Each class someone comes to is logged, and you can print a certificate of your hours any time.</span></div>
+            <div className="eg good"><span className="verdict">2</span><span><b>Want to tutor someone 1-on-1?</b> You can offer private lessons for up to ${MAX_PRICE} each. Set that up on your dashboard after you post this class.</span></div>
+            <div className="eg good"><span className="verdict">3</span><span><b>One class a week to start.</b> Pick a time you can keep every week.</span></div>
           </div>
         </div>
       )}
 
       {step === 5 && (
         <div className="stack" style={{ gap: 16 }}>
-          <h3 className="h3">Pick the moment</h3>
+          <h3 className="h3">When is it?</h3>
           <div className="guide-tip">
-            <b>What works:</b> weekday 4–7pm or weekend 10am–4pm. Post at least 3 days out so the
-            board has time to find your people.
+            <b>Tip:</b> weekdays 4 to 7pm and weekends 10am to 4pm work best. Post at least 3 days
+            ahead so students have time to sign up.
           </div>
           <div className="grid-2">
             <label className="field">
@@ -594,22 +602,25 @@ People scroll past topic names. They stop for what they will be able to do after
             </select>
             <span className="hint">
               {draft.repeatWeeks > 1
-                ? `this posts ${draft.repeatWeeks} classes, one week apart`
-                : 'one class on this date'}
+                ? `This posts ${draft.repeatWeeks} classes, one week apart.`
+                : 'One class on this date.'}
             </span>
           </label>
           {startMs && startMs <= Date.now() && (
-            <span className="conflict-warn">that moment already happened — pick a future one</span>
+            <span className="conflict-warn">That time has already passed. Pick a future date.</span>
           )}
-          {startMs && startMs > Date.now() && (
+          {problem?.step === 5 && startMs && startMs > Date.now() && (
+            <span className="conflict-warn">⚠ {problem.msg}</span>
+          )}
+          {startMs && startMs > Date.now() && problem?.step !== 5 && (
             conflicts.length === 0 ? (
               <span className="conflict-ok">✓ No other class at that time</span>
             ) : (
               <div className="stack" style={{ gap: 6 }}>
                 {conflicts.slice(0, 2).map((c) => (
                   <span key={c.id} className="conflict-warn">
-                    ⚠ overlaps "{c.title}" ({fmtDate(c.startISO)}, {fmtTime(c.startISO)}) — different
-                    time = both classes fill
+                    ⚠ Same time as "{c.title}" ({fmtDate(c.startISO)}, {fmtTime(c.startISO)}). A
+                    different time may get more students.
                   </span>
                 ))}
               </div>
@@ -622,7 +633,7 @@ People scroll past topic names. They stop for what they will be able to do after
         <div className="stack" style={{ gap: 16 }}>
           <h3 className="h3">Last step: the meeting link</h3>
           <p style={{ color: 'var(--ink-2)', fontSize: 15 }}>
-            Check the preview one last time — that ticket is exactly what goes on the board.
+            Check the preview. That's what students will see.
           </p>
           <MeetingFields
             link={draft.link}
@@ -633,37 +644,43 @@ People scroll past topic names. They stop for what they will be able to do after
             onPasscode={(v) => patch({ passcode: v })}
           />
           <span className="hint">
-            no link yet? leave it blank and we make a free Jitsi room. You can change the link any
-            time from the class card, e.g. if a free call hits its time limit.
+            No link yet? Leave it blank and we'll make a free Jitsi room. You can change the link
+            later from the class card.
           </span>
 
-          {tutor ? (
+          {tutor && problem ? (
             <div className="guide-tip">
-              <b>You are cleared to post.</b> The button below publishes it for real, and people
-              can book a seat straight away.
+              <b>One thing to fix first:</b> {problem.msg}{' '}
+              <button className="btn-quiet" onClick={() => go(problem.step)}>
+                Go to that step
+              </button>
+            </div>
+          ) : tutor ? (
+            <div className="guide-tip">
+              <b>Ready to post.</b> Students can save a spot as soon as you post it.
             </div>
           ) : (
             <div className="stack" style={{ gap: 12 }}>
               <div className="guide-tip">
-                <b>Your draft is saved.</b> One thing left: you need a tutor badge before posting.
+                <b>Your draft is saved.</b> You can post it once you're approved to teach.
                 {profile ? (
                   myApp?.status === 'pending' ? (
-                    <> Your application is in review — the moment a founder approves it, come back and hit post.</>
+                    <> We're reviewing your application. Once it's approved, come back and post.</>
                   ) : myCerts.length > 0 ? (
-                    <> You've passed a quiz already — just send the 2-minute application.</>
+                    <> You've passed the quiz. Now send the short application.</>
                   ) : (
                     <> Take the quiz if your subject has one, then send a short application.</>
                   )
                 ) : (
-                  <> Sign in, pass the subject quiz (~10 min), send a 2-minute application — a founder reviews it fast.</>
+                  <> Sign in and send a short application. Python and AI also have a 10-minute quiz. The team reviews applications within a few days.</>
                 )}
               </div>
               <div className="row">
                 <Link to="/teach" className="btn btn-primary btn-sm">
                   {myCerts.length > 0 ? 'Send the application' : 'Take the quiz'}
                 </Link>
-                <button className="btn-quiet" onClick={() => toast('Draft saved — it\'s waiting on your dashboard.')}>
-                  finish later
+                <button className="btn-quiet" onClick={() => toast('Draft saved. You can find it on your dashboard.')}>
+                  Finish later
                 </button>
               </div>
             </div>

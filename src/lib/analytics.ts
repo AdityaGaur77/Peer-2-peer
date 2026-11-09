@@ -22,6 +22,7 @@ export type EventKind =
   | 'request';
 
 export interface AnalyticsEvent {
+  id?: number;
   at?: string;
   visitor_id: string;
   session_id: string;
@@ -45,8 +46,9 @@ export interface AnalyticsEvent {
 }
 
 const VID = 'p2p.vid';
-const SESSION = 'p2p.session';
+const SESSION = 'p2p.visit';
 const LOCAL_EVENTS = 'p2p.events';
+const OPT_OUT = 'p2p.notrack';
 const SESSION_IDLE_MS = 30 * 60_000;
 
 const url = (import.meta.env.VITE_SUPABASE_URL ?? '').trim();
@@ -56,10 +58,19 @@ const live = !!url && !!key;
 let accessToken: string | null = null;
 /** The store tells us when someone signs in, so their events carry who they are. */
 export function setAnalyticsToken(token: string | null) {
+  if (token === accessToken) return;
+  // events from before the change belong to whoever was signed in then
+  flush();
   accessToken = token;
 }
 
-const clip = (s: string | null | undefined, n: number) => (s ? String(s).slice(0, n) : undefined);
+/** Cut to n characters without splitting an emoji (a half emoji breaks the whole batch). */
+const clip = (s: string | null | undefined, n: number) =>
+  s ? Array.from(String(s)).slice(0, n).join('') : undefined;
+
+/** Take personal details out of text we're about to record. */
+const scrub = (s: string) =>
+  s.replace(/\S+@\S+/g, '[email]').replace(/\d[\d\s-]{2,}\d/g, '#');
 
 function randomId(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
@@ -86,7 +97,11 @@ function visitorId(): string {
 
 // ── where the visitor came from ──────────────────────────────
 
-const SEARCH = /(^|\.)(google|bing|duckduckgo|yahoo|ecosia|baidu|yandex|brave)\./i;
+// the search pages themselves, not Gmail, Classroom or Docs on the same domain
+const SEARCH =
+  /^(google\.[a-z.]+|bing\.com|duckduckgo\.com|(search\.)?yahoo\.com|ecosia\.org|baidu\.com|yandex\.[a-z.]+|search\.brave\.com)$/i;
+const EMAIL = /^(mail\.google\.com|outlook\.(live|office|office365)\.com|mail\.yahoo\.com|mail\.aol\.com)$/i;
+const SCHOOL = /^(classroom\.google\.com|.*\.instructure\.com|.*schoology\.com|.*\.edu)$/i;
 const SOCIAL =
   /(^|\.)(instagram|facebook|fb|t|twitter|x|tiktok|snapchat|linkedin|reddit|youtube|discord|whatsapp|pinterest|threads)\.(com|co|me|gg|net)$/i;
 
@@ -115,15 +130,29 @@ function attribution() {
   } catch {
     /* unreadable referrer */
   }
-  const source = utm.utm_source || utm.ref || refHost || 'direct';
+  const tagged = utm.utm_source || utm.ref;
+  const source = tagged || refHost || 'direct';
+  // a tagged link says where it was posted; trust it over the referrer
   const medium =
     utm.utm_medium ||
-    (refHost ? (SEARCH.test(refHost) ? 'search' : SOCIAL.test(refHost) ? 'social' : 'referral') : utm.ref ? 'link' : 'none');
+    (tagged
+      ? 'link'
+      : refHost
+        ? SEARCH.test(refHost)
+          ? 'search'
+          : EMAIL.test(refHost)
+            ? 'email'
+            : SCHOOL.test(refHost)
+              ? 'school'
+              : SOCIAL.test(refHost)
+                ? 'social'
+                : 'referral'
+        : 'none');
   return {
     source: clip(source, 100),
     medium: clip(medium, 100),
     campaign: clip(utm.utm_campaign, 100),
-    referrer: clip(document.referrer, 500),
+    referrer: refHost ? clip(document.referrer, 500) : undefined,
   };
 }
 
@@ -132,12 +161,22 @@ function attribution() {
 function device() {
   const ua = navigator.userAgent;
   const w = window.screen?.width ?? window.innerWidth;
-  const kind = /iPad|Tablet/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))
+  // iPads ask for desktop sites, so they look like a Mac with a touch screen
+  const ipad = /Macintosh/.test(ua) && (navigator.maxTouchPoints ?? 0) > 1;
+  const kind = ipad || /iPad|Tablet/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))
     ? 'tablet'
     : /Mobi|iPhone|Android/i.test(ua) || w < 600
       ? 'phone'
       : 'desktop';
-  const browser = /Edg\//.test(ua)
+  const browser = /Instagram/.test(ua)
+    ? 'Instagram app'
+    : /FBAN|FBAV|FB_IAB/.test(ua)
+      ? 'Facebook app'
+      : /musical_ly|TikTok|BytedanceWebview/i.test(ua)
+        ? 'TikTok app'
+        : /Snapchat/.test(ua)
+          ? 'Snapchat app'
+          : /Edg\//.test(ua)
     ? 'Edge'
     : /OPR\//.test(ua)
       ? 'Opera'
@@ -152,7 +191,7 @@ function device() {
               : 'Other';
   const os = /Windows/.test(ua)
     ? 'Windows'
-    : /iPhone|iPad|iPod/.test(ua)
+    : ipad || /iPhone|iPad|iPod/.test(ua)
       ? 'iOS'
       : /Mac OS X/.test(ua)
         ? 'macOS'
@@ -173,7 +212,8 @@ function device() {
   };
 }
 
-// ── session: new after 30 minutes idle, keeps its first-touch source ──
+// ── visit: new after 30 minutes idle, keeps its first-touch source ──
+// Kept in localStorage so a second tab is the same visit, not a new one.
 
 interface SessionInfo {
   id: string;
@@ -185,21 +225,60 @@ interface SessionInfo {
   referrer?: string;
 }
 
-function session(path: string): SessionInfo {
-  const ss = store('session');
-  const now = Date.now();
-  let s: SessionInfo | null = null;
+// The referrer and link tags describe how this page load began, so they're
+// only credited once: a visit that restarts after idling in an open tab
+// counts as coming back directly.
+let arrivalUsed = false;
+
+function readSession(): SessionInfo | null {
   try {
-    s = JSON.parse(ss?.getItem(SESSION) ?? 'null') as SessionInfo | null;
+    return JSON.parse(store('local')?.getItem(SESSION) ?? 'null') as SessionInfo | null;
   } catch {
-    s = null;
+    return null;
   }
+}
+
+function session(path: string): SessionInfo {
+  const now = Date.now();
+  let s = readSession();
   if (!s || now - s.last > SESSION_IDLE_MS) {
-    s = { id: randomId(), last: now, landing: path, ...attribution() };
+    const how = arrivalUsed
+      ? { source: 'direct', medium: 'none' }
+      : attribution();
+    s = { id: randomId(), last: now, landing: path, ...how };
   }
+  arrivalUsed = true;
   s.last = now;
-  ss?.setItem(SESSION, JSON.stringify(s));
+  try {
+    store('local')?.setItem(SESSION, JSON.stringify(s));
+  } catch {
+    /* storage blocked: this visit just won't carry over */
+  }
   return s;
+}
+
+/** Bots, test browsers and the team's own browsers aren't visitors. */
+function ignored(path: string): boolean {
+  try {
+    if (path.startsWith('/admin')) return true;
+    // automated test runs can opt back in with localStorage p2p.testtrack = 1
+    const testing = store('local')?.getItem('p2p.testtrack') === '1';
+    if (!testing && navigator.webdriver) return true;
+    const ua = navigator.userAgent;
+    if (/bot|crawl|spider|slurp|lighthouse|preview/i.test(ua) || (!testing && /headless/i.test(ua))) return true;
+    return store('local')?.getItem(OPT_OUT) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/** Called when someone opens the team console: their visits stop counting. */
+export function excludeThisBrowser() {
+  try {
+    store('local')?.setItem(OPT_OUT, '1');
+  } catch {
+    /* nothing to do */
+  }
 }
 
 // ── sending ──────────────────────────────────────────────────
@@ -237,27 +316,41 @@ function flush(unloading = false) {
     for (const k of COLUMNS) row[k] = e[k] ?? null;
     return row;
   });
-  // keepalive lets the request finish while the tab is closing
-  void fetch(`${url}/rest/v1/events`, {
-    method: 'POST',
-    keepalive: unloading || batch.length < 20,
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${accessToken ?? key}`,
-      'Content-Type': 'application/json',
-      Prefer: 'return=minimal',
-    },
-    body: JSON.stringify(rows),
-  }).catch(() => {
-    /* analytics must never break the site */
-  });
+  // the database takes at most 50 rows per request; keepalive lets the
+  // request finish while the tab is closing
+  for (let i = 0; i < rows.length; i += 50) {
+    const chunk = rows.slice(i, i + 50);
+    void fetch(`${url}/rest/v1/events`, {
+      method: 'POST',
+      keepalive: unloading || chunk.length < 20,
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${accessToken ?? key}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify(chunk),
+    }).catch(() => {
+      /* analytics must never break the site */
+    });
+  }
 }
+
+const pathOf = (hash: string) => clip(hash.replace(/^#/, '').split('?')[0] || '/', 300) ?? '/';
 
 export function track(kind: EventKind, extra: Partial<AnalyticsEvent> = {}) {
   if (typeof window === 'undefined') return;
   try {
-    const path = clip(window.location.hash.replace(/^#/, '').split('?')[0] || '/', 300) ?? '/';
+    const path = extra.path ?? pathOf(window.location.hash);
+    if (ignored(path)) return;
+    const before = readSession()?.id;
     const s = session(path);
+    if (kind !== 'pageview' && s.id !== before && pagePath) {
+      // the visit timed out while the page sat open: begin the new one with
+      // the page they're on, so the click has a visit to belong to
+      queue.push({ visitor_id: visitorId(), session_id: s.id, kind: 'pageview', path, landing: path, source: s.source, medium: s.medium, ...device() });
+      pageVisit = s.id;
+    }
     queue.push({
       visitor_id: visitorId(),
       session_id: s.id,
@@ -270,6 +363,7 @@ export function track(kind: EventKind, extra: Partial<AnalyticsEvent> = {}) {
       referrer: kind === 'pageview' && path === s.landing ? s.referrer : undefined,
       ...device(),
       ...extra,
+      label: clip(extra.label, 200),
     });
     if (!timer) timer = window.setTimeout(() => flush(), 4000);
   } catch {
@@ -281,26 +375,45 @@ export function track(kind: EventKind, extra: Partial<AnalyticsEvent> = {}) {
 
 let pageStart = 0;
 let pagePath = '';
+/** Visible time on the current page, not counting time in a background tab. */
+let pageMs = 0;
+let pageVisit = '';
 
 /** Called on every route change. */
 export function trackPageview() {
   sendLeave();
-  pageStart = Date.now();
-  pagePath = window.location.hash;
   track('pageview');
+  pageStart = Date.now();
+  pageMs = 0;
+  pagePath = window.location.hash;
+  pageVisit = readSession()?.id ?? '';
 }
 
-function sendLeave() {
-  if (!pageStart) return;
-  const ms = Math.min(Date.now() - pageStart, 86_400_000);
-  if (ms > 500) track('leave', { duration_ms: ms, path: clip(pagePath.replace(/^#/, '').split('?')[0] || '/', 300) });
+/** Time on the page so far. A leave belongs to the visit its page was in. */
+function sendLeave(final = true) {
+  if (pageStart) pageMs += Date.now() - pageStart;
   pageStart = 0;
+  if (!final || !pagePath) return;
+  const ms = Math.min(pageMs, 86_400_000);
+  const path = pathOf(pagePath);
+  pagePath = '';
+  if (ms <= 500 || !pageVisit || ignored(path)) return;
+  const s = readSession();
+  queue.push({
+    visitor_id: visitorId(),
+    session_id: pageVisit,
+    kind: 'leave',
+    path,
+    duration_ms: ms,
+    landing: s?.id === pageVisit ? clip(s.landing, 300) : undefined,
+    ...device(),
+  });
 }
 
 /** Text that describes a clicked element, without anything typed into forms. */
 function describe(el: Element): { label?: string; href?: string } {
   const explicit = el.getAttribute('data-track') ?? el.getAttribute('aria-label');
-  const text = (explicit ?? (el as HTMLElement).innerText ?? el.textContent ?? '').replace(/\s+/g, ' ').trim();
+  const text = scrub((explicit ?? (el as HTMLElement).innerText ?? el.textContent ?? '').replace(/\s+/g, ' ').trim());
   let href: string | undefined;
   const raw = el.getAttribute('href');
   if (raw) {
@@ -336,13 +449,21 @@ export function startAnalytics() {
     },
     { capture: true, passive: true },
   );
+  // Hiding the tab pauses the page timer and sends what's queued (phones
+  // often never fire a close event). Coming back resumes the same page.
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
-      sendLeave();
+      sendLeave(false);
       flush(true);
-    } else if (!pageStart) {
-      pageStart = Date.now();
-      pagePath = window.location.hash;
+    } else if (pagePath && !pageStart) {
+      const s = readSession();
+      if (!s || Date.now() - s.last > SESSION_IDLE_MS) {
+        // gone long enough that this is a new visit: close the old page and
+        // start the new visit with a page view
+        trackPageview();
+      } else {
+        pageStart = Date.now();
+      }
     }
   });
   window.addEventListener('pagehide', () => {

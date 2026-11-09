@@ -24,19 +24,21 @@ export function KudosModal({ tutor, onClose }: { tutor: Tutor; onClose: () => vo
           Thank {tutor.name.split(' ')[0]}
         </h2>
         <p className="muted" style={{ fontSize: 14.5 }}>
-          Kudos show up on their tutor card and on the wall of thank-you. Make their week.
+          Your note shows on their teacher card and on the home page, with your first name.
         </p>
       </div>
       <form className="stack" style={{ gap: 14 }} onSubmit={send}>
         <textarea
           className="textarea"
-          placeholder="You made loops actually make sense…"
+          aria-label="Your thank-you note"
+          maxLength={500}
+          placeholder="Thanks for explaining fractions so clearly!"
           value={msg}
           onChange={(e) => setMsg(e.target.value)}
           autoFocus
         />
         <button className="btn btn-primary" type="submit" disabled={msg.trim().length < 3}>
-          Send kudos ♥
+          Send thanks ♥
         </button>
       </form>
     </Modal>

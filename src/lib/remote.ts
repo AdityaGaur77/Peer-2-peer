@@ -466,6 +466,7 @@ export const remote = {
         .select('*')
         .gte('at', sinceISO)
         .order('at', { ascending: false })
+        .order('id', { ascending: false }) // rows sent together share a time; this keeps pages stable
         .range(from, from + page - 1);
       if (error) throw new Error(error.message);
       out.push(...((data ?? []) as AnalyticsEvent[]));

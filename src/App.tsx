@@ -41,7 +41,9 @@ const KNOWN = new Set(Object.keys(TITLES));
 
 /** A page view per route change, plus click and time-on-page tracking. */
 function Analytics() {
-  const { pathname, search } = useLocation();
+  // filters and search change the query string, not the page, so they
+  // don't count as a new page view
+  const { pathname } = useLocation();
   useEffect(() => {
     startAnalytics();
   }, []);
@@ -49,7 +51,7 @@ function Analytics() {
     // after the title updates, so the event reflects the page
     const t = window.setTimeout(trackPageview, 0);
     return () => window.clearTimeout(t);
-  }, [pathname, search]);
+  }, [pathname]);
   return null;
 }
 

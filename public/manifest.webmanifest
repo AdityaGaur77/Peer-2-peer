@@ -1,7 +1,7 @@
 {
   "name": "Peer 2 Peer Tutoring",
   "short_name": "Peer 2 Peer",
-  "description": "Live classes taught by high school students. Most are free.",
+  "description": "Free online classes taught by high school students.",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#f3f8fc",

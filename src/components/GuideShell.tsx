@@ -56,7 +56,7 @@ export function GuideShell({
 
           <div className="guide-main card card-pad">
             <div className="mono small muted" style={{ marginBottom: 14 }}>
-              leg {String(current + 1).padStart(2, '0')} / {String(steps.length).padStart(2, '0')}
+              Step {current + 1} of {steps.length}
             </div>
             {children}
             <div className="row between" style={{ marginTop: 26, gap: 12 }}>

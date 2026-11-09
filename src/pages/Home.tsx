@@ -216,7 +216,7 @@ export function Home() {
                 <h3 className="h3">Want more help?</h3>
                 <p style={{ color: 'var(--ink-2)', fontSize: 15 }}>
                   Some teachers also tutor 1-on-1, for up to ${MAX_PRICE} a session. You can ask
-                  for that from the Tutors page.
+                  for that from the Teachers page.
                 </p>
               </div>
             </Reveal>
@@ -258,7 +258,7 @@ export function Home() {
             {[
               [
                 'Who teaches?',
-                'High school students we know. Each one applies, tells us what they will teach, and is only listed after we review it. You can see every teacher on the Tutors page.',
+                'High school students we know. Each one applies, tells us what they will teach, and is only listed after we review it. You can see every teacher on the Teachers page.',
               ],
               [
                 'How do classes work?',
@@ -266,7 +266,7 @@ export function Home() {
               ],
               [
                 'What does it cost?',
-                `Group classes are free. Some teachers also offer 1-on-1 tutoring for up to $${MAX_PRICE} a session, which you arrange and pay for directly with the teacher. This site never asks for card details.`,
+                `Group classes are free. Some teachers also offer 1-on-1 tutoring for up to $${MAX_PRICE} a lesson, which you arrange and pay for directly with the teacher. This site never asks for card details.`,
               ],
               [
                 'Who do I contact?',

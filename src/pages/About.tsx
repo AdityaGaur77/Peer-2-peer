@@ -5,7 +5,7 @@ import { globalStats, useStore } from '../lib/store';
 const FAQ = [
   {
     q: 'Does it cost anything?',
-    a: 'Group classes are free. Some teachers also offer 1-on-1 tutoring for up to $20 a session. You arrange and pay for that directly with the teacher. This site never asks for card details.',
+    a: 'Group classes are free. Some teachers also offer 1-on-1 tutoring for up to $20 a lesson. You arrange and pay for that directly with the teacher. This site never asks for card details.',
   },
   {
     q: 'Who are the teachers?',
@@ -38,7 +38,7 @@ const TIMELINE = [
   {
     when: 'now',
     title: 'Now group classes are free',
-    body: 'Teachers volunteer an hour a week for a group class, and it counts as service hours. Students who want extra help can book 1-on-1 tutoring with a teacher, for up to $20 a session.',
+    body: 'Teachers volunteer an hour a week for a group class, and it counts as service hours. Students who want extra help can book 1-on-1 tutoring with a teacher, for up to $20 a lesson.',
   },
   {
     when: 'next',
@@ -82,20 +82,6 @@ export function About() {
                   flexWrap: 'nowrap',
                 }}
               >
-                <span
-                  className="mono"
-                  style={{
-                    flex: 'none',
-                    width: 72,
-                    fontSize: 11,
-                    letterSpacing: '0.12em',
-                    textTransform: 'uppercase',
-                    color: 'var(--ember-deep)',
-                    paddingTop: 4,
-                  }}
-                >
-                  {t.when}
-                </span>
                 <div style={{ minWidth: 0 }}>
                   <h3 className="h3" style={{ marginBottom: 6 }}>
                     {t.title}
@@ -178,14 +164,14 @@ export function About() {
         <Reveal delay={0.1}>
           <div className="cta-band" style={{ marginTop: 'clamp(40px, 7vw, 72px)' }}>
             <h2 className="h2" style={{ maxWidth: 520 }}>
-              Want to <em>join in?</em>
+              Want to join in?
             </h2>
             <div className="row" style={{ justifyContent: 'center' }}>
               <Link to="/sessions" className="btn btn-band-light">
-                Find a session
+                See classes
               </Link>
               <Link to="/teach" className="btn btn-band-ghost">
-                Become a tutor
+                Teach a class
               </Link>
             </div>
           </div>

@@ -23,10 +23,9 @@ export function RequestTutoring({ tutor, onClose }: { tutor: Tutor; onClose: () 
       setErr('Tell them a little about what you need help with.');
       return;
     }
-    requireProfile((p) => {
-      requestTutoring(tutor.id, message, times, p);
-      onClose();
-    });
+    // close first, so the sign-in box (if needed) isn't stacked on top of this one
+    onClose();
+    requireProfile((p) => requestTutoring(tutor.id, message, times, p));
   };
 
   return (
@@ -36,7 +35,7 @@ export function RequestTutoring({ tutor, onClose }: { tutor: Tutor; onClose: () 
           Ask {first} for 1-on-1 tutoring
         </h2>
         <p className="muted" style={{ fontSize: 14.5 }}>
-          ${tutor.tutoringPrice} a session, paid to {first} directly. {first} will email you to
+          ${tutor.tutoringPrice} a lesson, paid to {first} directly. {first} will email you to
           pick a time. Nothing is charged here.
         </p>
       </div>
@@ -88,8 +87,8 @@ function RequestRow({ r, asTeacher }: { r: TutoringRequest; asTeacher: boolean }
   const { db, setTutoringStatus } = useStore();
   const tutor = tutorById(db, r.tutorId);
   return (
-    <div className="line-item" style={{ alignItems: 'flex-start' }}>
-      <div style={{ minWidth: 0, flex: 1 }}>
+    <div className="line-item" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
+      <div style={{ minWidth: 0, flex: '1 1 240px' }}>
         <div style={{ fontWeight: 600, fontSize: 14.5 }}>
           {asTeacher ? r.studentName : `1-on-1 with ${tutor?.name ?? 'a teacher'}`}
           <span className={cx('status-pill', r.status === 'new' ? 'status-pending' : r.status === 'declined' ? 'status-declined' : 'status-approved')} style={{ marginLeft: 8 }}>
@@ -98,7 +97,7 @@ function RequestRow({ r, asTeacher }: { r: TutoringRequest; asTeacher: boolean }
         </div>
         {asTeacher && (
           <div className="small">
-            <a href={`mailto:${r.studentEmail}`} data-track="Email student" style={{ color: 'var(--ember-deep)' }}>
+            <a href={`mailto:${r.studentEmail}`} data-track="Email student" style={{ color: 'var(--ember-deep)', overflowWrap: 'anywhere' }}>
               {r.studentEmail}
             </a>{' '}
             · sent {fmtDate(r.createdISO)}
@@ -140,6 +139,8 @@ export function TeacherTutoringPanel({ tutor }: { tutor: Tutor }) {
   const [note, setNote] = useState(tutor.tutoringNote ?? '');
   const requests = (db.tutoringRequests ?? []).filter((r) => r.tutorId === tutor.id);
   const waiting = requests.filter((r) => r.status === 'new').length;
+  const open = requests.filter((r) => r.status === 'new' || r.status === 'accepted');
+  const past = requests.filter((r) => r.status === 'done' || r.status === 'declined');
 
   return (
     <div className="card card-pad stack" style={{ gap: 14, marginBottom: 24 }}>
@@ -159,7 +160,7 @@ export function TeacherTutoringPanel({ tutor }: { tutor: Tutor }) {
       {on && (
         <div className="grid-2">
           <label className="field">
-            <span className="label">Price per session: ${price}</span>
+            <span className="label">Price per lesson: ${price}</span>
             <input
               type="range"
               min={1}
@@ -188,13 +189,23 @@ export function TeacherTutoringPanel({ tutor }: { tutor: Tutor }) {
           Save
         </button>
       </div>
-      {requests.length > 0 && (
+      {open.length > 0 && (
         <div>
           <h4 style={{ fontSize: 15, marginBottom: 6 }}>Requests</h4>
-          {requests.map((r) => (
+          {open.map((r) => (
             <RequestRow key={r.id} r={r} asTeacher />
           ))}
         </div>
+      )}
+      {past.length > 0 && (
+        <details>
+          <summary className="small muted" style={{ cursor: 'pointer' }}>
+            Finished and declined ({past.length})
+          </summary>
+          {past.map((r) => (
+            <RequestRow key={r.id} r={r} asTeacher />
+          ))}
+        </details>
       )}
     </div>
   );

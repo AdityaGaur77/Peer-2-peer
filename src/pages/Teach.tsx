@@ -172,7 +172,7 @@ See the tutors
               )}
               <div className="row" style={{ justifyContent: 'center' }}>
                 <Link to="/sessions" className="btn btn-primary">
-                  Browse sessions
+                  See classes
                 </Link>
                 <button className="btn btn-ghost" onClick={startEditing}>
                   Edit application
@@ -189,7 +189,7 @@ See the tutors
 You are in.
               </span>
               <p className="muted">
-                Your tutor profile is live. Sign in with this email and your dashboard unlocks
+                Your teacher profile is live. Sign in with this email and your dashboard unlocks
                 teaching tools.
               </p>
               <div className="row" style={{ justifyContent: 'center' }}>
@@ -208,12 +208,12 @@ You are in.
 Not this time.
               </span>
               <p className="muted">
-Usually it just means come to a few sessions first so we know you. Try again after
+Usually it just means come to a few classes first so we get to know you. Try again after
                 that.
               </p>
               <div className="row" style={{ justifyContent: 'center' }}>
                 <Link to="/sessions" className="btn btn-primary">
-                  Join sessions
+                  See classes
                 </Link>
                 <button className="btn btn-ghost" onClick={startEditing}>
                   Reapply
@@ -236,7 +236,7 @@ Usually it just means come to a few sessions first so we know you. Try again aft
         <div className="container stack" style={{ gap: 18, maxWidth: 460, margin: '0 auto' }}>
           <h1 className="h2">Want to teach as well?</h1>
           <p className="lede" style={{ margin: '0 auto' }}>
-            You signed up to learn, so we keep the tutor pages out of your way. You can change
+            You signed up as a student, so we keep the teacher pages out of your way. You can change
             that whenever you like — plenty of people do both.
           </p>
           <div className="row" style={{ justifyContent: 'center' }}>
@@ -244,7 +244,7 @@ Usually it just means come to a few sessions first so we know you. Try again aft
               Show me the tutor side
             </button>
             <Link to="/sessions" className="btn btn-ghost">
-              Back to sessions
+              Back to classes
             </Link>
           </div>
         </div>
@@ -284,17 +284,14 @@ Usually it just means come to a few sessions first so we know you. Try again aft
           <div className="card card-pad" style={{ marginBottom: 20 }}>
             <div className="row between" style={{ marginBottom: 18 }}>
               <div className="row" style={{ gap: 12 }}>
-                <span className="step-no" style={{ fontSize: 13 }}>
-                  Step 1
-                </span>
-                <h3 className="h3">Take the quiz for your subject</h3>
+                <h3 className="h3">Python or AI? Take the quiz first</h3>
               </div>
-              <span className="mono small muted">retake as often as you like</span>
+              <span className="small muted">You can retake it as often as you like.</span>
             </div>
 
             <p className="muted" style={{ fontSize: 13.5, marginBottom: 14, maxWidth: '62ch' }}>
-              Only these two have a quiz so far. For every other subject there is nothing to pass
-              — just fill in the application below and someone will read it.
+              Only Python and AI have a quiz. For every other subject, just send the application
+              and someone on the team will read it.
             </p>
 
             <div className="grid-3">
@@ -338,10 +335,7 @@ Usually it just means come to a few sessions first so we know you. Try again aft
         <Reveal delay={0.16}>
           <div className="card card-pad">
             <div className="row" style={{ gap: 12, marginBottom: 18 }}>
-              <span className="step-no" style={{ fontSize: 13 }}>
-                Step 2
-              </span>
-              <h3 className="h3">Apply to join the crew</h3>
+              <h3 className="h3">Apply to teach</h3>
             </div>
 
             {renderStepTwo() ?? (
@@ -359,7 +353,7 @@ Usually it just means come to a few sessions first so we know you. Try again aft
                       value={live ? (profile?.email ?? '') : email}
                       onChange={(e) => setEmail(e.target.value)}
                       readOnly={live}
-                      placeholder={live ? 'you sign in when you submit' : 'you@school.org'}
+                      placeholder={live ? 'You sign in when you send it' : 'you@school.org'}
                     />
                   </label>
                 </div>
@@ -394,7 +388,7 @@ Usually it just means come to a few sessions first so we know you. Try again aft
                       );
                     })}
                   </div>
-                  <span className="hint">the ✓ means you've already certified — nice</span>
+                  <span className="hint">✓ means you passed the quiz for that subject.</span>
                 </div>
 
                 <div className="field">
@@ -424,7 +418,7 @@ Usually it just means come to a few sessions first so we know you. Try again aft
                     placeholder="Tuesdays and Wednesdays, 6–8pm"
                   />
                   <span className="hint">
-                    classes repeat weekly, so tell us when you are usually free, not a single date
+                    Classes happen once a week, so tell us when you're usually free.
                   </span>
                 </label>
 
@@ -453,7 +447,7 @@ Usually it just means come to a few sessions first so we know you. Try again aft
                 </label>
 
                 <label className="field">
-                  <span className="label">Why do you want to tutor? <span className="muted">(optional)</span></span>
+                  <span className="label">Why do you want to teach? <span className="muted">(optional)</span></span>
                   <textarea
                     className="textarea"
                     value={why}
@@ -467,11 +461,11 @@ Usually it just means come to a few sessions first so we know you. Try again aft
                     {formErr ? (
                       <span style={{ color: 'var(--hot-deep)' }}>{formErr}</span>
                     ) : subjects.length === 0 ? (
-                      'pick at least one subject'
+                      'Pick at least one subject.'
                     ) : live ? (
-                      'this goes straight to the team'
+                      'This goes straight to the team.'
                     ) : (
-                      'next you will send this to the team'
+                      'Next, you email this to the team.'
                     )}
                   </span>
                   <button className="btn btn-primary" type="submit" disabled={subjects.length === 0}>

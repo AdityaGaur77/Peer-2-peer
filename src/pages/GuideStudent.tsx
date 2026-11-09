@@ -3,18 +3,18 @@ import { Link, useNavigate } from 'react-router-dom';
 import { GuideShell, type GuideStepDef } from '../components/GuideShell';
 import { KudosModal } from '../components/KudosModal';
 import { subjectSessions, useStore } from '../lib/store';
-import { SUBJECTS, type SubjectId, type Tutor } from '../lib/types';
+import { SUBJECTS, subjectMeta, type SubjectId, type Tutor } from '../lib/types';
 import { cx, fmtRelativeDay, fmtTime } from '../lib/util';
 
 const STEPS: GuideStepDef[] = [
-  { id: 'track', label: 'Pick your track' },
-  { id: 'spot', label: 'Grab a spot' },
-  { id: 'show', label: 'Show up' },
-  { id: 'steer', label: 'Steer the schedule' },
-  { id: 'loop', label: 'Close the loop' },
+  { id: 'track', label: 'Pick a subject' },
+  { id: 'spot', label: 'Save a spot' },
+  { id: 'show', label: 'Join the class' },
+  { id: 'steer', label: 'Ask for a class' },
+  { id: 'loop', label: 'Say thanks' },
 ];
 
-/** A sandbox ticket — RSVP mechanics with zero consequences. */
+/** A practice class card: nothing on it is saved. */
 function DemoTicket() {
   const [mode, setMode] = useState<'open' | 'full'>('open');
   const [going, setGoing] = useState(false);
@@ -37,10 +37,10 @@ function DemoTicket() {
     <div className="stack" style={{ gap: 12 }}>
       <div className="row" style={{ gap: 8 }}>
         <button className={cx('chip chip-btn', mode === 'open' && 'on')} onClick={() => { setMode('open'); reset(); }}>
-          scenario: spots open
+          Example: spots open
         </button>
         <button className={cx('chip chip-btn', mode === 'full' && 'on')} onClick={() => { setMode('full'); reset(); }}>
-          scenario: class is full
+          Example: class is full
         </button>
       </div>
 
@@ -58,11 +58,11 @@ function DemoTicket() {
               </span>
               <span className="chip chip-ghost">Practice card</span>
             </div>
-            {going && <span className="mono small going-tag">✓ going</span>}
+            {going && <span className="small going-tag">✓ You're going</span>}
           </div>
-          <h3 className="ticket-title">Loops that finally click — sandbox edition</h3>
+          <h3 className="ticket-title">Practice class: Python loops</h3>
           <p className="ticket-desc">
-            This card is fake. Click things. Nothing you do here touches the real board.
+            Practice card: try saving a spot. Nothing here is real.
           </p>
           <div className="spots">
             <div className="spots-bar">
@@ -73,8 +73,8 @@ function DemoTicket() {
             </div>
             <span className={cx('spots-label', mode === 'open' && !going && 'tight')}>
               {mode === 'full'
-                ? `full — every spot passed on${waitPos ? ' · 3 waiting' : ' · 2 waiting'}`
-                : `${spotsLeft} of 12 spots left — almost gone`}
+                ? `Full · ${waitPos ? 3 : 2} on the waitlist`
+                : `${spotsLeft} of 12 spots left`}
             </span>
           </div>
           <div className="row">
@@ -82,25 +82,25 @@ function DemoTicket() {
               going ? (
                 <>
                   <a className="btn btn-soft btn-sm" href="#demo" onClick={(e) => e.preventDefault()}>
-                    Join the room ↗
+                    Join class ↗
                   </a>
                   <button className="btn btn-ghost btn-sm" onClick={(e) => e.preventDefault()}>
                     Add to calendar
                   </button>
                   <button className="btn-quiet" onClick={() => setGoing(false)}>
-                    can't make it?
+                    Can't make it?
                   </button>
                 </>
               ) : (
                 <button className="btn btn-primary btn-sm" onClick={() => setGoing(true)}>
-                  Save my spot — free
+                  Save my spot (free)
                 </button>
               )
             ) : waitPos ? (
               <>
-                <span className="chip chip-founder">waitlist #{waitPos}</span>
+                <span className="chip chip-founder">Waitlist #{waitPos}</span>
                 <button className="btn-quiet" onClick={() => setWaitPos(0)}>
-                  leave waitlist
+                  Leave waitlist
                 </button>
               </>
             ) : (
@@ -116,24 +116,24 @@ function DemoTicket() {
         {mode === 'open' ? (
           going ? (
             <>
-  <b>That is the whole thing.</b> The room link shows up once you are in, and "Add to
-              calendar" saves it to your phone. If you change your mind, releasing the seat hands
-              it to whoever is next.
+              <b>That's it.</b> Once you've saved a spot, the class link shows up on the card
+              and on your dashboard. If you can't make it, tap "Can't make it?" and the next
+              person on the waitlist gets your spot.
             </>
           ) : (
             <>
-<b>Go ahead, book it.</b> No card, no signup wall, no trial. The button does exactly
-              what it says.
+              <b>Try it.</b> Tap "Save my spot". On the real site you sign in with your email
+              first. It's free.
             </>
           )
         ) : waitPos ? (
           <>
-<b>You are #{waitPos} in line.</b> When somebody drops out, the first person waiting
-            gets the seat automatically. It happens fairly often.
+            <b>You're #{waitPos} on the waitlist.</b> If someone drops out, the first person
+            on the waitlist gets their spot automatically.
           </>
         ) : (
           <>
-<b>Class full? Join the waitlist.</b> Seats free up, and the first person waiting
+            <b>Class full? Join the waitlist.</b> If a spot opens, the first person waiting
             gets it automatically.
           </>
         )}
@@ -173,11 +173,11 @@ export function GuideStudent() {
       </button>
       {step < STEPS.length - 1 ? (
         <button className="btn btn-primary btn-sm" disabled={!stepValid} onClick={() => go(step + 1)}>
-          {step === 0 && !stepValid ? 'Pick a track first' : 'Next →'}
+          {step === 0 && !stepValid ? 'Pick a subject first' : 'Next →'}
         </button>
       ) : (
         <button className="btn btn-primary" onClick={finish}>
-          Find my first session →
+          See classes →
         </button>
       )}
     </>
@@ -191,7 +191,7 @@ export function GuideStudent() {
             How Peer 2 Peer works
           </>
         }
-intro="Five quick steps. You'll pick a subject, practice saving a spot, see what a class is like, and vote on what we should teach next. Nothing here is real until you sign up."
+intro="Five quick steps: pick a subject, practice saving a spot, see what a class is like, and ask for the classes you want."
         steps={STEPS}
         current={step}
         maxVisited={maxVisited}
@@ -202,7 +202,7 @@ intro="Five quick steps. You'll pick a subject, practice saving a spot, see what
           <div className="stack" style={{ gap: 16 }}>
             <h3 className="h3">What do you want to get good at?</h3>
             <p style={{ color: 'var(--ink-2)', fontSize: 15 }}>
-              Pick a subject and we'll show you what's actually coming up in it.
+              Pick a subject and we'll show you the next classes in it.
             </p>
             <div className="row" style={{ gap: 10 }}>
               {SUBJECTS.map((s) => (
@@ -217,7 +217,7 @@ intro="Five quick steps. You'll pick a subject, practice saving a spot, see what
             </div>
             {subject && (
               <div className="stack" style={{ gap: 8 }}>
-                <span className="mono small muted">next on the board — real sessions, real seats:</span>
+                <span className="small muted">Coming up:</span>
                 {nextSessions.length === 0 ? (
                   <div className="guide-tip">
                     Nothing is scheduled in this subject yet. You can ask for it in step 4.
@@ -237,42 +237,41 @@ intro="Five quick steps. You'll pick a subject, practice saving a spot, see what
 
         {step === 1 && (
           <div className="stack" style={{ gap: 16 }}>
-            <h3 className="h3">Grab a spot — practice here</h3>
+            <h3 className="h3">Practice saving a spot</h3>
             <DemoTicket />
           </div>
         )}
 
         {step === 2 && (
           <div className="stack" style={{ gap: 14 }}>
-            <h3 className="h3">Showing up is the whole assignment</h3>
+            <h3 className="h3">What a class is like</h3>
             <div className="eg-row" style={{ gap: 12 }}>
               <div className="eg good">
-                <span className="verdict">01</span>
+                <span className="verdict">1</span>
                 <span>
-                  <b>The room link is yours after you RSVP</b> — it lives on the session card and
-                  your dashboard. When a session is live, the card literally says so and the join
-                  button lights up.
+                  <b>You get the class link after you save a spot.</b> It's on the class card and
+                  your dashboard. When the class starts, the card shows a "Join class" button.
                 </span>
               </div>
               <div className="eg good">
-                <span className="verdict">02</span>
+                <span className="verdict">2</span>
                 <span>
-                  <b>Cameras optional, questions mandatory-ish.</b> Groups are capped small on
-                  purpose. The "embarrassing" question is the one half the room has.
+                  <b>Cameras are optional.</b> Classes are small, so it's easy to ask questions.
+                  If you're confused, others probably are too.
                 </span>
               </div>
               <div className="eg good">
-                <span className="verdict">03</span>
+                <span className="verdict">3</span>
                 <span>
-                  <b>Your tutor was you, about eight weeks ago.</b> That's not a bug — recent
-                  learners remember exactly which part was confusing.
+                  <b>Your teacher is a high school student</b> who learned this recently, so they
+                  remember which parts are confusing.
                 </span>
               </div>
               <div className="eg good">
-                <span className="verdict">04</span>
+                <span className="verdict">4</span>
                 <span>
-                  <b>Life happens.</b> "Can't make it?" releases your spot — the first person on
-                  the waitlist gets it automatically.
+                  <b>Can't come?</b> Tap "Can't make it?" so someone on the waitlist can have your
+                  spot.
                 </span>
               </div>
             </div>
@@ -281,20 +280,23 @@ intro="Five quick steps. You'll pick a subject, practice saving a spot, see what
 
         {step === 3 && (
           <div className="stack" style={{ gap: 16 }}>
-            <h3 className="h3">The schedule is a democracy</h3>
+            <h3 className="h3">Ask for the classes you want</h3>
             <p style={{ color: 'var(--ink-2)', fontSize: 15 }}>
-              Tutors build classes from the request board. These +1 buttons are <b>real</b> — go
-              ahead, steer the curriculum:
+              Teachers look at this list when they plan new classes. Tap ▲ to vote for a topic
+              you'd like (you'll need to sign in):
             </p>
             <div className="stack" style={{ gap: 4 }}>
+              {topRequests.length === 0 && (
+                <p className="muted small">No requests yet. Yours could be the first.</p>
+              )}
               {topRequests.map((r) => {
                 const voted = !!profile && r.votedBy.includes(profile.email);
                 return (
                   <div key={r.id} className="line-item" style={{ padding: '11px 0' }}>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 14.5, fontWeight: 580 }}>{r.topic}</div>
-                      <div className="mono" style={{ fontSize: 11, color: 'var(--muted)' }}>
-                        {r.subject} · asked by {r.by}
+                      <div className="small muted">
+                        {r.subject === 'other' ? 'Other' : subjectMeta(r.subject).name} · asked by {r.by}
                       </div>
                     </div>
                     <button
@@ -308,18 +310,18 @@ intro="Five quick steps. You'll pick a subject, practice saving a spot, see what
               })}
             </div>
             <span className="hint">
-              want something that isn't listed? the request form lives on the{' '}
-              <Link to="/sessions#requests" style={{ color: 'var(--ember-deep)' }}>session board</Link>
+              Want something that isn't listed? Ask for it at the bottom of the{' '}
+              <Link to="/sessions#requests" style={{ color: 'var(--ember-deep)', textDecoration: 'underline' }}>Classes page</Link>.
             </span>
           </div>
         )}
 
         {step === 4 && (
           <div className="stack" style={{ gap: 16 }}>
-            <h3 className="h3">Why group classes are free</h3>
+            <h3 className="h3">Group classes are free</h3>
             <p style={{ color: 'var(--ink-2)', fontSize: 15 }}>
               Our teachers volunteer an hour a week for their group class. If you want extra
-              help, some of them also tutor 1-on-1 for up to $20 a session. Two things keep it
+              help, some of them also tutor 1-on-1 for up to $20 a lesson. Two ways to help it
               going:
             </p>
             <div className="eg-row" style={{ gap: 12 }}>
@@ -330,7 +332,7 @@ intro="Five quick steps. You'll pick a subject, practice saving a spot, see what
                   It shows up on the home page.{' '}
                   {founder && (
                     <button className="btn-quiet" onClick={() => setThanking(founder)}>
-                      send {founder.name.split(' ')[0]} a thank-you →
+                      Send {founder.name.split(' ')[0]} a thank-you →
                     </button>
                   )}
                 </span>
@@ -341,15 +343,15 @@ intro="Five quick steps. You'll pick a subject, practice saving a spot, see what
                   <b>Teaching later.</b> Once you know a subject well, you can apply to teach
                   it. Teachers get volunteer hours and a certificate.{' '}
                   <Link to="/guide/tutor" style={{ color: 'var(--ember-deep)', borderBottom: '1.5px dotted' }}>
-                    see how teaching works
+                    See how teaching works
                   </Link>
                 </span>
               </div>
             </div>
             <div className="guide-tip">
-              <b>That's the tour.</b> The button below drops you on the live board, filtered to{' '}
-              {subject ? SUBJECTS.find((s) => s.id === subject)?.name : 'your subject'} — first
-              spot's on us. (They're all on us.)
+              <b>That's it.</b> The button below shows you the real{' '}
+              {subject ? SUBJECTS.find((s) => s.id === subject)?.name : ''} classes. Every group
+              class is free.
             </div>
           </div>
         )}

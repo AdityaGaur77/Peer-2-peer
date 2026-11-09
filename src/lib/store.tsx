@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { setAnalyticsToken, track } from './analytics';
+import { excludeThisBrowser, setAnalyticsToken, track } from './analytics';
 import { supabase } from './backend';
 import { SEED_VERSION } from './config';
 import type { DecodedInvite } from './invite';
@@ -66,7 +66,7 @@ interface StoreValue {
   voteRequest: (id: string, email: string) => void;
   approveApplication: (id: string) => void;
   declineApplication: (id: string) => void;
-  createSession: (s: Omit<Session, 'id' | 'attendees' | 'waitlist' | 'status'>) => string;
+  createSession: (s: Omit<Session, 'id' | 'attendees' | 'waitlist' | 'status'>, quiet?: boolean) => string;
   cancelSession: (id: string) => void;
   updateTutor: (
     id: string,
@@ -193,6 +193,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const snap = await fetchState(supabase, myEmail.current);
       setDb(normalizeState(snap.state, true));
       setIsAdmin(snap.isAdmin);
+      if (snap.isAdmin) excludeThisBrowser();
       return snap;
     } catch (e) {
       console.error(e);
@@ -200,11 +201,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [toast]);
 
-  /** Run a write, then pull fresh data so every screen shows the truth. */
+  /**
+   * Run a write, then pull fresh data so every screen shows the truth.
+   * `ok` runs only once the database has accepted it (straight away in the
+   * offline version), so success messages and analytics never get ahead of
+   * a refusal.
+   */
   const sync = useCallback(
-    (work: (sb: NonNullable<typeof supabase>) => Promise<unknown>) => {
-      if (!supabase) return;
+    (work: (sb: NonNullable<typeof supabase>) => Promise<unknown>, ok?: () => void) => {
+      if (!supabase) {
+        ok?.();
+        return;
+      }
       work(supabase)
+        .then(() => ok?.())
         .catch((e: Error) => toast(e.message || 'That didn\'t save. Try again.'))
         .finally(() => void reload());
     },
@@ -322,9 +332,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setSignInOpen(false);
       const after = pendingAction.current;
       pendingAction.current = null;
-      toast(`You're in, ${p.name.split(' ')[0]}.`);
       track('signin', { label: p.role ?? 'student' });
+      // whatever they were doing gives its own message; one toast is enough
       if (after) after(p);
+      else toast(`You're signed in, ${p.name.split(' ')[0]}.`);
     },
     [toast],
   );
@@ -356,7 +367,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return;
       }
       if (!going && session.minAge && (p.age ?? 0) < session.minAge) {
-        toast(`This class is for ages ${session.minAge} and up.`);
+        toast(`This class is for ages ${session.minAge} and up. If you're younger, a parent can email us to ask.`);
         return;
       }
       const promoted = going ? session.waitlist[0] : undefined;
@@ -379,16 +390,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           };
         }),
       }));
-      toast(
-        going
-          ? promoted?.name
-            ? `Spot released. ${promoted.name.split(' ')[0]} moves up from the waitlist.`
-            : 'Spot released.'
-          : `You're going: ${session.title}`,
-      );
-      if (!going) track('rsvp', { label: session.title.slice(0, 200) });
-      sync((sb) =>
-        going ? remote.leaveClass(sb, sessionId, p.email) : remote.joinClass(sb, sessionId, p),
+      sync(
+        (sb) => (going ? remote.leaveClass(sb, sessionId, p.email) : remote.joinClass(sb, sessionId, p)),
+        () => {
+          toast(
+            going
+              ? promoted?.name
+                ? `Spot released. ${promoted.name.split(' ')[0]} moves up from the waitlist.`
+                : 'Spot released.'
+              : `You're going: ${session.title}`,
+          );
+          if (!going) track('rsvp', { label: session.title });
+        },
       );
     },
     [db, toast, sync],
@@ -401,7 +414,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (session.attendees.some((a) => a.email === p.email)) return;
       const on = session.waitlist.some((a) => a.email === p.email);
       if (!on && session.minAge && (p.age ?? 0) < session.minAge) {
-        toast(`This class is for ages ${session.minAge} and up.`);
+        toast(`This class is for ages ${session.minAge} and up. If you're younger, a parent can email us to ask.`);
         return;
       }
       setDb((prev) => ({
@@ -417,13 +430,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               },
         ),
       }));
-      toast(
-        on
-          ? 'Off the waitlist.'
-          : `You're #${session.waitlist.length + 1} on the waitlist. Spots do open up.`,
-      );
-      sync((sb) =>
-        on ? remote.leaveClass(sb, sessionId, p.email) : remote.joinClass(sb, sessionId, p, true),
+      sync(
+        (sb) => (on ? remote.leaveClass(sb, sessionId, p.email) : remote.joinClass(sb, sessionId, p, true)),
+        () =>
+          toast(
+            on
+              ? 'Off the waitlist.'
+              : `You're #${session.waitlist.length + 1} on the waitlist. We'll move you up if a spot opens.`,
+          ),
       );
     },
     [db.sessions, toast, sync],
@@ -435,8 +449,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const pending = db.applications.find(
         (x) => x.email.toLowerCase() === a.email.toLowerCase() && x.status === 'pending',
       );
-      sync((sb) => remote.submitApplication(sb, a, id, pending?.id));
-      track('apply', { label: a.subjects.join(', ').slice(0, 200) });
+      sync(
+        (sb) => remote.submitApplication(sb, a, id, pending?.id),
+        () => {
+          track('apply', { label: a.subjects.join(', ') });
+          toast('Application sent.');
+        },
+      );
       setDb((prev) => ({
         ...prev,
         applications: [
@@ -444,7 +463,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           { ...a, id, status: 'pending', submittedISO: new Date().toISOString() },
         ],
       }));
-      toast('Application sent.');
     },
     [db.applications, toast, sync],
   );
@@ -486,9 +504,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     (tutorId: string, from: string, message: string) => {
       const k = { id: uid('kudos'), tutorId, from, message, atISO: new Date().toISOString() };
       setDb((prev) => ({ ...prev, kudos: [k, ...prev.kudos] }));
-      sync((sb) => remote.addKudos(sb, k));
-      track('kudos');
-      toast("Sent. That will make their day.");
+      sync(
+        (sb) => remote.addKudos(sb, k),
+        () => {
+          track('kudos');
+          toast('Thank-you sent.');
+        },
+      );
     },
     [toast, sync],
   );
@@ -505,9 +527,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         atISO: new Date().toISOString(),
       };
       setDb((prev) => ({ ...prev, requests: [r, ...prev.requests] }));
-      sync((sb) => remote.addRequest(sb, r, myEmail.current ?? ''));
-      track('request', { label: topic.slice(0, 200) });
-      toast('Requested. Tutors build sessions from this list.');
+      sync(
+        (sb) => remote.addRequest(sb, r, myEmail.current ?? ''),
+        () => {
+          track('request', { label: subject });
+          toast('Request added. Teachers check this list when they plan classes.');
+        },
+      );
     },
     [toast, sync, profile],
   );
@@ -565,7 +591,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (!exists) await remote.addTutor(sb, tutor);
         await remote.setApplicationStatus(sb, id, 'approved');
       });
-      toast("Approved. They are a tutor now.");
+      toast("Approved. They can teach now.");
     },
     [db.applications, db.tutors, toast, sync],
   );
@@ -581,12 +607,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [sync]);
 
   const createSession = useCallback(
-    (s: Omit<Session, 'id' | 'attendees' | 'waitlist' | 'status'>) => {
+    (s: Omit<Session, 'id' | 'attendees' | 'waitlist' | 'status'>, quiet = false) => {
       const id = uid('session');
       const full: Session = { ...s, id, attendees: [], waitlist: [], status: 'scheduled' };
       setDb((prev) => ({ ...prev, sessions: [...prev.sessions, full] }));
-      sync((sb) => remote.createSession(sb, full));
-      toast("Published. It is on the board.");
+      sync(
+        (sb) => remote.createSession(sb, full),
+        quiet ? undefined : () => toast('Class posted.'),
+      );
       return id;
     },
     [toast, sync],
@@ -599,7 +627,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         sessions: prev.sessions.map((s) => (s.id === id ? { ...s, status: 'canceled' as const } : s)),
       }));
       sync((sb) => remote.cancelSession(sb, id));
-      toast('Session canceled.');
+      toast('Class canceled.');
     },
     [toast, sync],
   );
@@ -611,7 +639,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         tutors: prev.tutors.map((t) => (t.id === id ? { ...t, ...patch } : t)),
       }));
       sync((sb) => remote.updateTutor(sb, id, patch));
-      toast('Tutor updated.');
+      toast('Teacher updated.');
     },
     [toast, sync],
   );
@@ -640,7 +668,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           : { ...prev, tutors: [...prev.tutors, tutor] },
       );
       sync((sb) => remote.addTutor(sb, tutor));
-      toast(`${t.name.trim().split(' ')[0]} is on the crew.`);
+      toast(`${t.name.trim().split(' ')[0]} added as a teacher.`);
     },
     [db.tutors, toast, sync],
   );
@@ -665,7 +693,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             : s,
         ),
       }));
-      toast(`${tutor.name} removed from the crew.`);
+      toast(`${tutor.name} removed.`);
     },
     [db.tutors, toast, sync],
   );
@@ -688,7 +716,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return;
     }
     setDb(normalizeState(buildSeed()));
-    toast('Board cleared.');
+    toast('All data cleared.');
   }, [toast]);
 
   /**
@@ -736,7 +764,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     (role: Role) => {
       setProfile((p) => (p ? { ...p, role } : p));
       if (profile) sync((sb) => remote.saveProfile(sb, { ...profile, role }));
-      toast(role === 'tutor' ? 'Switched to the tutor view.' : 'Switched to the student view.');
+      toast(role === 'tutor' ? 'Switched to the teacher view.' : 'Switched to the student view.');
     },
     [toast, profile, sync],
   );
@@ -825,10 +853,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         createdISO: new Date().toISOString(),
       };
       setDb((prev) => ({ ...prev, tutoringRequests: [r, ...(prev.tutoringRequests ?? [])] }));
-      sync((sb) => remote.requestTutoring(sb, r));
-      track('tutoring', { label: tutorById(db, tutorId)?.name.slice(0, 200) });
       const t = tutorById(db, tutorId);
-      toast(`Sent to ${t?.name.split(' ')[0] ?? 'the teacher'}. They'll email you to pick a time.`);
+      const first = t?.name.split(' ')[0] ?? 'the teacher';
+      sync(
+        (sb) => remote.requestTutoring(sb, r),
+        () => {
+          track('tutoring', { label: t?.name });
+          toast(
+            supabase
+              ? `Sent to ${first}. They'll email you to pick a time.`
+              : `Saved in this browser only. This demo version can't send it to ${first}.`,
+          );
+        },
+      );
     },
     [db, sync, toast],
   );
@@ -859,7 +896,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ? remote.setMyTutoring(sb, clean, note.trim())
           : remote.updateTutor(sb, tutorId, { tutoringPrice: clean ?? 0, tutoringNote: note.trim() }),
       );
-      toast(clean ? `1-on-1 tutoring is on, at $${clean} a session.` : '1-on-1 tutoring is off.');
+      toast(clean ? `1-on-1 tutoring is on, at $${clean} a lesson.` : '1-on-1 tutoring is off.');
     },
     [db, sync, toast],
   );

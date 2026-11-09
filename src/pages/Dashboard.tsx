@@ -50,8 +50,7 @@ export function Dashboard() {
         <div className="container stack" style={{ gap: 18, maxWidth: 440, margin: '0 auto' }}>
           <h1 className="h2">Your dashboard</h1>
           <p className="lede" style={{ margin: '0 auto' }}>
-            Sign in to see your saved sessions, certifications, and — if you're a tutor — your
-            volunteer hours.
+            Sign in to see your classes. Teachers can also see their volunteer hours here.
           </p>
           <div>
             <button className="btn btn-primary" onClick={() => openSignIn()}>
@@ -77,8 +76,8 @@ export function Dashboard() {
                 <h1 className="h2" style={{ fontSize: 'clamp(1.6rem, 3vw, 2.1rem)' }}>
                   Hey, {profile.name.split(' ')[0]}.
                 </h1>
-                <p className="mono small muted">
-                  {tutor ? `${[gradeLabel(tutor.grade), 'teacher'].filter(Boolean).join(' · ')}` : profile.role === 'tutor' ? 'signed up to tutor' : 'student'} · {profile.email}
+                <p className="small muted">
+                  {tutor ? `${['Teacher', gradeLabel(tutor.grade)].filter(Boolean).join(' · ')}` : profile.role === 'tutor' ? 'Applying to teach' : 'Student'} · {profile.email}
                 </p>
               </div>
             </div>
@@ -87,10 +86,10 @@ export function Dashboard() {
                 className="btn btn-ghost btn-sm"
                 onClick={() => setRole(profile.role === 'tutor' ? 'student' : 'tutor')}
               >
-                {profile.role === 'tutor' ? 'Switch to student view' : 'Switch to tutor view'}
+                {profile.role === 'tutor' ? 'Switch to student view' : 'Switch to teacher view'}
               </button>
               <button className="btn-quiet" onClick={signOut}>
-                sign out
+                Sign out
               </button>
             </div>
           </div>
@@ -105,9 +104,9 @@ export function Dashboard() {
           <Reveal delay={0.04}>
             <div className="welcome-card" style={{ marginBottom: 24 }}>
               <span>
-                <b>You have an unposted class draft.</b> It's saved right where you left it.
+                <b>You have a class you haven't posted yet.</b> It's saved where you left off.
               </span>
-              <Link to="/guide/tutor">finish and post it →</Link>
+              <Link to="/guide/tutor">Finish and post it →</Link>
             </div>
           </Reveal>
         )}
@@ -123,26 +122,26 @@ export function Dashboard() {
                 </div>
                 <div className="stat">
                   <span className="stat-num">{stats.taught}</span>
-                  <span className="stat-label">sessions taught</span>
+                  <span className="stat-label">classes taught</span>
                 </div>
                 <div className="stat">
                   <span className="stat-num">{stats.learners}</span>
-                  <span className="stat-label">learners reached</span>
+                  <span className="stat-label">students taught</span>
                 </div>
                 <div className="stat">
                   <span className="stat-num">{stats.kudosCount}</span>
-                  <span className="stat-label">kudos received</span>
+                  <span className="stat-label">thank-yous</span>
                 </div>
               </div>
               <div className="row between" style={{ padding: '16px 22px', borderTop: '1.5px dashed var(--border-strong)' }}>
-                <span className="mono small muted">
+                <span className="small muted">
                   {stats.firstISO
-                    ? `tutoring since ${fmtLongDate(stats.firstISO)}`
-                    : 'your teaching journey starts with your first session'}
+                    ? `Teaching since ${fmtLongDate(stats.firstISO)}`
+                    : 'Your hours start counting after your first class.'}
                 </span>
                 <div className="row">
                   <Link to="/guide/tutor" className="btn btn-primary btn-sm">
-                    Host a session
+                    Post a class
                   </Link>
                   <Link to="/certificate" className="btn btn-ghost btn-sm">
                     Volunteer certificate
@@ -161,22 +160,23 @@ export function Dashboard() {
 
         <MyTutoringRequests email={profile.email} />
 
-        {/* certifications */}
+        {/* quizzes passed: only for people who teach or want to */}
+        {(tutor || certs.length > 0 || profile.role === 'tutor') && (
         <Reveal delay={0.1}>
           <div className="card card-pad" style={{ marginBottom: 24 }}>
             <div className="row between" style={{ marginBottom: 14 }}>
-              <h3 className="h3">Your certifications</h3>
+              <h3 className="h3">Quizzes passed</h3>
               <Link to="/teach" className="btn-quiet">
-                {certs.length > 0 ? 'certify in more →' : 'get certified →'}
+                Take a quiz →
               </Link>
             </div>
             {certs.length === 0 ? (
               <p className="muted" style={{ fontSize: 15 }}>
-                No certifications yet. Pass a subject quiz on the{' '}
+                None yet. To teach Python or AI, pass the short quiz on the{' '}
                 <Link to="/teach" style={{ color: 'var(--ember-deep)', borderBottom: '1.5px dotted' }}>
                   Teach
                 </Link>{' '}
-                page and you're cleared to tutor it.
+                page. Other subjects don't need one.
               </p>
             ) : (
               <div className="row" style={{ gap: 10 }}>
@@ -194,24 +194,24 @@ export function Dashboard() {
             )}
           </div>
         </Reveal>
+        )}
 
         {/* my saved sessions */}
         <Reveal delay={0.14}>
           <div style={{ marginBottom: 24 }}>
             <div className="row between" style={{ marginBottom: 14 }}>
-              <h3 className="h3">Sessions you're going to</h3>
+              <h3 className="h3">Your classes</h3>
               <Link to="/sessions" className="btn-quiet">
-                browse all →
+                See all classes →
               </Link>
             </div>
             {myRsvps.length === 0 ? (
               <div className="card card-pad" style={{ textAlign: 'center' }}>
                 <p className="muted" style={{ fontSize: 15 }}>
-                  You haven't saved a spot yet. There are classes on the board —{' '}
+                  You haven't saved a spot in a class yet.{' '}
                   <Link to="/sessions" style={{ color: 'var(--ember-deep)', borderBottom: '1.5px dotted' }}>
-                    go grab one
+                    See classes
                   </Link>
-                  .
                 </p>
               </div>
             ) : (
@@ -229,11 +229,11 @@ export function Dashboard() {
           <Reveal delay={0.16}>
             <div className="card card-pad" style={{ marginBottom: 24 }}>
               <div className="row between" style={{ marginBottom: 6 }}>
-                <h3 className="h3">Sessions you attended</h3>
-                <span className="mono small muted">{plural(attended.length, 'session')}</span>
+                <h3 className="h3">Classes you went to</h3>
+                <span className="small muted">{plural(attended.length, 'class', 'classes')}</span>
               </div>
               <p className="muted small" style={{ marginBottom: 10 }}>
-                Got something out of one? A thank-you note is the only payment tutors get.
+                Did a class help? Teachers volunteer their time, so a thank-you note means a lot.
               </p>
               {attended.slice(0, 6).map((s) => {
                 const t = tutorById(db, s.tutorId);
@@ -241,14 +241,14 @@ export function Dashboard() {
                   <div key={s.id} className="line-item" style={{ padding: '11px 0' }}>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 14.5, fontWeight: 580 }}>{s.title}</div>
-                      <div className="mono" style={{ fontSize: 11, color: 'var(--muted)' }}>
+                      <div className="small muted">
                         {fmtDate(s.startISO)}
                         {t ? ` · with ${t.name}` : ''}
                       </div>
                     </div>
                     {t && (
                       <button className="btn btn-soft btn-sm" onClick={() => setThanking(t)}>
-                        ♥ thank {t.name.split(' ')[0]}
+                        ♥ Thank {t.name.split(' ')[0]}
                       </button>
                     )}
                   </div>
@@ -263,7 +263,7 @@ export function Dashboard() {
           <Reveal delay={0.18}>
             <div style={{ marginBottom: 24 }}>
               <h3 className="h3" style={{ marginBottom: 14 }}>
-                Sessions you're teaching
+                Classes you teach
               </h3>
               <div className="stack" style={{ gap: 14 }}>
                 {stats.upcoming.map((s) => (
@@ -279,11 +279,10 @@ export function Dashboard() {
           <Reveal delay={0.2}>
             <div className="cta-band">
               <h3 className="h3" style={{ maxWidth: 480 }}>
-                You've learned something here. Teaching it is how it sticks — and it's how you log
-                real volunteer hours.
+                Good at a subject? Teach a free class and earn volunteer hours.
               </h3>
               <button className="btn btn-band-light" onClick={() => navigate('/teach')}>
-                Become a tutor
+                Teach a class
               </button>
             </div>
           </Reveal>

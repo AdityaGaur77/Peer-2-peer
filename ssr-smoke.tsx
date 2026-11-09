@@ -15,10 +15,10 @@ const ROUTES: Array<[string, string[]]> = [
   ['/certificate', ['Volunteer certificate']],
   ['/admin', ['Team login']],
   ['/dashboard?x=1', ['Your dashboard', 'Sign in to see']],
-  ['/guide/tutor', ['Set up your class', 'The subject', 'live preview', 'draft preview']],
-  ['/guide/student', ['How Peer 2 Peer works', 'Pick your track']],
-  ['/join', ['invite']], // no payload → the friendly error state
-  ['/flyer/nope', ['No such session']], // unknown id → graceful fallback
+  ['/guide/tutor', ['Set up your class', 'Class name', 'Preview']],
+  ['/guide/student', ['How Peer 2 Peer works', 'Pick a subject']],
+  ['/join', ['Loading']], // effects don't run in SSR, so the loading state
+  ['/flyer/nope', ['Class not found']], // unknown id → graceful fallback
   ['/definitely-not-a-page', ['Page not found']],
 ];
 

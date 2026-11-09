@@ -5,7 +5,7 @@ import { SessionCard } from '../components/SessionCard';
 import { decodeInvite, type DecodedInvite } from '../lib/invite';
 import { useStore } from '../lib/store';
 import type { Session } from '../lib/types';
-import { firstName, gradeLabel, fmtLongDate, fmtTime, isPastSession } from '../lib/util';
+import { firstName, gradeLabel, fmtLongDate, fmtTime, isPastSession, plural } from '../lib/util';
 
 /**
  * Landing page for an invite link. Shows the class the way the board would,
@@ -27,12 +27,12 @@ export function Join() {
     setInvite(null);
     setError(null);
     if (!payload) {
-      setError('This link is missing its invite code.');
+      setError('This link is missing the class details.');
       return;
     }
     decodeInvite(payload)
       .then((d) => alive && setInvite(d))
-      .catch(() => alive && setError('This invite link looks damaged — ask for a fresh one.'));
+      .catch(() => alive && setError('This link looks broken. Ask whoever sent it for a new one.'));
     return () => {
       alive = false;
     };
@@ -42,17 +42,13 @@ export function Join() {
     return (
       <div className="section" style={{ paddingTop: 'clamp(120px, 16vw, 160px)', textAlign: 'center' }}>
         <div className="container stack" style={{ gap: 18, maxWidth: 440, margin: '0 auto' }}>
-          <span className="mono muted" style={{ letterSpacing: '0.2em' }}>
-            LINK PROBLEM
-          </span>
           <h1 className="h2">Couldn't read that invite</h1>
           <p className="lede" style={{ margin: '0 auto' }}>
-            {error} Links can get chopped short when they're forwarded — the full one is long on
-            purpose, since it carries the whole class inside it.
+            {error} Long links sometimes get cut off when they're forwarded.
           </p>
           <div className="row" style={{ justifyContent: 'center' }}>
             <Link to="/sessions" className="btn btn-primary">
-              Browse the open board
+              See all classes
             </Link>
           </div>
         </div>
@@ -64,7 +60,7 @@ export function Join() {
     return (
       <div className="section" style={{ paddingTop: 'clamp(120px, 16vw, 160px)', textAlign: 'center' }}>
         <div className="container">
-          <span className="mono muted">unpacking the invite…</span>
+          <span className="muted">Loading…</span>
         </div>
       </div>
     );
@@ -93,7 +89,7 @@ export function Join() {
       return;
     }
     const id = acceptInvite(invite);
-    toast(`Added to your board — ${who}'s class is yours to join.`);
+    toast(`Added ${who}'s class. You can save a spot now.`);
     navigate(`/sessions?s=${id}`);
   };
 
@@ -121,7 +117,7 @@ export function Join() {
           <SessionCard
             session={preview}
             preview
-            previewNote={`${preview.capacity} spots · free · add it to your board to save one`}
+            previewNote={`${plural(preview.capacity, 'spot')} · free`}
           />
         </Reveal>
 
@@ -129,27 +125,26 @@ export function Join() {
           <div className="stack" style={{ gap: 14, marginTop: 20 }}>
             {stale ? (
               <div className="guide-tip">
-                <b>This one already happened.</b> Invites carry a fixed date, so this link has
-                aged out — the live board has what's coming up next.
+                <b>This class already happened.</b> See what's coming up on the Classes page.
               </div>
             ) : (
               <div className="guide-tip">
                 {live
-                  ? 'Open it on the board to save a spot. You get the meeting link once you have one.'
-                  : 'Adding it puts the class on your board, where you can save a spot and get the meeting link.'}
+                  ? 'Open the class to save a spot. You get the class link after you save one.'
+                  : 'Add the class, then save a spot to get the class link.'}
               </div>
             )}
             <div className="row">
               {!stale && (
                 <button className="btn btn-primary" onClick={accept}>
-                  Add it to my board
+                  Add this class
                 </button>
               )}
               <Link to="/sessions" className="btn btn-ghost">
-                See what else is on
+                See all classes
               </Link>
               <Link to="/guide/student" className="btn-quiet">
-                new to Peer 2 Peer? 2-minute tour →
+                New here? Take the 2-minute tour →
               </Link>
             </div>
           </div>

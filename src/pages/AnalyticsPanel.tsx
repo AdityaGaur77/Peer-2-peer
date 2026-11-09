@@ -39,6 +39,14 @@ function uniqueBy<T>(items: T[], group: (t: T) => string | undefined | null, who
   return [...m.entries()].map(([k, s]) => [k, s.size] as [string, number]).sort((a, b) => b[1] - a[1]);
 }
 
+/** The visitor's calendar day in the admin's own time zone. */
+function localDay(iso: string | undefined): string {
+  const d = new Date(iso ?? '');
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 const mins = (ms: number) =>
   ms < 60_000 ? `${Math.round(ms / 1000)}s` : `${Math.floor(ms / 60_000)}m ${Math.round((ms % 60_000) / 1000)}s`;
 
@@ -74,7 +82,7 @@ function Table({ title, rows, unit, limit = 10 }: { title: string; rows: Array<[
  */
 export function AnalyticsPanel() {
   const [days, setDays] = useState(7);
-  const [events, setEvents] = useState<AnalyticsEvent[] | null>(null);
+  const [raw, setEvents] = useState<AnalyticsEvent[] | null>(null);
   const [err, setErr] = useState('');
   const [open, setOpen] = useState<string | null>(null);
   const [reloads, setReloads] = useState(0);
@@ -87,7 +95,7 @@ export function AnalyticsPanel() {
     if (days === 1) since.setHours(0, 0, 0, 0);
     const load = supabase
       ? remote.fetchEvents(supabase, since.toISOString())
-      : Promise.resolve(localEvents().filter((e) => (e.at ?? '') >= since.toISOString()).reverse());
+      : Promise.resolve(localEvents().filter((e) => (e.at ?? '') >= since.toISOString())); // oldest first, sorted below
     load
       .then((e) => alive && setEvents(e))
       .catch((x: Error) => alive && setErr(x.message));
@@ -97,19 +105,28 @@ export function AnalyticsPanel() {
   }, [days, reloads]);
 
   const r = useMemo(() => {
-    if (!events) return null;
+    if (!raw) return null;
+    // oldest first. A batch of events shares one server time, so the row id
+    // (given out in the order they were sent) breaks ties.
+    const asc = raw
+      .map((e, i) => ({ e, k: e.id ?? i }))
+      .sort((a, b) => (a.e.at ?? '').localeCompare(b.e.at ?? '') || a.k - b.k)
+      .map((x) => x.e);
+    const events = [...asc].reverse();
     const views = events.filter((e) => e.kind === 'pageview');
     const visitors = new Set(events.map((e) => e.visitor_id));
     const sessions = new Map<string, AnalyticsEvent[]>();
-    for (const e of [...events].reverse()) {
+    for (const e of asc) {
       if (!sessions.has(e.session_id)) sessions.set(e.session_id, []);
       sessions.get(e.session_id)!.push(e);
     }
-    const sessionList = [...sessions.entries()].map(([id, evs]) => {
+    // a visit starts with a page view; stray events on their own aren't one
+    const sessionList = [...sessions.entries()].flatMap(([id, evs]) => {
       const pv = evs.filter((e) => e.kind === 'pageview');
+      if (pv.length === 0) return [];
       const dur = evs.filter((e) => e.kind === 'leave').reduce((n, e) => n + (e.duration_ms ?? 0), 0);
-      const first = evs[0];
-      return {
+      const first = pv[0];
+      return [{
         id,
         first,
         start: first.at ?? '',
@@ -118,11 +135,12 @@ export function AnalyticsPanel() {
         email: evs.find((e) => e.user_email)?.user_email ?? null,
         actions: evs.filter((e) => KEY_ACTIONS.some(([k]) => k === e.kind)),
         events: evs,
-      };
+      }];
     });
     const returning = new Set<string>();
     const firstSeen = new Map<string, string>();
-    for (const e of [...events].reverse()) {
+    for (const e of asc) {
+      if (e.kind !== 'pageview') continue;
       if (!firstSeen.has(e.visitor_id)) firstSeen.set(e.visitor_id, e.session_id);
       else if (firstSeen.get(e.visitor_id) !== e.session_id) returning.add(e.visitor_id);
     }
@@ -133,7 +151,7 @@ export function AnalyticsPanel() {
     // visitors per day
     const perDay = new Map<string, Set<string>>();
     for (const e of events) {
-      const d = (e.at ?? '').slice(0, 10);
+      const d = localDay(e.at);
       if (!perDay.has(d)) perDay.set(d, new Set());
       perDay.get(d)!.add(e.visitor_id);
     }
@@ -171,10 +189,10 @@ export function AnalyticsPanel() {
       }),
       recent: sessionList.sort((a, b) => b.start.localeCompare(a.start)).slice(0, 60),
     };
-  }, [events]);
+  }, [raw]);
 
   const exportCsv = () => {
-    if (!events) return;
+    if (!raw) return;
     const cols: Array<keyof AnalyticsEvent> = [
       'at', 'kind', 'path', 'label', 'href', 'source', 'medium', 'campaign', 'referrer', 'landing',
       'device', 'browser', 'os', 'screen', 'lang', 'tz', 'duration_ms', 'user_email', 'visitor_id', 'session_id',
@@ -186,7 +204,7 @@ export function AnalyticsPanel() {
     };
     downloadText(
       `peer2peer-analytics-${new Date().toISOString().slice(0, 10)}.csv`,
-      [cols.join(','), ...events.map((e) => cols.map((c) => esc(e[c])).join(','))].join('\n'),
+      [cols.join(','), ...raw.map((e) => cols.map((c) => esc(e[c])).join(','))].join('\n'),
       'text/csv',
     );
   };
@@ -205,7 +223,7 @@ export function AnalyticsPanel() {
           <button className="btn-quiet" onClick={() => setReloads((n) => n + 1)}>
             refresh
           </button>
-          <button className="btn btn-ghost btn-sm" onClick={exportCsv} disabled={!events?.length}>
+          <button className="btn btn-ghost btn-sm" onClick={exportCsv} disabled={!raw?.length}>
             Download CSV
           </button>
         </div>
@@ -218,7 +236,7 @@ export function AnalyticsPanel() {
         </p>
       )}
       {err && <p className="small" style={{ color: 'var(--hot-deep)' }}>Couldn't load analytics: {err}</p>}
-      {!events && !err && <p className="small muted">Loading…</p>}
+      {!raw && !err && <p className="small muted">Loading…</p>}
 
       {r && (
         <>

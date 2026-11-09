@@ -71,13 +71,13 @@ export function Nav() {
           className="theme-btn"
           onClick={flipTheme}
           aria-label={theme === 'dark' ? 'Switch to day mode' : 'Switch to night mode'}
-          title={theme === 'dark' ? 'day mode' : 'night mode'}
+          title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
         >
           {theme === 'dark' ? '☀' : '☾'}
         </button>
 
         {profile ? (
-          <button className="nav-user nav-cta" onClick={() => navigate('/dashboard')}>
+          <button className="nav-user nav-cta" data-track="My dashboard" onClick={() => navigate('/dashboard')}>
             <span
               className="avatar avatar-sm"
               style={{ '--h': hashHue(profile.email) } as CSSProperties}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { excludeThisBrowser } from '../lib/analytics';
 import { MeetingFields } from '../components/MeetingPanel';
 import { AllTutoringRequests } from '../components/Tutoring';
 import { AnalyticsPanel } from './AnalyticsPanel';
@@ -96,10 +97,11 @@ export function Admin() {
       }
       if (ADMIN_CODE && code.trim() === ADMIN_CODE) {
         sessionStorage.setItem('relay.admin', '1');
+        excludeThisBrowser(); // the team's own visits don't count in Analytics
         setAuthed(true);
         toast('Welcome back.');
       } else {
-        toast('Nope — wrong passcode.');
+        toast('Wrong passcode.');
       }
     };
     return (
@@ -112,11 +114,11 @@ export function Admin() {
               </h1>
             </div>
             <p className="muted" style={{ fontSize: 14.5 }}>
-              This is where applications get reviewed and sessions get published. Enter the
-              team passcode to continue.
+              This is where the team reviews applications and posts classes. Enter the team
+              passcode to continue.
             </p>
             {appPayload && (
-              <p className="hint">an application is waiting in this link — unlock to file it</p>
+              <p className="hint">This link has an application in it. Enter the passcode to add it.</p>
             )}
             <form className="stack" style={{ gap: 12 }} onSubmit={tryCode}>
               <input
@@ -124,7 +126,8 @@ export function Admin() {
                 type="password"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                placeholder="passcode"
+                placeholder="Passcode"
+                aria-label="Team passcode"
                 autoFocus
               />
               <button className="btn btn-primary" type="submit">
@@ -243,7 +246,7 @@ export function Admin() {
                     Top topic requests
                   </h3>
                   <p className="muted small" style={{ marginBottom: 12 }}>
-                    What learners are voting for — build sessions around these.
+                    What students are voting for. Plan classes around these.
                   </p>
                   {[...db.requests]
                     .sort((a, b) => b.votes - a.votes)
@@ -260,7 +263,7 @@ export function Admin() {
 
                 <div className="card card-pad">
                   <h3 className="h3" style={{ marginBottom: 12 }}>
-                    Recent kudos
+                    Recent thank-yous
                   </h3>
                   <p className="muted small" style={{ marginBottom: 12 }}>
                     The stuff that makes it worth it.
