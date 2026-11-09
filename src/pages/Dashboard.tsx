@@ -3,13 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { KudosModal } from '../components/KudosModal';
 import { Reveal } from '../components/Reveal';
 import { NextClass } from '../components/NextClass';
+import { MyTutoringRequests, TeacherTutoringPanel } from '../components/Tutoring';
 import { SessionCard } from '../components/SessionCard';
 import {
   attendedSessions, certsFor, tutorByEmail, tutorById, tutorStats, upcomingSessions, useStore,
 } from '../lib/store';
 import type { Tutor } from '../lib/types';
 import { subjectMeta } from '../lib/types';
-import { fmtDate, fmtLongDate, initials, plural } from '../lib/util';
+import { fmtDate, gradeLabel, fmtLongDate, initials, plural } from '../lib/util';
 
 export function Dashboard() {
   const { db, profile, openSignIn, signOut, setRole } = useStore();
@@ -77,7 +78,7 @@ export function Dashboard() {
                   Hey, {profile.name.split(' ')[0]}.
                 </h1>
                 <p className="mono small muted">
-                  {tutor ? `${tutor.grade} · tutor` : profile.role === 'tutor' ? 'signed up to tutor' : 'student'} · {profile.email}
+                  {tutor ? `${[gradeLabel(tutor.grade), 'teacher'].filter(Boolean).join(' · ')}` : profile.role === 'tutor' ? 'signed up to tutor' : 'student'} · {profile.email}
                 </p>
               </div>
             </div>
@@ -151,6 +152,14 @@ export function Dashboard() {
             </div>
           </Reveal>
         )}
+
+        {tutor && (
+          <Reveal delay={0.08}>
+            <TeacherTutoringPanel tutor={tutor} />
+          </Reveal>
+        )}
+
+        <MyTutoringRequests email={profile.email} />
 
         {/* certifications */}
         <Reveal delay={0.1}>
@@ -269,9 +278,6 @@ export function Dashboard() {
         {!tutor && (
           <Reveal delay={0.2}>
             <div className="cta-band">
-              <span className="eyebrow" style={{ color: '#90a0bc' }}>
-                ready for the next leg?
-              </span>
               <h3 className="h3" style={{ maxWidth: 480 }}>
                 You've learned something here. Teaching it is how it sticks — and it's how you log
                 real volunteer hours.

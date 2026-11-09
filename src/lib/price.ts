@@ -1,8 +1,9 @@
 /**
- * Teachers can charge for a class, up to MAX_PRICE dollars. Free is the
- * default. The site shows the price; it doesn't take payments.
+ * Group classes are always free. A teacher can offer 1-on-1 tutoring for up
+ * to MAX_PRICE dollars a session. The site shows the price; it doesn't take
+ * payments.
  */
-export const MAX_PRICE = 19;
+export const MAX_PRICE = 20;
 
 export function clampPrice(n: unknown): number {
   const v = Math.round(Number(n) || 0);

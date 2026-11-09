@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { downloadSessionICS, googleCalUrl } from '../lib/ics';
 import { inviteUrl } from '../lib/invite';
-import { countsForHours, priceLabel } from '../lib/price';
+import { countsForHours } from '../lib/price';
 import { MeetingPanel } from './MeetingPanel';
 import { levelLabel, tutorById, useStore } from '../lib/store';
 import type { Session } from '../lib/types';
@@ -87,9 +87,7 @@ export function SessionCard({
             </span>
             <span className="chip chip-ghost">{levelLabel(session.level)}</span>
             {session.minAge ? <span className="chip chip-ghost">ages {session.minAge}+</span> : null}
-            <span className={cx('chip', session.price ? 'chip-price' : 'chip-ghost')}>
-              {session.price ? `${priceLabel(session.price)} / class` : 'Free'}
-            </span>
+            <span className="chip chip-ghost">Free</span>
             {live && <span className="chip chip-live">live now</span>}
           </div>
           {going && !past && <span className="mono small going-tag">✓ going</span>}
@@ -192,7 +190,7 @@ export function SessionCard({
                     className="btn btn-primary btn-sm"
                     onClick={() => requireProfile((p) => toggleRsvp(session.id, p))}
                   >
-                    {session.price ? `Save my spot · ${priceLabel(session.price)}` : 'Save my spot — free'}
+                    Save my spot
                   </button>
                   {!canEditLink && <span className="hint">you get the meeting link once you save a spot</span>}
                 </>

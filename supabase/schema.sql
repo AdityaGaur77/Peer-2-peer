@@ -41,6 +41,27 @@ create table if not exists public.tutors (
 
 alter table public.tutors add column if not exists active boolean not null default true;
 
+-- 1-on-1 tutoring: group classes are always free, but a teacher can offer
+-- private sessions at a price they choose, up to $20. null = not offered.
+alter table public.tutors add column if not exists tutoring_price int;
+alter table public.tutors add column if not exists tutoring_note text;
+alter table public.tutors drop constraint if exists tutors_tutoring_price;
+alter table public.tutors add constraint tutors_tutoring_price
+  check (tutoring_price is null or tutoring_price between 1 and 20);
+
+-- A student asking a teacher for 1-on-1 tutoring. The teacher arranges the
+-- time and payment directly with them.
+create table if not exists public.tutoring_requests (
+  id             text primary key,
+  tutor_id       text not null references public.tutors (id) on delete cascade,
+  student_email  text not null check (student_email = lower(student_email)),
+  student_name   text not null check (char_length(student_name) between 1 and 80),
+  message        text not null default '' check (char_length(message) <= 1000),
+  times          text not null default '' check (char_length(times) <= 200),
+  status         text not null default 'new' check (status in ('new', 'accepted', 'declined', 'done')),
+  created_at     timestamptz not null default now()
+);
+
 -- Kept apart from tutors so teachers' emails are never public.
 create table if not exists public.tutor_emails (
   tutor_id  text primary key references public.tutors (id) on delete cascade,
@@ -308,8 +329,19 @@ language plpgsql security definer set search_path = public as $$
 declare
   seated int;
 begin
+  -- group classes are always free; 1-on-1 tutoring is where prices live
+  new.price := 0;
   if is_admin() then
     return new;
+  end if;
+  -- teachers start with one class a week: no two of their classes within
+  -- six days of each other (a weekly series is seven days apart)
+  if exists (
+    select 1 from sessions o
+     where o.tutor_id = new.tutor_id and o.id <> new.id and o.status = 'scheduled'
+       and abs(extract(epoch from (o.start_at - new.start_at))) < 6 * 86400
+  ) and (tg_op = 'INSERT' or new.start_at is distinct from old.start_at) then
+    raise exception 'Teachers run one class a week to start. You already have one within six days of that.';
   end if;
   if tg_op = 'INSERT' then
     if new.start_at < now() then
@@ -378,6 +410,54 @@ alter table public.certifications add constraint certifications_sane check (
   subject in ('python', 'ai') and total between 1 and 50 and score between 0 and total
 ) not valid;
 
+-- A teacher turns 1-on-1 tutoring on or off and sets the price ($1-$20).
+create or replace function public.set_my_tutoring(p int, n text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if my_tutor_id() is null then
+    raise exception 'Only teachers can offer 1-on-1 tutoring.';
+  end if;
+  if p is not null and (p < 1 or p > 20) then
+    raise exception 'Pick a price from $1 to $20.';
+  end if;
+  update tutors set tutoring_price = p, tutoring_note = left(coalesce(n, ''), 300)
+   where id = my_tutor_id();
+end $$;
+
+-- On a 1-on-1 request, a teacher may only change its status; the student's
+-- details stay as they sent them. New requests always start as 'new'.
+create or replace function public.guard_tutoring_request() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if is_admin() then
+    return new;
+  end if;
+  if tg_op = 'INSERT' then
+    new.status := 'new';
+    new.created_at := now();
+    if not exists (select 1 from tutors where id = new.tutor_id and tutoring_price is not null and active) then
+      raise exception 'That teacher isn''t offering 1-on-1 tutoring right now.';
+    end if;
+    if (select count(*) from tutoring_requests
+         where student_email = new.student_email and created_at > now() - interval '1 day') >= 5 then
+      raise exception 'That''s a lot of requests for one day. Try again tomorrow.';
+    end if;
+    return new;
+  end if;
+  new.id := old.id;
+  new.tutor_id := old.tutor_id;
+  new.student_email := old.student_email;
+  new.student_name := old.student_name;
+  new.message := old.message;
+  new.times := old.times;
+  new.created_at := old.created_at;
+  return new;
+end $$;
+
+drop trigger if exists tutoring_request_guard on public.tutoring_requests;
+create trigger tutoring_request_guard before insert or update on public.tutoring_requests
+  for each row execute function public.guard_tutoring_request();
+
 -- Who voted for a topic stays private: everyone sees the count, and each
 -- person can ask which topics they voted for.
 create or replace function public.my_votes() returns setof text
@@ -398,6 +478,7 @@ alter table public.applications   enable row level security;
 alter table public.certifications enable row level security;
 alter table public.kudos          enable row level security;
 alter table public.requests       enable row level security;
+alter table public.tutoring_requests enable row level security;
 
 do $$
 declare r record;
@@ -470,6 +551,15 @@ create policy req_new   on public.requests for insert
   with check (my_email() <> '' and votes = 1 and voted_by = array[my_email()]);
 create policy req_admin on public.requests for all using (is_admin()) with check (is_admin());
 
+create policy tutreq_read on public.tutoring_requests for select
+  using (student_email = my_email() or tutor_id = my_tutor_id() or is_admin());
+create policy tutreq_new on public.tutoring_requests for insert
+  with check (my_email() <> '' and student_email = my_email());
+create policy tutreq_status on public.tutoring_requests for update
+  using (tutor_id = my_tutor_id() or is_admin())
+  with check (tutor_id = my_tutor_id() or is_admin());
+create policy tutreq_admin on public.tutoring_requests for delete using (is_admin());
+
 grant usage on schema public to anon, authenticated;
 grant select on all tables in schema public to anon, authenticated;
 grant insert, update, delete on all tables in schema public to authenticated;
@@ -491,3 +581,12 @@ begin
     end;
   end if;
 end $$;
+
+-- ── one-off data fixes (safe to run again) ───────────────────
+-- Every current teacher is in 10th grade; no titles like "Co-founder" or
+-- "High school senior"; the founder's old tagline goes.
+update public.tutors set grade = '10th grade'
+ where id in ('founder', 'roster-sohail', 'roster-abhiram', 'roster-akil', 'roster-haggai', 'roster-ayden')
+   and grade <> '10th grade';
+update public.tutors set tagline = ''
+ where tagline = 'Started this after charging for tutoring stopped feeling right.';

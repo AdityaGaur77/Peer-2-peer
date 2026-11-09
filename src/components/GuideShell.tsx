@@ -8,7 +8,6 @@ export interface GuideStepDef {
 }
 
 interface GuideShellProps {
-  eyebrow: string;
   title: ReactNode;
   intro: string;
   steps: GuideStepDef[];
@@ -21,15 +20,12 @@ interface GuideShellProps {
 }
 
 export function GuideShell({
-  eyebrow, title, intro, steps, current, maxVisited, onStep, children, aside, footer,
+  title, intro, steps, current, maxVisited, onStep, children, aside, footer,
 }: GuideShellProps) {
   return (
     <div className="section" style={{ paddingTop: 'clamp(110px, 15vw, 150px)' }}>
       <div className="container">
         <div className="section-head" style={{ marginBottom: 28 }}>
-          <Reveal>
-            <span className="eyebrow">{eyebrow}</span>
-          </Reveal>
           <Reveal delay={0.05}>
             <h1 className="h2">{title}</h1>
           </Reveal>

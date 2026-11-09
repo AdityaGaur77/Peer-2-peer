@@ -4,7 +4,7 @@ import { GuideShell, type GuideStepDef } from '../components/GuideShell';
 import { MeetingFields } from '../components/MeetingPanel';
 import { SessionCard } from '../components/SessionCard';
 import { DEFAULT_MIN_AGE, freshJitsiLink, meetingLinkError, weeklyStarts } from '../lib/meeting';
-import { MAX_PRICE, priceLabel } from '../lib/price';
+import { MAX_PRICE } from '../lib/price';
 import {
   applicationFor, certsFor, tutorByEmail, upcomingSessions, useStore,
 } from '../lib/store';
@@ -53,7 +53,7 @@ const EMPTY_DRAFT: ClassDraft = {
   passcode: '',
   minAge: DEFAULT_MIN_AGE,
   price: 0,
-  repeatWeeks: 1,
+  repeatWeeks: 8,
 };
 
 function loadDraft(): { draft: ClassDraft; step: number } {
@@ -74,7 +74,7 @@ const STEPS: GuideStepDef[] = [
   { id: 'name', label: 'The name' },
   { id: 'pitch', label: 'The pitch' },
   { id: 'shape', label: 'The shape' },
-  { id: 'price', label: 'The price' },
+  { id: 'price', label: 'Free for all' },
   { id: 'when', label: 'The when' },
   { id: 'post', label: 'Post it' },
 ];
@@ -212,10 +212,21 @@ export function GuideTutor() {
     if (draft.description.trim().length < 30)
       return { step: 2, msg: 'The pitch needs a couple of sentences (30+ characters).' };
     if (!startMs || startMs <= Date.now()) return { step: 5, msg: 'Pick a date and time in the future.' };
+    // one class a week to start: not within six days of another of theirs
+    if (tutor) {
+      const clash = upcomingSessions(db).find(
+        (x) => x.tutorId === tutor.id && Math.abs(new Date(x.startISO).getTime() - startMs) < 6 * 86_400_000,
+      );
+      if (clash)
+        return {
+          step: 5,
+          msg: `Teachers run one class a week to start, and you already have one on ${fmtDate(clash.startISO)}.`,
+        };
+    }
     if (draft.link.trim() && meetingLinkError(draft.link))
       return { step: 6, msg: meetingLinkError(draft.link) ?? 'Check the meeting link.' };
     return null;
-  }, [draft, startMs]);
+  }, [draft, startMs, tutor, db]);
   const posting = useRef(false);
 
   // live preview built from the draft
@@ -239,7 +250,6 @@ export function GuideTutor() {
       waitlist: [],
       link: draft.link || 'https://meet.jit.si/peer2peer-your-class',
       minAge: draft.minAge,
-      price: draft.price,
       status: 'scheduled',
     };
   }, [draft, startMs, tutor?.id]);
@@ -274,7 +284,6 @@ export function GuideTutor() {
           meetingId: draft.meetingId.trim() || undefined,
           passcode: draft.passcode.trim() || undefined,
           minAge: draft.minAge,
-          price: draft.price,
         });
         if (w === 0) id = made;
       }
@@ -316,13 +325,12 @@ export function GuideTutor() {
 
   return (
     <GuideShell
-      eyebrow="set up a class · about 5 minutes"
       title={
         <>
-          Set up your first class, <em className="em-ember">step by step.</em>
+          Set up your class
         </>
       }
-      intro="This is not a demo. Each step fills in part of a real class, the preview updates as you type, and the last step puts it on the board."
+      intro="Answer a few questions and your class goes on the Classes page. The preview on the right shows what students will see."
       steps={STEPS}
       current={step}
       maxVisited={maxVisited}
@@ -530,31 +538,15 @@ People scroll past topic names. They stop for what they will be able to do after
 
       {step === 4 && (
         <div className="stack" style={{ gap: 16 }}>
-          <h3 className="h3">Set your price</h3>
-          <div className="price-gag">
-            <span className="price-read">{priceLabel(draft.price)}</span>
-            <input
-              type="range"
-              min={0}
-              max={MAX_PRICE}
-              step={1}
-              value={draft.price}
-              onChange={(e) => patch({ price: Number(e.target.value) })}
-              aria-label={`Price per class, from free to $${MAX_PRICE}`}
-            />
-            <span className="price-quip">
-              {draft.price === 0 ? 'free · counts as volunteer hours' : 'per student, per class'}
-            </span>
-          </div>
+          <h3 className="h3">Group classes are free</h3>
           <p style={{ color: 'var(--ink-2)', fontSize: 15 }}>
-            Free is the default, and most classes here are free. You can charge up to $
-            {MAX_PRICE} a class if you want to. The price shows on the class before anyone signs
-            up.
+            Anyone can join your class without paying. That's what makes it count as volunteer
+            hours.
           </p>
           <div className="eg-row">
-            <div className="eg good"><span className="verdict">01</span><span><b>Free classes count as volunteer hours</b>, added up automatically and printable as a certificate. Paid classes don't, since volunteering means unpaid.</span></div>
-            <div className="eg good"><span className="verdict">02</span><span><b>You collect payment yourself.</b> The site shows the price but doesn't take money, so agree on how students pay you before the first class.</span></div>
-            <div className="eg good"><span className="verdict">03</span><span><b>Keep it fair.</b> A free first class is a good way to find students.</span></div>
+            <div className="eg good"><span className="verdict">01</span><span><b>Your hours add up on their own.</b> Each class someone comes to is logged, and you can print a certificate of your hours any time.</span></div>
+            <div className="eg good"><span className="verdict">02</span><span><b>Want to tutor someone 1-on-1?</b> You can offer private sessions for up to ${MAX_PRICE} each. Set that up on your dashboard after you post this class.</span></div>
+            <div className="eg good"><span className="verdict">03</span><span><b>One class a week to start.</b> Pick a time you can keep every week.</span></div>
           </div>
         </div>
       )}
@@ -611,7 +603,7 @@ People scroll past topic names. They stop for what they will be able to do after
           )}
           {startMs && startMs > Date.now() && (
             conflicts.length === 0 ? (
-              <span className="conflict-ok">✓ clear runway — nothing else on the board overlaps</span>
+              <span className="conflict-ok">✓ No other class at that time</span>
             ) : (
               <div className="stack" style={{ gap: 6 }}>
                 {conflicts.slice(0, 2).map((c) => (
@@ -628,7 +620,7 @@ People scroll past topic names. They stop for what they will be able to do after
 
       {step === 6 && (
         <div className="stack" style={{ gap: 16 }}>
-          <h3 className="h3">The final handoff</h3>
+          <h3 className="h3">Last step: the meeting link</h3>
           <p style={{ color: 'var(--ink-2)', fontSize: 15 }}>
             Check the preview one last time — that ticket is exactly what goes on the board.
           </p>

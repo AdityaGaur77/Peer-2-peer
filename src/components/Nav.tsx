@@ -7,8 +7,8 @@ import { Wordmark } from './Logo';
 // `tutorOnly` links disappear for anyone who signed in as a student.
 // Signed-out visitors see everything, since they haven't picked a side yet.
 const LINKS = [
-  { to: '/sessions', label: 'Sessions' },
-  { to: '/tutors', label: 'Tutors' },
+  { to: '/sessions', label: 'Classes' },
+  { to: '/tutors', label: 'Teachers' },
   { to: '/teach', label: 'Teach', tutorOnly: true },
   { to: '/about', label: 'About' },
 ];

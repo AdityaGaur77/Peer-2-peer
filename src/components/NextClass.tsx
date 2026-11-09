@@ -46,7 +46,7 @@ export function NextClass() {
   return (
     <div className="card card-pad stack" style={{ gap: 12, marginBottom: 24 }}>
       <div className="row between">
-        <span className="eyebrow">{teaching ? 'Your next class to teach' : 'Your next class'}</span>
+        <span className="next-label">{teaching ? 'Your next class to teach' : 'Your next class'}</span>
         <span className="small muted">
           {state === 'open' && new Date(next.startISO).getTime() <= now
             ? 'happening now'

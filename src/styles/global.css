@@ -2850,3 +2850,49 @@ details.faq .faq-a {
 .grid-2 > *, .grid-3 > * {
   min-width: 0;
 }
+
+/* a teacher's 1-on-1 offer on their card */
+.tutor-one {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--ember-soft);
+  font-size: 14px;
+  justify-items: start;
+}
+
+/* home page: one tile per subject */
+.subject-tile {
+  display: grid;
+  gap: 8px;
+  padding: 22px;
+  height: 100%;
+  border-top: 4px solid hsl(var(--sub-h, 212) 60% 70%);
+  color: inherit;
+}
+
+.subject-tile p {
+  font-size: 14.5px;
+  color: var(--ink-2);
+  line-height: 1.55;
+}
+
+.next-label {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--ember-deep);
+}
+
+/* status headings and taglines in the same plain type as everything else */
+.serif-i, .tutor-tagline {
+  font-family: inherit;
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.tutor-tagline {
+  font-weight: 450;
+  font-size: 15px;
+}

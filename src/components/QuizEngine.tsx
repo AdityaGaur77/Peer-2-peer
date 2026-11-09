@@ -69,7 +69,7 @@ export function QuizEngine({ quiz, onExit }: { quiz: Quiz; onExit: () => void })
             </div>
             <p className="mono small" style={{ color: passed ? 'var(--ember-deep)' : 'var(--hot-deep)' }}>
               {passed
-                ? '✓ certified — the baton is officially yours'
+                ? '✓ Passed! You can now teach this subject.'
                 : `needs ${quiz.passNeeded}/${total} — review below and run it back`}
             </p>
           </div>

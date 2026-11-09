@@ -6,17 +6,17 @@ import App from './src/App';
 import { StoreProvider } from './src/lib/store';
 
 const ROUTES: Array<[string, string[]]> = [
-  ['/', ['Learn from a student', 'New here?', 'What you can learn', 'Foundational English Skills', 'For parents']],
-  ['/sessions', ['Most seats are free', 'Request a topic']],
-  ['/tutors', ['volunteer their time', 'Thank them', 'Ayden J.', 'Foundational English Skills', 'Tuesdays and Wednesdays']],
-  ['/teach', ['open the class builder', 'Take the quiz', 'What would you call your class?']],
-  ['/about', ['Free by default', 'Questions people ask']],
+  ['/', ['Free tutoring from high school students', 'First time here?', 'What you can learn', 'English &amp; Writing', 'For parents']],
+  ['/sessions', ['Classes', 'Request a topic']],
+  ['/tutors', ['Our teachers', 'Thank them', 'Ayden J.', 'Foundational English Skills', 'Grade 10']],
+  ['/teach', ['Teach a class', 'Set up my class', 'What would you call your class?']],
+  ['/about', ['About Peer 2 Peer', 'Questions people ask']],
   ['/dashboard', ['Your dashboard']],
   ['/certificate', ['Volunteer certificate']],
-  ['/admin', ['Restricted to founders']],
+  ['/admin', ['Team login']],
   ['/dashboard?x=1', ['Your dashboard', 'Sign in to see']],
-  ['/guide/tutor', ['Set up your first class', 'The subject', 'live preview', 'draft preview']],
-  ['/guide/student', ['by trying it', 'Pick your track', 'how it works']],
+  ['/guide/tutor', ['Set up your class', 'The subject', 'live preview', 'draft preview']],
+  ['/guide/student', ['How Peer 2 Peer works', 'Pick your track']],
   ['/join', ['invite']], // no payload → the friendly error state
   ['/flyer/nope', ['No such session']], // unknown id → graceful fallback
   ['/definitely-not-a-page', ['Page not found']],

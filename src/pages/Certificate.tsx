@@ -66,7 +66,6 @@ export function Certificate() {
         <Reveal>
           <div className="row between no-print" style={{ marginBottom: 24 }}>
             <div>
-              <span className="eyebrow">certificate of service</span>
               <p className="muted small" style={{ marginTop: 8 }}>
                 Generated live from your logged sessions. Print it or save as PDF.
               </p>
@@ -148,7 +147,7 @@ export function Certificate() {
                     {FOUNDER_NAME}
                   </span>
                   <div className="mono small muted" style={{ marginTop: 2 }}>
-                    Founder, Peer 2 Peer
+                    Peer 2 Peer
                   </div>
                 </div>
                 <div className="mono small muted" style={{ textAlign: 'right' }}>

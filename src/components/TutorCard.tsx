@@ -1,9 +1,10 @@
-import type { CSSProperties, PointerEvent } from 'react';
+import { useState, type CSSProperties, type PointerEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { RequestTutoring } from './Tutoring';
 import { certsFor, tutorStats, useStore } from '../lib/store';
 import type { Tutor } from '../lib/types';
 import { subjectMeta, subjectShort } from '../lib/types';
-import { initials } from '../lib/util';
+import { gradeLabel, initials } from '../lib/util';
 
 interface TutorCardProps {
   tutor: Tutor;
@@ -12,6 +13,7 @@ interface TutorCardProps {
 
 export function TutorCard({ tutor, onThank }: TutorCardProps) {
   const { db } = useStore();
+  const [asking, setAsking] = useState(false);
   const stats = tutorStats(db, tutor.id);
   const certs = certsFor(db, tutor.email);
 
@@ -29,14 +31,13 @@ export function TutorCard({ tutor, onThank }: TutorCardProps) {
         </span>
         <div>
           <div className="tutor-name">{tutor.name}</div>
-          <div className="tutor-grade">{tutor.grade}</div>
+          {gradeLabel(tutor.grade) && <div className="tutor-grade">{gradeLabel(tutor.grade)}</div>}
         </div>
       </div>
 
-      <p className="tutor-tagline">“{tutor.tagline}”</p>
+      {tutor.tagline && <p className="tutor-tagline">“{tutor.tagline}”</p>}
 
       <div className="row" style={{ gap: 7 }}>
-        {tutor.isFounder && <span className="chip chip-founder">Founder</span>}
         {tutor.subjects.map((s) => {
           const certified = certs.some((c) => c.subject === s);
           return (
@@ -69,7 +70,19 @@ export function TutorCard({ tutor, onThank }: TutorCardProps) {
         </div>
       )}
 
-      {stats.taught === 0 && stats.upcoming.length === 0 && !tutor.isFounder ? (
+      {tutor.tutoringPrice ? (
+        <div className="tutor-one">
+          <div>
+            <b>1-on-1 tutoring</b> · ${tutor.tutoringPrice} a session
+          </div>
+          {tutor.tutoringNote && <div className="small muted">{tutor.tutoringNote}</div>}
+          <button className="btn btn-soft btn-sm" onClick={() => setAsking(true)}>
+            Ask for 1-on-1
+          </button>
+        </div>
+      ) : null}
+
+      {stats.taught === 0 && stats.upcoming.length === 0 ? (
         <div className="tutor-stats">
           <span>First class being scheduled</span>
         </div>
@@ -95,6 +108,7 @@ export function TutorCard({ tutor, onThank }: TutorCardProps) {
           Their sessions
         </Link>
       </div>
+      {asking && <RequestTutoring tutor={tutor} onClose={() => setAsking(false)} />}
     </article>
   );
 }

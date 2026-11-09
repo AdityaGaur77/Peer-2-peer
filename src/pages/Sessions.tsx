@@ -97,18 +97,15 @@ export function Sessions() {
     <div className="section" style={{ paddingTop: 'clamp(110px, 15vw, 150px)' }}>
       <div className="container">
         <div className="section-head">
-          <Reveal>
-            <span className="eyebrow">the session board</span>
-          </Reveal>
           <Reveal delay={0.05}>
             <h1 className="h2">
-              Most seats are free. Take one.
+              Classes
             </h1>
           </Reveal>
           <Reveal delay={0.1}>
             <p className="lede">
-              Live sessions on video, usually six to twelve people, run by student tutors.
-              Book a seat and you get the room link.
+              Small group classes on a video call, taught by high school students. They're
+              free. Save a spot and you'll get the link to join.
             </p>
           </Reveal>
         </div>
@@ -194,7 +191,7 @@ export function Sessions() {
             {showPast && past.length > 0 && (
               <>
                 <div className="row" style={{ margin: '18px 0 4px' }}>
-                  <span className="eyebrow">recently completed</span>
+                  <h3 className="h3">Recent classes</h3>
                 </div>
                 {past.map((s) => (
                   <SessionCard key={s.id} session={s} />

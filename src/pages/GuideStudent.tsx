@@ -186,13 +186,12 @@ export function GuideStudent() {
   return (
     <>
       <GuideShell
-        eyebrow="how it works · about 2 minutes"
         title={
           <>
-            How Peer 2 Peer works, <em className="em-ember">by trying it.</em>
+            How Peer 2 Peer works
           </>
         }
-intro="Five short steps: pick a subject, practise booking a seat on a fake card, see what a session is like, vote on what gets taught next, and find out why most of it costs nothing."
+intro="Five quick steps. You'll pick a subject, practice saving a spot, see what a class is like, and vote on what we should teach next. Nothing here is real until you sign up."
         steps={STEPS}
         current={step}
         maxVisited={maxVisited}
@@ -221,7 +220,7 @@ intro="Five short steps: pick a subject, practise booking a seat on a fake card,
                 <span className="mono small muted">next on the board — real sessions, real seats:</span>
                 {nextSessions.length === 0 ? (
                   <div className="guide-tip">
-                    Nothing scheduled this second — that's what topic requests are for (leg 04).
+                    Nothing is scheduled in this subject yet. You can ask for it in step 4.
                   </div>
                 ) : (
                   nextSessions.map((s) => (
@@ -317,20 +316,21 @@ intro="Five short steps: pick a subject, practise booking a seat on a fake card,
 
         {step === 4 && (
           <div className="stack" style={{ gap: 16 }}>
-            <h3 className="h3">How most classes stay free</h3>
+            <h3 className="h3">Why group classes are free</h3>
             <p style={{ color: 'var(--ink-2)', fontSize: 15 }}>
-              Most teachers volunteer their time. A few charge a little (never more than $19, and
-              always shown on the class). Either way, two things keep it going:
+              Our teachers volunteer an hour a week for their group class. If you want extra
+              help, some of them also tutor 1-on-1 for up to $20 a session. Two things keep it
+              going:
             </p>
             <div className="eg-row" style={{ gap: 12 }}>
               <div className="eg good">
                 <span className="verdict">♥</span>
                 <span>
-                  <b>Kudos.</b> A thank-you note is the only payment tutors get, and it lands on
-                  the public wall.{' '}
+                  <b>Saying thanks.</b> You can send a teacher a thank-you note after a class.
+                  It shows up on the home page.{' '}
                   {founder && (
                     <button className="btn-quiet" onClick={() => setThanking(founder)}>
-                      try it — thank {founder.name.split(' ')[0]} for building this →
+                      send {founder.name.split(' ')[0]} a thank-you →
                     </button>
                   )}
                 </span>
@@ -338,11 +338,10 @@ intro="Five short steps: pick a subject, practise booking a seat on a fake card,
               <div className="eg good">
                 <span className="verdict">⟳</span>
                 <span>
-                  <b>The baton.</b> When something finally clicks for you, you teach it to the
-                  next person. Pass a 10-minute quiz, apply, host a session — your hours get
-                  logged on a real volunteer certificate. That's the whole loop.{' '}
+                  <b>Teaching later.</b> Once you know a subject well, you can apply to teach
+                  it. Teachers get volunteer hours and a certificate.{' '}
                   <Link to="/guide/tutor" style={{ color: 'var(--ember-deep)', borderBottom: '1.5px dotted' }}>
-                    peek at the tutor guide
+                    see how teaching works
                   </Link>
                 </span>
               </div>

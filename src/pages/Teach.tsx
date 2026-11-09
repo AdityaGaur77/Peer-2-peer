@@ -91,7 +91,7 @@ export function Teach() {
       submitApplication({
         name: name.trim(),
         email: from,
-        grade: grade.trim() || 'Student',
+        grade: grade.trim(),
         subjects,
         why: why.trim(),
         availability,
@@ -234,7 +234,6 @@ Usually it just means come to a few sessions first so we know you. Try again aft
     return (
       <div className="section" style={{ paddingTop: 'clamp(120px, 16vw, 160px)', textAlign: 'center' }}>
         <div className="container stack" style={{ gap: 18, maxWidth: 460, margin: '0 auto' }}>
-          <span className="eyebrow" style={{ justifyContent: 'center' }}>for tutors</span>
           <h1 className="h2">Want to teach as well?</h1>
           <p className="lede" style={{ margin: '0 auto' }}>
             You signed up to learn, so we keep the tutor pages out of your way. You can change
@@ -257,19 +256,15 @@ Usually it just means come to a few sessions first so we know you. Try again aft
     <div className="section" style={{ paddingTop: 'clamp(110px, 15vw, 150px)' }}>
       <div className="container">
         <div className="section-head">
-          <Reveal>
-            <span className="eyebrow">become a tutor</span>
-          </Reveal>
           <Reveal delay={0.05}>
             <h1 className="h2">
-              You learned it. <em className="em-ember">Now teach it.</em>
+              Teach a class
             </h1>
           </Reveal>
           <Reveal delay={0.1}>
             <p className="lede">
-Teaching something is the fastest way to properly learn it, and the hours count
-              toward service requirements. Two steps: take a short quiz if your subject has one,
-              then send a short application.
+              Teach one free class a week and earn volunteer hours. Fill out the application
+              below and we'll get back to you within a few days.
             </p>
           </Reveal>
         </div>
@@ -277,10 +272,10 @@ Teaching something is the fastest way to properly learn it, and the hours count
         <Reveal delay={0.11}>
           <div className="welcome-card" style={{ marginBottom: 20 }}>
             <span>
-              <b>Want it walked through?</b> The class builder takes you from a blank page to a
-              posted session in a few minutes.
+              <b>Already approved?</b> The class builder walks you through setting up your
+              class.
             </span>
-            <Link to="/guide/tutor">open the class builder →</Link>
+            <Link to="/guide/tutor">Set up my class →</Link>
           </div>
         </Reveal>
 
@@ -290,7 +285,7 @@ Teaching something is the fastest way to properly learn it, and the hours count
             <div className="row between" style={{ marginBottom: 18 }}>
               <div className="row" style={{ gap: 12 }}>
                 <span className="step-no" style={{ fontSize: 13 }}>
-                  STEP 01
+                  Step 1
                 </span>
                 <h3 className="h3">Take the quiz for your subject</h3>
               </div>
@@ -344,7 +339,7 @@ Teaching something is the fastest way to properly learn it, and the hours count
           <div className="card card-pad">
             <div className="row" style={{ gap: 12, marginBottom: 18 }}>
               <span className="step-no" style={{ fontSize: 13 }}>
-                STEP 02
+                Step 2
               </span>
               <h3 className="h3">Apply to join the crew</h3>
             </div>
@@ -370,8 +365,15 @@ Teaching something is the fastest way to properly learn it, and the hours count
                 </div>
 
                 <label className="field">
-                  <span className="label">Grade / year</span>
-                  <input className="input" value={grade} onChange={(e) => setGrade(e.target.value)} placeholder="11th grade" />
+                  <span className="label">Grade</span>
+                  <select className="select" value={grade} onChange={(e) => setGrade(e.target.value)}>
+                    <option value="">Pick your grade</option>
+                    {[6, 7, 8, 9, 10, 11, 12].map((g) => (
+                      <option key={g} value={`${g}th grade`}>
+                        Grade {g}
+                      </option>
+                    ))}
+                  </select>
                 </label>
 
                 <div className="field">

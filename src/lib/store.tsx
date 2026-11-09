@@ -27,6 +27,8 @@ import type {
   SubjectId,
   TopicRequest,
   Tutor,
+  TutoringRequest,
+  TutoringStatus,
 } from './types';
 import { isPastSession, uid } from './util';
 
@@ -93,6 +95,11 @@ interface StoreValue {
   setTutorEmail: (tutorId: string, email: string) => void;
   setStudentBlocked: (email: string, blocked: boolean) => void;
   removeFromClass: (sessionId: string, email: string) => void;
+  /** A signed-in student asking a teacher for 1-on-1 tutoring. */
+  requestTutoring: (tutorId: string, message: string, times: string, p: Profile) => void;
+  setTutoringStatus: (id: string, status: TutoringStatus) => void;
+  /** Turn a teacher's 1-on-1 tutoring on (price $1-$20) or off (null). */
+  setTutoring: (tutorId: string, price: number | null, note: string) => void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -114,6 +121,7 @@ function withRoster(tutors: Tutor[]): Tutor[] {
 export function normalizeState(s: RelayState, live = false): RelayState {
   return {
     ...s,
+    tutoringRequests: Array.isArray(s.tutoringRequests) ? s.tutoringRequests : [],
     tutors: live ? s.tutors : withRoster(s.tutors),
     sessions: s.sessions.map((x) => ({
       ...x,
@@ -372,11 +380,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ? promoted?.name
             ? `Spot released. ${promoted.name.split(' ')[0]} moves up from the waitlist.`
             : 'Spot released.'
-          : session.price
-            ? `You're going: ${session.title}. It's $${session.price}; ${
-                tutorById(db, session.tutorId)?.name.split(' ')[0] ?? 'the teacher'
-              } will tell you how to pay.`
-            : `You're going: ${session.title}`,
+          : `You're going: ${session.title}`,
       );
       sync((sb) =>
         going ? remote.leaveClass(sb, sessionId, p.email) : remote.joinClass(sb, sessionId, p),
@@ -796,6 +800,57 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [sync, toast],
   );
 
+  const requestTutoring = useCallback(
+    (tutorId: string, message: string, times: string, p: Profile) => {
+      const r: TutoringRequest = {
+        id: uid('tutreq'),
+        tutorId,
+        studentEmail: p.email,
+        studentName: p.name,
+        message: message.trim().slice(0, 1000),
+        times: times.trim().slice(0, 200),
+        status: 'new',
+        createdISO: new Date().toISOString(),
+      };
+      setDb((prev) => ({ ...prev, tutoringRequests: [r, ...(prev.tutoringRequests ?? [])] }));
+      sync((sb) => remote.requestTutoring(sb, r));
+      const t = tutorById(db, tutorId);
+      toast(`Sent to ${t?.name.split(' ')[0] ?? 'the teacher'}. They'll email you to pick a time.`);
+    },
+    [db, sync, toast],
+  );
+
+  const setTutoringStatus = useCallback(
+    (id: string, status: TutoringStatus) => {
+      setDb((prev) => ({
+        ...prev,
+        tutoringRequests: (prev.tutoringRequests ?? []).map((r) => (r.id === id ? { ...r, status } : r)),
+      }));
+      sync((sb) => remote.setTutoringStatus(sb, id, status));
+    },
+    [sync],
+  );
+
+  const setTutoring = useCallback(
+    (tutorId: string, price: number | null, note: string) => {
+      const clean = price === null ? null : Math.min(20, Math.max(1, Math.round(price)));
+      setDb((prev) => ({
+        ...prev,
+        tutors: prev.tutors.map((t) =>
+          t.id === tutorId ? { ...t, tutoringPrice: clean ?? undefined, tutoringNote: note.trim() || undefined } : t,
+        ),
+      }));
+      const mine = tutorById(db, tutorId)?.email === myEmail.current && !!myEmail.current;
+      sync((sb) =>
+        mine
+          ? remote.setMyTutoring(sb, clean, note.trim())
+          : remote.updateTutor(sb, tutorId, { tutoringPrice: clean ?? 0, tutoringNote: note.trim() }),
+      );
+      toast(clean ? `1-on-1 tutoring is on, at $${clean} a session.` : '1-on-1 tutoring is off.');
+    },
+    [db, sync, toast],
+  );
+
   /** Admin or the class's teacher taking someone off a class. */
   const removeFromClass = useCallback(
     (sessionId: string, email: string) => {
@@ -860,6 +915,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setTutorEmail,
       setStudentBlocked,
       removeFromClass,
+      requestTutoring,
+      setTutoringStatus,
+      setTutoring,
     }),
     [
       db, profile, toasts, signInOpen,
@@ -868,7 +926,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       voteRequest, approveApplication, declineApplication, createSession,
       cancelSession, updateTutor, removeTutor, addTutor, importData, resetData, acceptInvite, setRole,
       live, isAdmin, reload, sendSignInCode, verifySignInCode, saveProfile, updateMeeting,
-      setTutorEmail, setStudentBlocked, removeFromClass,
+      setTutorEmail, setStudentBlocked, removeFromClass, requestTutoring, setTutoringStatus,
+      setTutoring,
     ],
   );
 

@@ -5,7 +5,7 @@ import { SessionCard } from '../components/SessionCard';
 import { decodeInvite, type DecodedInvite } from '../lib/invite';
 import { useStore } from '../lib/store';
 import type { Session } from '../lib/types';
-import { firstName, fmtLongDate, fmtTime, isPastSession } from '../lib/util';
+import { firstName, gradeLabel, fmtLongDate, fmtTime, isPastSession } from '../lib/util';
 
 /**
  * Landing page for an invite link. Shows the class the way the board would,
@@ -101,21 +101,18 @@ export function Join() {
     <div className="section" style={{ paddingTop: 'clamp(110px, 15vw, 150px)' }}>
       <div className="container" style={{ maxWidth: 640 }}>
         <div className="section-head">
-          <Reveal>
-            <span className="eyebrow">you've been handed the baton</span>
-          </Reveal>
           <Reveal delay={0.05}>
             <h1 className="h2">
-              {who} invited you to a {invite.session.price ? 'class' : 'free class'}.
+              {who} invited you to a free class.
             </h1>
           </Reveal>
           <Reveal delay={0.1}>
             <p className="lede">
-              {invite.tutor.name} ({invite.tutor.grade}) is running this on{' '}
+              {invite.tutor.name}
+              {gradeLabel(invite.tutor.grade) ? ` (${gradeLabel(invite.tutor.grade)})` : ''} is running
+              this on{' '}
               {fmtLongDate(invite.session.startISO)} at {fmtTime(invite.session.startISO)}.{' '}
-              {invite.session.price
-                ? `It's $${invite.session.price} a class, paid to the teacher directly.`
-                : "It's free."}
+              It's free.
             </p>
           </Reveal>
         </div>
@@ -124,7 +121,7 @@ export function Join() {
           <SessionCard
             session={preview}
             preview
-            previewNote={`${preview.capacity} spots · ${invite.session.price ? `$${invite.session.price} a class` : 'free'} · add it to your board to save one`}
+            previewNote={`${preview.capacity} spots · free · add it to your board to save one`}
           />
         </Reveal>
 

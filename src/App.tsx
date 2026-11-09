@@ -25,13 +25,13 @@ import { Tutors } from './pages/Tutors';
 const TITLES: Record<string, string> = {
   '/': 'Peer 2 Peer — tutoring by students',
   '/sessions': 'Classes — Peer 2 Peer',
-  '/tutors': 'The crew — Peer 2 Peer',
-  '/teach': 'Become a tutor — Peer 2 Peer',
+  '/tutors': 'Teachers — Peer 2 Peer',
+  '/teach': 'Teach a class — Peer 2 Peer',
   '/about': 'Our story — Peer 2 Peer',
   '/dashboard': 'Your dashboard — Peer 2 Peer',
   '/certificate': 'Volunteer certificate — Peer 2 Peer',
-  '/admin': 'Founder console — Peer 2 Peer',
-  '/guide/tutor': 'Post your first class — Peer 2 Peer',
+  '/admin': 'Team console — Peer 2 Peer',
+  '/guide/tutor': 'Set up your class — Peer 2 Peer',
   '/guide/student': 'How Peer 2 Peer works — Peer 2 Peer',
   '/join': "You're invited — Peer 2 Peer",
 };
