@@ -906,9 +906,7 @@ button {
 .chain-cap {
   margin-top: 6px;
   min-height: 34px;
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: clamp(1.1rem, 2vw, 1.35rem);
+  font-size: clamp(1rem, 1.8vw, 1.15rem);
   color: var(--ink-2);
   text-align: center;
   transition: opacity 0.35s ease;
@@ -1114,7 +1112,7 @@ button {
 
 .ticket {
   display: grid;
-  grid-template-columns: 96px 1fr;
+  grid-template-columns: 96px minmax(0, 1fr);
   overflow: hidden;
 }
 
@@ -1168,6 +1166,8 @@ button {
 }
 
 .ticket-body {
+  min-width: 0;
+  overflow-wrap: anywhere;
   padding: 18px 20px;
   display: grid;
   gap: 11px;
@@ -1235,7 +1235,10 @@ button {
 
 @media (max-width: 560px) {
   .ticket {
-    grid-template-columns: 76px 1fr;
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+  .ticket-body {
+    padding: 16px 14px;
   }
 }
 
@@ -1367,10 +1370,9 @@ button {
 }
 
 .hint {
-  font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 13px;
   color: var(--muted);
-  letter-spacing: 0.02em;
+  line-height: 1.45;
 }
 
 .optchips {
@@ -1873,8 +1875,8 @@ button {
   transform: scale(0.96);
 }
 
-/* side-slides would push a phone screen wider for a moment; rise instead */
-@media (max-width: 720px) {
+/* side-slides would push a phone or tablet screen wider for a moment; rise instead */
+@media (max-width: 1024px) {
   .reveal-left,
   .reveal-right {
     transform: translateY(20px);
@@ -2467,11 +2469,13 @@ details.faq .faq-a {
 
 .welcome-x {
   margin-left: auto;
-  font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted);
-  padding: 4px 8px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 4px 10px;
   border-radius: 99px;
+  flex: none;
 }
 
 .welcome-x:hover {
@@ -2725,7 +2729,7 @@ details.faq .faq-a {
   white-space: nowrap;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 900px) {
   .class-banner {
     top: auto;
     bottom: 12px;
@@ -2849,4 +2853,149 @@ details.faq .faq-a {
 
 .grid-2 > *, .grid-3 > * {
   min-width: 0;
+}
+
+/* a teacher's 1-on-1 offer on their card */
+.tutor-one {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--ember-soft);
+  font-size: 14px;
+  justify-items: start;
+}
+
+/* home page: one tile per subject */
+.subject-tile {
+  display: grid;
+  gap: 8px;
+  padding: 22px;
+  height: 100%;
+  border-top: 4px solid hsl(var(--sub-h, 212) 60% 70%);
+  color: inherit;
+}
+
+.subject-tile p {
+  font-size: 14.5px;
+  color: var(--ink-2);
+  line-height: 1.55;
+}
+
+.next-label {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--ember-deep);
+}
+
+/* status headings and taglines in the same plain type as everything else */
+.serif-i, .tutor-tagline {
+  font-family: inherit;
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.tutor-tagline {
+  font-weight: 450;
+  font-size: 15px;
+}
+
+/* ── analytics ─────────────────────────────────────────────── */
+
+.bar-row {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px;
+  font-size: 13.5px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--ember-soft);
+  z-index: 0;
+}
+
+.bar-label, .bar-num {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.bar-num {
+  flex: none;
+  font-weight: 650;
+}
+
+.day-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 160px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.day-bar {
+  flex: 1 0 22px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.day-bar-fill {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 6px 6px 0 0;
+  background: linear-gradient(180deg, #add9fd, #4c9be0);
+  max-height: calc(100% - 34px);
+}
+
+.journey {
+  margin: 4px 0 4px 18px;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+  font-size: 13.5px;
+}
+
+/* phones: small text buttons still need a finger-sized target */
+@media (pointer: coarse) {
+  .btn-quiet,
+  .chip-btn,
+  .btn-sm {
+    min-height: 40px;
+  }
+  .btn-quiet {
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+/* text for screen readers only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.tutor-one .small {
+  overflow-wrap: anywhere;
 }

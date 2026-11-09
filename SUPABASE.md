@@ -50,7 +50,10 @@ Students and teachers sign in with a 6-digit code sent to their email, so
 there are no passwords.
 
 1. **Authentication → Sign In / Providers → Email**: make sure it is on.
-   Leave "Confirm email" on.
+   Leave **"Confirm email" on**. The site only signs people in with emailed
+   codes, so also turn **off** sign-ups with a password if Supabase offers that
+   option (otherwise someone could create an account for an email they don't
+   own, such as an admin's).
 2. **Authentication → Emails → Templates → Magic Link**. Replace the body with
    this, so the email contains the code as well as the link:
 
@@ -148,6 +151,20 @@ That means Supabase couldn't hand the email to Gmail. Check, in order:
 
 To check sign-in itself works while you sort out email, turn **custom SMTP
 off** for a moment: Supabase's own sender works for a few emails an hour.
+
+## Analytics
+
+Visits are recorded in the `events` table and shown in the console's
+**Analytics** tab. To keep the table small, delete old rows now and then in
+the SQL Editor:
+
+```sql
+delete from events where at < now() - interval '180 days';
+```
+
+Visitors who aren't signed in are anonymous (a random id per browser). Once
+someone signs in, their visits from that browser show their email, so mention
+that in your privacy note.
 
 ## Things to know
 

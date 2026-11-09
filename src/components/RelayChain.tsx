@@ -1,8 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { FOUNDER_NAME } from '../lib/config';
-import { cx, firstName } from '../lib/util';
-
-const FOUNDER_FIRST = firstName(FOUNDER_NAME);
+import { cx } from '../lib/util';
 
 // The signature piece: one baton travelling through the people it changed.
 // Everything Peer 2 Peer is, in one loop.
@@ -19,28 +16,24 @@ interface Beat {
 // Roles, not invented people — this is the model, not a claimed history.
 const BEATS: Beat[] = [
   {
-    frac: 0.04, initials: 'AG', name: FOUNDER_FIRST, when: 'leg 01',
-    caption: (
-      <>
-        <strong>{FOUNDER_FIRST}</strong> runs one free session. A few students, one video call.
-      </>
-    ),
+    frac: 0.04, initials: 'T', name: 'a teacher', when: 'step 1',
+    caption: <>A high school student teaches a small, free class online.</>,
   },
   {
-    frac: 0.28, initials: '+1', name: 'a learner', when: 'leg 02',
-    caption: <>One of them gets it, passes the quiz, and signs up to teach.</>,
+    frac: 0.28, initials: 'S', name: 'a student', when: 'step 2',
+    caption: <>A younger student joins and gets the help they need.</>,
   },
   {
-    frac: 0.52, initials: '+1', name: 'who teaches', when: 'leg 03',
-    caption: <>They run the next session, and it clicks for somebody else.</>,
+    frac: 0.52, initials: 'S', name: 'learns it', when: 'step 3',
+    caption: <>With practice, that student really gets the topic.</>,
   },
   {
-    frac: 0.75, initials: '+n', name: 'a full room', when: 'leg 04',
-    caption: <>That person teaches too. <strong>The room keeps growing.</strong></>,
+    frac: 0.75, initials: 'T', name: 'teaches it', when: 'step 4',
+    caption: <>Later on, they can teach it to someone else.</>,
   },
   {
     frac: 0.97, initials: '?', name: 'you', when: 'next', dashed: true,
-    caption: <>It keeps going from there. <strong>Your turn.</strong></>,
+    caption: <>Join as a student now. <strong>Teach when you're ready.</strong></>,
   },
 ];
 
@@ -166,7 +159,7 @@ export function RelayChain() {
   }, [reduced]);
 
   return (
-    <div className="chain" ref={wrapRef} aria-label="How Peer 2 Peer works: each learner becomes a tutor">
+    <div className="chain" ref={wrapRef} aria-label="How Peer 2 Peer works: students learn from older students, then teach others">
       <svg viewBox="0 0 1000 208" role="img">
         <defs>
           <linearGradient id="batonGrad" x1="0" y1="0" x2="1" y2="0">

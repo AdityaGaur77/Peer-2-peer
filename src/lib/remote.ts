@@ -1,7 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { AnalyticsEvent } from './analytics';
 import type {
   Application, Attendee, Certification, Course, Kudos, Profile, RelayState, Session,
-  StudentRecord, SubjectId, TopicRequest, Tutor,
+  StudentRecord, SubjectId, TopicRequest, Tutor, TutoringRequest,
 } from './types';
 
 /**
@@ -15,7 +16,7 @@ import type {
 interface TutorRow {
   id: string; name: string; grade: string; tagline: string; subjects: string[];
   joined_at: string; hue: number; courses: Course[] | null; availability: string | null;
-  is_founder: boolean; active: boolean;
+  is_founder: boolean; active: boolean; tutoring_price: number | null; tutoring_note: string | null;
 }
 interface SessionRow {
   id: string; title: string; subject: string; level: Session['level']; description: string;
@@ -82,7 +83,7 @@ function soft<T>(
 }
 
 export async function fetchState(sb: SupabaseClient, myEmail: string | null): Promise<LiveSnapshot> {
-  const [tutors, emails, sessions, rooms, counts, signups, apps, certs, kudos, reqs, admin, profiles, votes] =
+  const [tutors, emails, sessions, rooms, counts, signups, apps, certs, kudos, reqs, admin, profiles, votes, tutoring] =
     await Promise.all([
       sb.from('tutors').select('*'),
       soft(sb.from('tutor_emails').select('*'), 'login emails'),
@@ -100,6 +101,9 @@ export async function fetchState(sb: SupabaseClient, myEmail: string | null): Pr
       sb.rpc('is_admin'),
       soft(sb.from('profiles').select('*'), 'profiles'),
       myEmail ? soft(sb.rpc('my_votes'), 'your votes') : Promise.resolve({ data: [] as string[], error: null }),
+      myEmail
+        ? soft(sb.from('tutoring_requests').select('*').order('created_at', { ascending: false }), '1-on-1 requests')
+        : Promise.resolve({ data: [], error: null }),
     ]);
 
   const isAdmin = !!must(admin);
@@ -178,6 +182,8 @@ export async function fetchState(sb: SupabaseClient, myEmail: string | null): Pr
         availability: t.availability ?? undefined,
         isFounder: t.is_founder,
         active: t.active,
+        tutoringPrice: t.tutoring_price ?? undefined,
+        tutoringNote: t.tutoring_note ?? undefined,
       }),
     ),
     sessions: mapped,
@@ -221,6 +227,21 @@ export async function fetchState(sb: SupabaseClient, myEmail: string | null): Pr
       votes: r.votes,
       votedBy: myEmail && myVotes.has(r.id) ? [myEmail] : [],
       atISO: r.at,
+    })),
+    tutoringRequests: (
+      must(tutoring) as Array<{
+        id: string; tutor_id: string; student_email: string; student_name: string; message: string;
+        times: string; status: TutoringRequest['status']; created_at: string;
+      }>
+    ).map((r): TutoringRequest => ({
+      id: r.id,
+      tutorId: r.tutor_id,
+      studentEmail: r.student_email,
+      studentName: r.student_name,
+      message: r.message,
+      times: r.times,
+      status: r.status,
+      createdISO: r.created_at,
     })),
     students: isAdmin
       ? profileRows.map(
@@ -364,6 +385,8 @@ export const remote = {
     if (patch.availability !== undefined) row.availability = patch.availability || null;
     if (patch.courses !== undefined) row.courses = patch.courses;
     if (patch.active !== undefined) row.active = patch.active;
+    if (patch.tutoringPrice !== undefined) row.tutoring_price = patch.tutoringPrice || null;
+    if (patch.tutoringNote !== undefined) row.tutoring_note = patch.tutoringNote || null;
     return ok(sb.from('tutors').update(row).eq('id', id));
   },
 
@@ -413,6 +436,44 @@ export const remote = {
     ),
 
   voteRequest: (sb: SupabaseClient, id: string) => ok(sb.rpc('vote_request', { rid: id })),
+
+  /** A teacher's own 1-on-1 offer. null price = not offered. */
+  setMyTutoring: (sb: SupabaseClient, price: number | null, note: string) =>
+    ok(sb.rpc('set_my_tutoring', { p: price, n: note })),
+
+  requestTutoring: (sb: SupabaseClient, r: TutoringRequest) =>
+    ok(
+      sb.from('tutoring_requests').insert({
+        id: r.id,
+        tutor_id: r.tutorId,
+        student_email: r.studentEmail,
+        student_name: r.studentName,
+        message: r.message,
+        times: r.times,
+      }),
+    ),
+
+  setTutoringStatus: (sb: SupabaseClient, id: string, status: TutoringRequest['status']) =>
+    ok(sb.from('tutoring_requests').update({ status }).eq('id', id)),
+
+  /** Analytics for the console. Pages through, since the API returns 1,000 rows at a time. */
+  fetchEvents: async (sb: SupabaseClient, sinceISO: string, max = 50_000): Promise<AnalyticsEvent[]> => {
+    const out: AnalyticsEvent[] = [];
+    const page = 1000;
+    for (let from = 0; from < max; from += page) {
+      const { data, error } = await sb
+        .from('events')
+        .select('*')
+        .gte('at', sinceISO)
+        .order('at', { ascending: false })
+        .order('id', { ascending: false }) // rows sent together share a time; this keeps pages stable
+        .range(from, from + page - 1);
+      if (error) throw new Error(error.message);
+      out.push(...((data ?? []) as AnalyticsEvent[]));
+      if (!data || data.length < page) break;
+    }
+    return out;
+  },
 
   setBlocked: (sb: SupabaseClient, email: string, blocked: boolean) =>
     ok(sb.from('profiles').update({ blocked }).eq('email', email)),

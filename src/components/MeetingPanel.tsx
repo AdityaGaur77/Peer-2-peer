@@ -11,6 +11,7 @@ function CopyChip({ label, value }: { label: string; value: string }) {
     <button
       type="button"
       className="meet-copy"
+      data-track={`Copy ${label.toLowerCase()}`}
       onClick={() =>
         navigator.clipboard.writeText(value).then(
           () => toast(`${label} copied.`),
@@ -78,7 +79,7 @@ export function MeetingPanel({ session, canEdit }: { session: Session; canEdit: 
         )}
       </div>
       {state === 'before' && (
-        <span className="hint">the call opens 15 minutes before class starts</span>
+        <span className="hint">The Join button works from 15 minutes before class.</span>
       )}
       {editing && <LinkEditor session={session} onClose={() => setEditing(false)} />}
     </div>
@@ -139,7 +140,7 @@ export function LinkEditor({ session, onClose }: { session: Session; onClose: ()
           </label>
         )}
         <div className="row between">
-          <span className="hint">{error ?? 'ready'}</span>
+          <span className="hint">{error ?? 'Looks good.'}</span>
           <button className="btn btn-primary btn-sm" type="submit" disabled={!!error}>
             Save new link
           </button>

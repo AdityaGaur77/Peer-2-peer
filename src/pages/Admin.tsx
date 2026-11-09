@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { excludeThisBrowser } from '../lib/analytics';
 import { MeetingFields } from '../components/MeetingPanel';
+import { AllTutoringRequests } from '../components/Tutoring';
+import { AnalyticsPanel } from './AnalyticsPanel';
 import { Reveal } from '../components/Reveal';
 import { DEFAULT_MIN_AGE, freshJitsiLink, meetingLinkError, weeklyStarts } from '../lib/meeting';
-import { MAX_PRICE, priceLabel } from '../lib/price';
 import {
   AttentionPanel, ClassesPanel, StatsPanel, StudentsPanel, TeacherTable,
 } from './AdminPanels';
@@ -22,7 +24,9 @@ import {
 } from '../lib/types';
 import { cx, downloadText, initials, plural } from '../lib/util';
 
-type Tab = 'overview' | 'applications' | 'sessions' | 'students' | 'schedule' | 'crew' | 'data';
+type Tab =
+  | 'overview' | 'analytics' | 'applications' | 'sessions' | 'students' | 'tutoring' | 'schedule' | 'crew'
+  | 'data';
 
 function looksLikeState(x: unknown): x is RelayState {
   if (!x || typeof x !== 'object') return false;
@@ -93,10 +97,11 @@ export function Admin() {
       }
       if (ADMIN_CODE && code.trim() === ADMIN_CODE) {
         sessionStorage.setItem('relay.admin', '1');
+        excludeThisBrowser(); // the team's own visits don't count in Analytics
         setAuthed(true);
-        toast('Welcome back, founder.');
+        toast('Welcome back.');
       } else {
-        toast('Nope — wrong passcode.');
+        toast('Wrong passcode.');
       }
     };
     return (
@@ -104,17 +109,16 @@ export function Admin() {
         <div className="container" style={{ maxWidth: 420 }}>
           <div className="card card-pad stack" style={{ gap: 16 }}>
             <div>
-              <span className="eyebrow">founder console</span>
               <h1 className="h3" style={{ marginTop: 12 }}>
-                Restricted to founders
+                Team login
               </h1>
             </div>
             <p className="muted" style={{ fontSize: 14.5 }}>
-              This is where applications get reviewed and sessions get published. Enter the
-              founder passcode to continue.
+              This is where the team reviews applications and posts classes. Enter the team
+              passcode to continue.
             </p>
             {appPayload && (
-              <p className="hint">an application is waiting in this link — unlock to file it</p>
+              <p className="hint">This link has an application in it. Enter the passcode to add it.</p>
             )}
             <form className="stack" style={{ gap: 12 }} onSubmit={tryCode}>
               <input
@@ -122,7 +126,8 @@ export function Admin() {
                 type="password"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                placeholder="passcode"
+                placeholder="Passcode"
+                aria-label="Team passcode"
                 autoFocus
               />
               <button className="btn btn-primary" type="submit">
@@ -179,8 +184,14 @@ export function Admin() {
 
   const TABS: Array<{ id: Tab; label: string; badge?: number }> = [
     { id: 'overview', label: 'Overview' },
+    { id: 'analytics', label: 'Analytics' },
     { id: 'sessions', label: 'Classes' },
     { id: 'students', label: 'Students' },
+    {
+      id: 'tutoring',
+      label: '1-on-1',
+      badge: (db.tutoringRequests ?? []).filter((r) => r.status === 'new').length,
+    },
     { id: 'crew', label: 'Teachers' },
     { id: 'applications', label: 'Applications', badge: pending.length },
     { id: 'schedule', label: 'Publish' },
@@ -193,9 +204,8 @@ export function Admin() {
         <Reveal>
           <div className="row between" style={{ marginBottom: 24 }}>
             <div>
-              <span className="eyebrow">founder console</span>
               <h1 className="h2" style={{ fontSize: 'clamp(1.6rem, 3vw, 2.1rem)', marginTop: 10 }}>
-                Mission control
+                Team console
               </h1>
             </div>
             <button
@@ -236,7 +246,7 @@ export function Admin() {
                     Top topic requests
                   </h3>
                   <p className="muted small" style={{ marginBottom: 12 }}>
-                    What learners are voting for — build sessions around these.
+                    What students are voting for. Plan classes around these.
                   </p>
                   {[...db.requests]
                     .sort((a, b) => b.votes - a.votes)
@@ -253,7 +263,7 @@ export function Admin() {
 
                 <div className="card card-pad">
                   <h3 className="h3" style={{ marginBottom: 12 }}>
-                    Recent kudos
+                    Recent thank-yous
                   </h3>
                   <p className="muted small" style={{ marginBottom: 12 }}>
                     The stuff that makes it worth it.
@@ -368,6 +378,18 @@ export function Admin() {
         {tab === 'sessions' && (
           <Reveal>
             <ClassesPanel db={db} />
+          </Reveal>
+        )}
+
+        {tab === 'analytics' && (
+          <Reveal>
+            <AnalyticsPanel />
+          </Reveal>
+        )}
+
+        {tab === 'tutoring' && (
+          <Reveal>
+            <AllTutoringRequests />
           </Reveal>
         )}
 
@@ -624,7 +646,6 @@ function CrewPanel({
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div className="row" style={{ gap: 8 }}>
                   <strong style={{ fontSize: 15.5 }}>{t.name}</strong>
-                  {t.isFounder && <span className="chip chip-founder">Founder</span>}
                   {t.subjects.map((sub) => (
                     <span
                       key={sub}
@@ -972,9 +993,8 @@ function ScheduleForm({
   const [meetingId, setMeetingId] = useState('');
   const [passcode, setPasscode] = useState('');
   const [minAge, setMinAge] = useState(DEFAULT_MIN_AGE);
-  const [price, setPrice] = useState(0);
   const [description, setDescription] = useState('');
-  const [repeatWeeks, setRepeatWeeks] = useState(1);
+  const [repeatWeeks, setRepeatWeeks] = useState(8);
   const linkErr = link.trim() ? meetingLinkError(link) : null;
 
   const submit = (e: FormEvent) => {
@@ -1002,7 +1022,6 @@ function ScheduleForm({
         meetingId: meetingId.trim() || undefined,
         passcode: passcode.trim() || undefined,
         minAge,
-        price,
       });
     }
     setTitle('');
@@ -1110,20 +1129,7 @@ function ScheduleForm({
           <span className="hint">students younger than this can't save a spot</span>
         </label>
 
-        <label className="field">
-          <span className="label">Price per student: {priceLabel(price)}</span>
-          <input
-            type="range"
-            min={0}
-            max={MAX_PRICE}
-            step={1}
-            value={price}
-            onChange={(e) => setPrice(Number(e.target.value))}
-          />
-          <span className="hint">
-            free by default, up to ${MAX_PRICE}. Paid classes don't count as volunteer hours.
-          </span>
-        </label>
+
 
         <label className="field">
           <span className="label">Description</span>

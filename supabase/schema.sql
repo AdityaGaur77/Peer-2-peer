@@ -41,6 +41,27 @@ create table if not exists public.tutors (
 
 alter table public.tutors add column if not exists active boolean not null default true;
 
+-- 1-on-1 tutoring: group classes are always free, but a teacher can offer
+-- private sessions at a price they choose, up to $20. null = not offered.
+alter table public.tutors add column if not exists tutoring_price int;
+alter table public.tutors add column if not exists tutoring_note text;
+alter table public.tutors drop constraint if exists tutors_tutoring_price;
+alter table public.tutors add constraint tutors_tutoring_price
+  check (tutoring_price is null or tutoring_price between 1 and 20);
+
+-- A student asking a teacher for 1-on-1 tutoring. The teacher arranges the
+-- time and payment directly with them.
+create table if not exists public.tutoring_requests (
+  id             text primary key,
+  tutor_id       text not null references public.tutors (id) on delete cascade,
+  student_email  text not null check (student_email = lower(student_email)),
+  student_name   text not null check (char_length(student_name) between 1 and 80),
+  message        text not null default '' check (char_length(message) <= 1000),
+  times          text not null default '' check (char_length(times) <= 200),
+  status         text not null default 'new' check (status in ('new', 'accepted', 'declined', 'done')),
+  created_at     timestamptz not null default now()
+);
+
 -- Kept apart from tutors so teachers' emails are never public.
 create table if not exists public.tutor_emails (
   tutor_id  text primary key references public.tutors (id) on delete cascade,
@@ -128,6 +149,34 @@ create table if not exists public.requests (
   at         timestamptz not null default now()
 );
 
+-- Site analytics: one row per page view, click, page exit or key action.
+-- Anyone can add rows (that's how a visit is recorded); only admins can
+-- read them. No IP addresses are stored.
+create table if not exists public.events (
+  id           bigserial primary key,
+  at           timestamptz not null default now(),
+  visitor_id   text not null check (char_length(visitor_id) between 8 and 64),
+  session_id   text not null check (char_length(session_id) between 8 and 64),
+  kind         text not null check (kind in ('pageview', 'click', 'leave', 'signin', 'rsvp', 'apply', 'tutoring', 'kudos', 'request')),
+  path         text check (char_length(path) <= 300),
+  label        text check (char_length(label) <= 200),
+  href         text check (char_length(href) <= 500),
+  referrer     text check (char_length(referrer) <= 500),
+  source       text check (char_length(source) <= 100),
+  medium       text check (char_length(medium) <= 100),
+  campaign     text check (char_length(campaign) <= 100),
+  landing      text check (char_length(landing) <= 300),
+  device       text check (char_length(device) <= 20),
+  browser      text check (char_length(browser) <= 40),
+  os           text check (char_length(os) <= 40),
+  screen       text check (char_length(screen) <= 20),
+  lang         text check (char_length(lang) <= 20),
+  tz           text check (char_length(tz) <= 60),
+  duration_ms  int check (duration_ms between 0 and 86400000),
+  user_email   text
+);
+create index if not exists events_at on public.events (at desc);
+
 -- ── helpers ──────────────────────────────────────────────────
 -- security definer: they read tables the caller can't, and return only
 -- a yes/no or a count.
@@ -152,9 +201,14 @@ language sql stable security definer set search_path = public as $$
   select exists (select 1 from sessions where id = sid and tutor_id = my_tutor_id())
 $$;
 
+create or replace function public.not_blocked() returns boolean
+language sql stable security definer set search_path = public as $$
+  select not exists (select 1 from profiles where email = my_email() and blocked)
+$$;
+
 create or replace function public.in_class(sid text) returns boolean
 language sql stable security definer set search_path = public as $$
-  select exists (
+  select not_blocked() and exists (
     select 1 from signups where session_id = sid and email = my_email() and not waitlist
   )
 $$;
@@ -180,7 +234,7 @@ create or replace function public.vote_request(rid text) returns void
 language sql security definer set search_path = public as $$
   update requests
      set votes = votes + 1, voted_by = array_append(voted_by, my_email())
-   where id = rid and my_email() <> '' and not (my_email() = any (voted_by))
+   where id = rid and my_email() <> '' and not_blocked() and not (my_email() = any (voted_by))
 $$;
 
 -- ── rules on signups ─────────────────────────────────────────
@@ -213,6 +267,7 @@ begin
   if p.blocked then
     raise exception 'This account cannot save spots. Contact the team.';
   end if;
+  new.name := coalesce(p.name, new.name);
   if p.age is null or p.age < s.min_age then
     raise exception 'This class is for ages %+.', s.min_age;
   end if;
@@ -308,8 +363,21 @@ language plpgsql security definer set search_path = public as $$
 declare
   seated int;
 begin
+  -- group classes are always free; 1-on-1 tutoring is where prices live
+  new.price := 0;
+  -- one at a time per teacher, so two quick posts can't both pass the weekly check
+  perform 1 from tutors where id = new.tutor_id for update;
   if is_admin() then
     return new;
+  end if;
+  -- teachers start with one class a week: no two of their classes within
+  -- six days of each other (a weekly series is seven days apart)
+  if exists (
+    select 1 from sessions o
+     where o.tutor_id = new.tutor_id and o.id <> new.id and o.status = 'scheduled'
+       and abs(extract(epoch from (o.start_at - new.start_at))) < 6 * 86400
+  ) and (tg_op = 'INSERT' or new.start_at is distinct from old.start_at) then
+    raise exception 'Teachers run one class a week to start. You already have one within six days of that.';
   end if;
   if tg_op = 'INSERT' then
     if new.start_at < now() then
@@ -350,6 +418,17 @@ begin
     return new;
   end if;
   select name into who from profiles where email = my_email();
+  if who is null then
+    raise exception 'Finish your profile first.';
+  end if;
+  perform pg_advisory_xact_lock(hashtext(tg_table_name || ':' || my_email()));
+  if tg_table_name = 'kudos' then
+    if (select count(*) from kudos where from_name = who and at > now() - interval '1 day') >= 10 then
+      raise exception 'That''s a lot of thank-yous for one day. Try again tomorrow.';
+    end if;
+  elsif (select count(*) from requests where by_name = who and at > now() - interval '1 day') >= 10 then
+    raise exception 'That''s a lot of requests for one day. Try again tomorrow.';
+  end if;
   new.at := now();
   if tg_table_name = 'kudos' then
     new.from_name := coalesce(who, new.from_name);
@@ -378,6 +457,140 @@ alter table public.certifications add constraint certifications_sane check (
   subject in ('python', 'ai') and total between 1 and 50 and score between 0 and total
 ) not valid;
 
+-- A teacher turns 1-on-1 tutoring on or off and sets the price ($1-$20).
+create or replace function public.set_my_tutoring(p int, n text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if my_tutor_id() is null then
+    raise exception 'Only teachers can offer 1-on-1 tutoring.';
+  end if;
+  if p is not null and (p < 1 or p > 20) then
+    raise exception 'Pick a price from $1 to $20.';
+  end if;
+  update tutors set tutoring_price = p, tutoring_note = left(coalesce(n, ''), 300)
+   where id = my_tutor_id();
+end $$;
+
+-- On a 1-on-1 request, a teacher may only change its status; the student's
+-- details stay as they sent them. New requests always start as 'new'.
+create or replace function public.guard_tutoring_request() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if is_admin() then
+    return new;
+  end if;
+  if tg_op = 'INSERT' then
+    new.status := 'new';
+    new.created_at := now();
+    select name into new.student_name from profiles where email = my_email();
+    if not found then
+      raise exception 'Finish your profile first.';
+    end if;
+    perform pg_advisory_xact_lock(hashtext('tutreq:' || new.student_email));
+    if not exists (select 1 from tutors where id = new.tutor_id and tutoring_price is not null and active) then
+      raise exception 'That teacher isn''t offering 1-on-1 tutoring right now.';
+    end if;
+    if exists (select 1 from tutor_emails where tutor_id = new.tutor_id and email = my_email()) then
+      raise exception 'That''s your own 1-on-1 offer.';
+    end if;
+    if char_length(btrim(coalesce(new.message, ''))) < 10 then
+      raise exception 'Tell them a little about what you need help with.';
+    end if;
+    if (select count(*) from tutoring_requests
+         where student_email = new.student_email and created_at > now() - interval '1 day') >= 5 then
+      raise exception 'That''s a lot of requests for one day. Try again tomorrow.';
+    end if;
+    return new;
+  end if;
+  new.id := old.id;
+  new.tutor_id := old.tutor_id;
+  new.student_email := old.student_email;
+  new.student_name := old.student_name;
+  new.message := old.message;
+  new.times := old.times;
+  new.created_at := old.created_at;
+  -- requests only move forward: new → accepted/declined, accepted → done/declined
+  if new.status is distinct from old.status and not (
+       (old.status = 'new' and new.status in ('accepted', 'declined'))
+    or (old.status = 'accepted' and new.status in ('done', 'declined'))
+  ) then
+    raise exception 'That request can''t go back to %.', new.status;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists tutoring_request_guard on public.tutoring_requests;
+create trigger tutoring_request_guard before insert or update on public.tutoring_requests
+  for each row execute function public.guard_tutoring_request();
+
+-- The server decides the time and who was signed in; a visitor can't fake
+-- either.
+create or replace function public.stamp_event() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  new.at := now();
+  new.user_email := nullif(my_email(), '');
+  -- sign-ins, signups, applications and so on only come from signed-in
+  -- people, so an anonymous one is made up: drop it quietly
+  if new.kind not in ('pageview', 'click', 'leave') and new.user_email is null then
+    return null;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists event_stamp on public.events;
+create trigger event_stamp before insert on public.events
+  for each row execute function public.stamp_event();
+
+-- Blocking someone takes them out of their upcoming classes too (the
+-- waitlist trigger then moves the next person up).
+create or replace function public.on_block() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.blocked and not coalesce(old.blocked, false) then
+    delete from signups s using sessions x
+     where s.email = new.email and x.id = s.session_id and x.start_at > now();
+  end if;
+  return null;
+end $$;
+
+drop trigger if exists profile_block on public.profiles;
+create trigger profile_block after update of blocked on public.profiles
+  for each row execute function public.on_block();
+
+-- Analytics can't be used to fill the database: at most 50 events per
+-- request, and a ceiling on how many arrive in ten minutes. Hitting the
+-- ceiling only loses analytics for a while, never the rest of the site.
+create or replace function public.cap_events() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if (select count(*) from new_rows) > 50 then
+    raise exception 'Too many events at once.';
+  end if;
+  if (select count(*) from events where at > now() - interval '10 minutes') > 5000 then
+    raise exception 'Analytics is busy.';
+  end if;
+  return null;
+end $$;
+
+drop trigger if exists events_cap on public.events;
+create trigger events_cap after insert on public.events
+  referencing new table as new_rows for each statement execute function public.cap_events();
+
+-- No giant text anywhere people can type. NOT VALID: checked on new and
+-- changed rows only.
+alter table public.signups drop constraint if exists signups_name_len;
+alter table public.signups add constraint signups_name_len check (char_length(name) between 1 and 80) not valid;
+alter table public.applications drop constraint if exists applications_sizes;
+alter table public.applications add constraint applications_sizes check (
+  char_length(name) between 1 and 80 and char_length(grade) <= 40 and char_length(why) <= 2000
+  and char_length(coalesce(course_title, '')) <= 120 and char_length(coalesce(course_summary, '')) <= 2000
+  and char_length(coalesce(times, '')) <= 300 and cardinality(subjects) <= 20 and cardinality(availability) <= 50
+) not valid;
+alter table public.sessions drop constraint if exists sessions_text_len;
+alter table public.sessions add constraint sessions_text_len
+  check (char_length(description) <= 2000 and char_length(subject) <= 40) not valid;
+
 -- Who voted for a topic stays private: everyone sees the count, and each
 -- person can ask which topics they voted for.
 create or replace function public.my_votes() returns setof text
@@ -398,6 +611,8 @@ alter table public.applications   enable row level security;
 alter table public.certifications enable row level security;
 alter table public.kudos          enable row level security;
 alter table public.requests       enable row level security;
+alter table public.tutoring_requests enable row level security;
+alter table public.events         enable row level security;
 
 do $$
 declare r record;
@@ -435,9 +650,11 @@ create policy sessions_delete on public.sessions for delete using (is_admin());
 
 create policy rooms_read on public.session_rooms for select
   using (is_admin() or teaches(session_id) or in_class(session_id));
-create policy rooms_write on public.session_rooms for all
-  using (is_admin() or teaches(session_id))
-  with check (is_admin() or teaches(session_id));
+create policy rooms_add  on public.session_rooms for insert with check (is_admin() or teaches(session_id));
+create policy rooms_edit on public.session_rooms for update
+  using (is_admin() or teaches(session_id)) with check (is_admin() or teaches(session_id));
+-- deleting and re-adding would hide the "new link" notice from students
+create policy rooms_del  on public.session_rooms for delete using (is_admin());
 
 create policy signups_read on public.signups for select
   using (email = my_email() or is_admin() or teaches(session_id));
@@ -449,7 +666,7 @@ create policy signups_admin on public.signups for update using (is_admin()) with
 
 create policy apps_read  on public.applications for select using (email = my_email() or is_admin());
 create policy apps_new   on public.applications for insert
-  with check (my_email() <> '' and email = my_email() and status = 'pending');
+  with check (my_email() <> '' and email = my_email() and status = 'pending' and not_blocked());
 create policy apps_mine  on public.applications for update
   using (email = my_email() and status = 'pending')
   with check (email = my_email() and status = 'pending');
@@ -457,22 +674,42 @@ create policy apps_admin on public.applications for all using (is_admin()) with 
 
 create policy certs_read  on public.certifications for select using (email = my_email() or is_admin());
 create policy certs_write on public.certifications for insert
-  with check (my_email() <> '' and email = my_email());
+  with check (my_email() <> '' and email = my_email() and not_blocked());
 create policy certs_redo  on public.certifications for update
-  using (email = my_email()) with check (email = my_email());
+  using (email = my_email()) with check (email = my_email() and not_blocked());
 
 create policy kudos_read  on public.kudos for select using (true);
-create policy kudos_new   on public.kudos for insert with check (my_email() <> '');
+create policy kudos_new   on public.kudos for insert with check (my_email() <> '' and not_blocked());
 create policy kudos_admin on public.kudos for delete using (is_admin());
 
 create policy req_read  on public.requests for select using (true);
 create policy req_new   on public.requests for insert
-  with check (my_email() <> '' and votes = 1 and voted_by = array[my_email()]);
+  with check (my_email() <> '' and not_blocked() and votes = 1 and voted_by = array[my_email()]);
 create policy req_admin on public.requests for all using (is_admin()) with check (is_admin());
+
+create policy tutreq_read on public.tutoring_requests for select
+  using (student_email = my_email() or tutor_id = my_tutor_id() or is_admin());
+create policy tutreq_new on public.tutoring_requests for insert
+  with check (my_email() <> '' and student_email = my_email() and not_blocked());
+create policy tutreq_status on public.tutoring_requests for update
+  using (tutor_id = my_tutor_id() or is_admin())
+  with check (tutor_id = my_tutor_id() or is_admin());
+create policy tutreq_admin on public.tutoring_requests for delete using (is_admin());
+
+create policy events_add  on public.events for insert with check (true);
+create policy events_read on public.events for select using (is_admin());
+create policy events_drop on public.events for delete using (is_admin());
 
 grant usage on schema public to anon, authenticated;
 grant select on all tables in schema public to anon, authenticated;
 grant insert, update, delete on all tables in schema public to authenticated;
+-- visitors who aren't signed in can record their visit, nothing else
+-- only the columns the site sends: nobody picks an id, a time or an email
+revoke insert on public.events from anon, authenticated;
+grant insert (visitor_id, session_id, kind, path, label, href, referrer, source, medium,
+              campaign, landing, device, browser, os, screen, lang, tz, duration_ms)
+  on public.events to anon, authenticated;
+grant usage on sequence public.events_id_seq to anon, authenticated;
 grant execute on all functions in schema public to anon, authenticated;
 
 -- voted_by holds emails: readable only through my_votes()
@@ -491,3 +728,12 @@ begin
     end;
   end if;
 end $$;
+
+-- ── one-off data fixes (safe to run again) ───────────────────
+-- Every current teacher is in 10th grade; no titles like "Co-founder" or
+-- "High school senior"; the founder's old tagline goes.
+update public.tutors set grade = '10th grade'
+ where id in ('founder', 'roster-sohail', 'roster-abhiram', 'roster-akil', 'roster-haggai', 'roster-ayden')
+   and grade <> '10th grade';
+update public.tutors set tagline = ''
+ where tagline = 'Started this after charging for tutoring stopped feeling right.';

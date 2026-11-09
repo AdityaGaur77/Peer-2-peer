@@ -132,6 +132,10 @@ export interface Tutor {
   onRoster?: boolean;
   /** False once a teacher leaves. They drop off the site; their past hours stay. */
   active?: boolean;
+  /** Price of a 1-on-1 session in dollars (1-20). Missing = not offered. */
+  tutoringPrice?: number;
+  /** A line about what their 1-on-1 sessions cover. */
+  tutoringNote?: string;
 }
 
 export interface Attendee {
@@ -216,6 +220,20 @@ export interface Profile {
   age?: number;
 }
 
+export type TutoringStatus = 'new' | 'accepted' | 'declined' | 'done';
+
+/** A student asking a teacher for 1-on-1 tutoring. */
+export interface TutoringRequest {
+  id: string;
+  tutorId: string;
+  studentEmail: string;
+  studentName: string;
+  message: string;
+  times: string;
+  status: TutoringStatus;
+  createdISO: string;
+}
+
 /** One row on the admin's Students tab. */
 export interface StudentRecord {
   email: string;
@@ -233,6 +251,8 @@ export interface RelayState {
   certifications: Certification[];
   kudos: Kudos[];
   requests: TopicRequest[];
+  /** 1-on-1 tutoring requests the viewer may see (their own, or to them as teacher). */
+  tutoringRequests?: TutoringRequest[];
   /** Everyone who has signed in. Only filled for admins on the live database. */
   students?: StudentRecord[];
 }

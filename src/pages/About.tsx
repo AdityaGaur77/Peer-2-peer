@@ -4,50 +4,48 @@ import { globalStats, useStore } from '../lib/store';
 
 const FAQ = [
   {
-    q: 'Is it free?',
-    a: "Most classes are. Teachers can choose to charge up to $19 a class, and the price is always on the class before you sign up. There's no subscription and the site never takes card details; if a class has a price, you pay the teacher directly. Free classes are taught by students volunteering their time, and they get volunteer hours for it.",
+    q: 'Does it cost anything?',
+    a: 'Group classes are free. Some teachers also offer 1-on-1 tutoring for up to $20 a lesson. You arrange and pay for that directly with the teacher. This site never asks for card details.',
   },
   {
-    q: 'How do you know the tutors are any good?',
-    a: "For subjects that have a quiz, tutors have to pass it before they can teach. Everything else gets read by a person before the tutor is approved. Beyond that, these are peers who learned the material recently, which usually means they remember what was confusing about it.",
+    q: 'Who are the teachers?',
+    a: "High school students. Each one applies and tells us what they want to teach, and we review every application before they're listed. They took these classes recently, so they remember which parts were confusing.",
   },
   {
-    q: 'Is this safe for younger students?',
-    a: "Sessions are small and run on video with a tutor who has been approved by hand. This is a student-run pilot rather than a company, so it doesn't have background checks or parental consent flows yet. If your school or family wants to sit in on a session, that's completely fine.",
+    q: 'Is it safe for younger students?',
+    a: "Classes are small group video calls with a teacher we've approved. We're a student-run group, not a company, so we don't run background checks. Parents are always welcome to sit in on a class.",
   },
   {
-    q: 'I only just learned this myself. Can I really tutor?',
-    a: "Yes, and you might be better at it than someone who learned it years ago. You still remember which part was confusing. You don't need to be an expert, just a step or two ahead and willing to be patient.",
+    q: 'How often are classes?',
+    a: 'Each teacher runs one class a week, at the same time every week. Save a spot in each class you want to go to.',
   },
   {
-    q: 'What do tutors get out of it?',
-    a: "Volunteer hours that get logged automatically, a printable service certificate, and the fact that teaching something forces you to actually understand it. Also, the thank-you notes are genuinely nice to receive.",
+    q: 'Can I teach if I only just learned this?',
+    a: "Yes. You don't need to be an expert, just a step ahead and patient. Teachers get volunteer hours for their group classes and a printable certificate.",
   },
   {
-    q: 'What subjects can I get help with?',
-    a: "Math has the most going on right now, along with English, Spanish and engineering/CAD. Physics, chemistry, biology, history, coding and test prep are open too. If nothing is scheduled in your subject, request it on the Sessions page and a teacher can pick it up.",
+    q: "What if my subject isn't listed?",
+    a: "Ask for it on the Classes page. When a teacher who can cover it joins, we'll add it.",
   },
 ];
-
 
 const TIMELINE = [
   {
     when: 'before',
-    title: 'A paid tutoring app, $8 to $20 a class',
-    body: 'I ran a small tutoring marketplace where high schoolers taught younger kids for a fee. It worked well enough. The problem was who it quietly turned away: the students who needed the help most were the ones least likely to pay for it.',
+    title: 'It started as paid tutoring',
+    body: 'We first ran tutoring that cost $8 to $20 a class. It worked, but the students who needed help most were often the ones who couldn\'t pay.',
   },
   {
     when: 'now',
-    title: 'Peer 2 Peer, free by default',
-    body: 'Same idea, with the prices taken down. Most teachers volunteer an hour and count it as service hours. A teacher who wants to can charge a little, capped at $19 a class, so cost never becomes the reason someone can\'t get help.',
+    title: 'Now group classes are free',
+    body: 'Teachers volunteer an hour a week for a group class, and it counts as service hours. Students who want extra help can book 1-on-1 tutoring with a teacher, for up to $20 a lesson.',
   },
   {
     when: 'next',
-    title: 'Whatever people show up to teach',
-    body: 'Python and AI came first because that is what the first tutors knew. Math, chemistry, essay writing, Spanish, test prep are all on the list. If you can teach it and someone wants to learn it, it belongs here.',
+    title: 'More subjects as we grow',
+    body: 'Right now we teach math, English, Spanish and engineering. We add a subject whenever someone joins who can teach it.',
   },
 ];
-
 
 export function About() {
   const { db } = useStore();
@@ -57,19 +55,15 @@ export function About() {
     <div className="section" style={{ paddingTop: 'clamp(110px, 15vw, 150px)' }}>
       <div className="container">
         <div className="section-head" style={{ maxWidth: 780 }}>
-          <Reveal>
-            <span className="eyebrow">the story</span>
-          </Reveal>
           <Reveal delay={0.05}>
             <h1 className="display" style={{ fontSize: 'clamp(2.2rem, 5vw, 3.4rem)' }}>
-              Free by default, <em className="em-ember">on purpose.</em>
+              About Peer 2 Peer
             </h1>
           </Reveal>
           <Reveal delay={0.1}>
             <p className="lede">
-              Peer 2 Peer is tutoring run by students. Someone helps you understand something
-              hard, and later you do the same for somebody else. Most classes cost nothing. Here
-              is how it ended up that way.
+              Peer 2 Peer is a tutoring group run by high school students. Older students teach
+              small online classes, and younger students get help with subjects they find hard.
             </p>
           </Reveal>
         </div>
@@ -88,20 +82,6 @@ export function About() {
                   flexWrap: 'nowrap',
                 }}
               >
-                <span
-                  className="mono"
-                  style={{
-                    flex: 'none',
-                    width: 72,
-                    fontSize: 11,
-                    letterSpacing: '0.12em',
-                    textTransform: 'uppercase',
-                    color: 'var(--ember-deep)',
-                    paddingTop: 4,
-                  }}
-                >
-                  {t.when}
-                </span>
                 <div style={{ minWidth: 0 }}>
                   <h3 className="h3" style={{ marginBottom: 6 }}>
                     {t.title}
@@ -118,9 +98,7 @@ export function About() {
           <div className="card card-pad" style={{ marginBottom: 'clamp(40px, 7vw, 72px)', background: 'var(--paper-2)' }}>
             <div className="row between" style={{ alignItems: 'flex-start', gap: 20 }}>
               <div style={{ maxWidth: '58ch' }}>
-                <span className="eyebrow" style={{ marginBottom: 10 }}>
-                  standing on shoulders
-                </span>
+                <h3 className="h3" style={{ marginBottom: 10 }}>Where the idea came from</h3>
                 <p style={{ fontSize: 16.5, color: 'var(--ink-2)', lineHeight: 1.6 }}>
                   We owe the model to{' '}
                   <a
@@ -168,9 +146,6 @@ export function About() {
 
         {/* faq */}
         <div className="section-head" style={{ marginBottom: 20 }}>
-          <Reveal>
-            <span className="eyebrow">Questions people ask</span>
-          </Reveal>
           <Reveal delay={0.05}>
             <h2 className="h2">Questions people ask</h2>
           </Reveal>
@@ -189,14 +164,14 @@ export function About() {
         <Reveal delay={0.1}>
           <div className="cta-band" style={{ marginTop: 'clamp(40px, 7vw, 72px)' }}>
             <h2 className="h2" style={{ maxWidth: 520 }}>
-              Want to <em>join in?</em>
+              Want to join in?
             </h2>
             <div className="row" style={{ justifyContent: 'center' }}>
               <Link to="/sessions" className="btn btn-band-light">
-                Find a session
+                See classes
               </Link>
               <Link to="/teach" className="btn btn-band-ghost">
-                Become a tutor
+                Teach a class
               </Link>
             </div>
           </div>

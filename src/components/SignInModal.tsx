@@ -160,10 +160,10 @@ export function SignInModal() {
           aria-pressed={role === 'tutor'}
         >
           <span className="role-title">I want to teach</span>
-          <span className="role-sub">Run classes and log hours</span>
+          <span className="role-sub">Teach a class and earn volunteer hours</span>
         </button>
       </div>
-      <span className="hint">you can switch later from your dashboard</span>
+      <span className="hint">You can change this later on your dashboard.</span>
     </div>
   );
 
@@ -281,7 +281,7 @@ export function SignInModal() {
               placeholder="you@school.org"
               autoFocus
             />
-            <span className="hint">teachers: use the email the team has on file for you</span>
+            <span className="hint">Teachers: use the email you gave the team.</span>
           </label>
           {errLine}
           <button className="btn btn-primary" type="submit" disabled={busy}>

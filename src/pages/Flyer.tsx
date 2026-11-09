@@ -1,11 +1,10 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Wordmark } from '../components/Logo';
-import { priceLabel } from '../lib/price';
 import { inviteUrl } from '../lib/invite';
 import { levelLabel, tutorById, useStore } from '../lib/store';
 import { subjectMeta } from '../lib/types';
-import { fmtLongDate, fmtTime, fmtWeekday } from '../lib/util';
+import { fmtLongDate, gradeLabel, fmtTime, fmtWeekday } from '../lib/util';
 
 /**
  * A print-first poster for a session. School launches run on paper — this is
@@ -34,14 +33,13 @@ export function Flyer() {
     return (
       <div className="section" style={{ paddingTop: 'clamp(120px, 16vw, 160px)', textAlign: 'center' }}>
         <div className="container stack" style={{ gap: 16, maxWidth: 420, margin: '0 auto' }}>
-          <h2 className="h2">No such session</h2>
+          <h1 className="h2">Class not found</h1>
           <p className="lede" style={{ margin: '0 auto' }}>
-            Flyers are generated from a session on your board. Pick one from the board and hit
-            "flyer".
+            Open one of your classes on the Classes page and tap "Flyer".
           </p>
           <div>
             <Link to="/sessions" className="btn btn-primary">
-              Back to the board
+              See classes
             </Link>
           </div>
         </div>
@@ -57,10 +55,8 @@ export function Flyer() {
       <div className="container">
         <div className="row between no-print" style={{ marginBottom: 20 }}>
           <div>
-            <span className="eyebrow">printable flyer</span>
             <p className="muted small" style={{ marginTop: 8, maxWidth: '52ch' }}>
-              Print it, tape it up. The QR-free version on purpose — the short link is easier to
-              type than a code is to scan across a hallway.
+              Print it and put it up at school, the library or anywhere students will see it.
             </p>
           </div>
           <div className="row">
@@ -68,7 +64,7 @@ export function Flyer() {
               Print this flyer
             </button>
             <Link to="/sessions" className="btn-quiet">
-              back to board
+              Back to classes
             </Link>
           </div>
         </div>
@@ -86,16 +82,7 @@ export function Flyer() {
           </div>
 
           <div className="flyer-free">
-            {session.price ? (
-              <>
-                {priceLabel(session.price)}
-                <span>·</span>PER CLASS
-              </>
-            ) : (
-              <>
-                FREE<span>·</span>CLASS
-              </>
-            )}
+            FREE<span>·</span>CLASS
           </div>
 
           <h1 className="flyer-title">{session.title}</h1>
@@ -104,7 +91,7 @@ export function Flyer() {
 
           <div className="flyer-when">
             <div>
-              <span className="flyer-k">when</span>
+              <span className="flyer-k">When</span>
               <span className="flyer-v">
                 {fmtWeekday(session.startISO)}, {fmtLongDate(session.startISO)}
               </span>
@@ -113,32 +100,32 @@ export function Flyer() {
               </span>
             </div>
             <div>
-              <span className="flyer-k">who</span>
-              <span className="flyer-v">{tutor?.name ?? 'A Peer 2 Peer tutor'}</span>
+              <span className="flyer-k">Teacher</span>
+              <span className="flyer-v">{tutor?.name ?? 'A Peer 2 Peer teacher'}</span>
               <span className="flyer-v2">
-                {tutor?.grade ?? 'Student'} · {levelLabel(session.level)} ·{' '}
+                {gradeLabel(tutor?.grade) || 'Student teacher'} · {levelLabel(session.level)} ·{' '}
                 {session.capacity} spots
               </span>
             </div>
           </div>
 
           <div className="flyer-join">
-            <span className="flyer-k">save a spot</span>
+            <span className="flyer-k">Save a spot</span>
             <span className="flyer-url">{siteRoot}</span>
             <span className="flyer-v2">
-              online, on video — no account, no card, nothing to install
+              Free, online. Sign in with your email to save a spot.
             </span>
           </div>
 
           <p className="flyer-foot">
-            Taught by a student who learned it recently and remembers exactly which part was
-            confusing. When it clicks for you, you can teach the next person.
+            Taught by a high school student who learned it recently and remembers which parts
+            are confusing.
           </p>
         </div>
 
         {link && (
           <p className="hint no-print" style={{ marginTop: 16, wordBreak: 'break-all', maxWidth: '70ch' }}>
-            direct invite link (for messages, not posters):{' '}
+            Link to this class (for messages, not posters):{' '}
             <span className="flyer-link">{link}</span>
           </p>
         )}

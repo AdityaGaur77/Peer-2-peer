@@ -1,5 +1,5 @@
 import type { Application, Tutor } from './types';
-import { hashHue } from './util';
+import { gradeLabel, hashHue } from './util';
 
 /**
  * The published teacher roster.
@@ -21,7 +21,7 @@ export const ROSTER: Tutor[] = [
     id: 'roster-sohail',
     name: 'Sohail T.',
     email: '',
-    grade: 'Co-founder',
+    grade: '10th grade',
     tagline: 'Algebra is a handful of rules used over and over. I teach the rules.',
     subjects: ['math'],
     joinedISO: '2026-10-12T00:00:00.000Z',
@@ -48,7 +48,7 @@ export const ROSTER: Tutor[] = [
     id: 'roster-abhiram',
     name: 'Abhiram K.',
     email: '',
-    grade: 'High school',
+    grade: '10th grade',
     tagline: 'Geometry through trig, algebra through Algebra 2.',
     subjects: ['math'],
     joinedISO: '2026-10-06T00:00:00.000Z',
@@ -69,7 +69,7 @@ export const ROSTER: Tutor[] = [
     id: 'roster-akil',
     name: 'Akil',
     email: '',
-    grade: 'High school',
+    grade: '10th grade',
     tagline: 'I follow whatever your class is doing and get you a little ahead of it.',
     subjects: ['math', 'spanish'],
     joinedISO: '2026-10-06T00:00:00.000Z',
@@ -99,7 +99,7 @@ export const ROSTER: Tutor[] = [
     id: 'roster-haggai',
     name: 'Haggai K.',
     email: '',
-    grade: 'High school',
+    grade: '10th grade',
     tagline: 'Grammar, essays and reading closely. No homework, ever.',
     subjects: ['english'],
     joinedISO: '2026-10-06T00:00:00.000Z',
@@ -145,7 +145,7 @@ export function onboardingGaps(t: Tutor): string[] {
   const gaps: string[] = [];
   if (!t.courses?.length) gaps.push('course description');
   if (!t.availability) gaps.push('days and times');
-  if (!t.grade || t.grade === 'High school') gaps.push('grade');
+  if (!gradeLabel(t.grade)) gaps.push('grade');
   return gaps;
 }
 

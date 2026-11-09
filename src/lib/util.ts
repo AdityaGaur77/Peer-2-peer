@@ -105,3 +105,12 @@ export function downloadText(filename: string, text: string, mime = 'text/plain'
   a.remove();
   URL.revokeObjectURL(url);
 }
+
+/**
+ * "10th grade", "grade 10", "10" -> "Grade 10". Anything without a grade
+ * number (old values like "High school") shows nothing.
+ */
+export function gradeLabel(grade: string | undefined): string {
+  const m = /\b(\d{1,2})(?:st|nd|rd|th)?\b/i.exec(grade ?? '');
+  return m ? `Grade ${Number(m[1])}` : '';
+}

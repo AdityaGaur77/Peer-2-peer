@@ -13,8 +13,8 @@ try {
   const arr = (a) => `array[${a.map(q).join(', ')}]::text[]`;
 
   const founder = {
-    id: 'founder', name: FOUNDER_NAME, grade: 'High school senior',
-    tagline: 'Started this after charging for tutoring stopped feeling right.',
+    id: 'founder', name: FOUNDER_NAME, grade: '10th grade',
+    tagline: '',
     subjects: ['python', 'ai'], joinedISO: '2026-09-01T00:00:00.000Z', hue: 212,
     courses: [], availability: null, isFounder: true,
   };

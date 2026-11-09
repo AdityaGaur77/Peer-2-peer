@@ -7,8 +7,8 @@ import { Wordmark } from './Logo';
 // `tutorOnly` links disappear for anyone who signed in as a student.
 // Signed-out visitors see everything, since they haven't picked a side yet.
 const LINKS = [
-  { to: '/sessions', label: 'Sessions' },
-  { to: '/tutors', label: 'Tutors' },
+  { to: '/sessions', label: 'Classes' },
+  { to: '/tutors', label: 'Teachers' },
   { to: '/teach', label: 'Teach', tutorOnly: true },
   { to: '/about', label: 'About' },
 ];
@@ -71,13 +71,13 @@ export function Nav() {
           className="theme-btn"
           onClick={flipTheme}
           aria-label={theme === 'dark' ? 'Switch to day mode' : 'Switch to night mode'}
-          title={theme === 'dark' ? 'day mode' : 'night mode'}
+          title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
         >
           {theme === 'dark' ? '☀' : '☾'}
         </button>
 
         {profile ? (
-          <button className="nav-user nav-cta" onClick={() => navigate('/dashboard')}>
+          <button className="nav-user nav-cta" data-track="My dashboard" onClick={() => navigate('/dashboard')}>
             <span
               className="avatar avatar-sm"
               style={{ '--h': hashHue(profile.email) } as CSSProperties}

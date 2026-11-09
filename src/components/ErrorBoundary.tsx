@@ -32,7 +32,7 @@ export class ErrorBoundary extends Component<Props, State> {
             SOMETHING TRIPPED
           </span>
           <h2 className="display" style={{ fontSize: 'clamp(2.2rem, 6vw, 3.4rem)' }}>
-            Fell mid-<em className="em-ember">stride.</em>
+            Something went wrong
           </h2>
           <p className="lede" style={{ margin: '0 auto' }}>
             Something broke while rendering. A reload usually fixes it — if it keeps happening,

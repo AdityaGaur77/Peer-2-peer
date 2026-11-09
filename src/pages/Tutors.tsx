@@ -3,14 +3,13 @@ import { Link } from 'react-router-dom';
 import { KudosModal } from '../components/KudosModal';
 import { Reveal } from '../components/Reveal';
 import { TutorCard } from '../components/TutorCard';
-import { globalStats, useStore } from '../lib/store';
+import { useStore } from '../lib/store';
 import { SUBJECTS, type SubjectId, type Tutor } from '../lib/types';
 
 export function Tutors() {
   const { db } = useStore();
   const [filter, setFilter] = useState<'all' | SubjectId>('all');
   const [thanking, setThanking] = useState<Tutor | null>(null);
-  const stats = globalStats(db);
 
   const tutors = useMemo(() => {
     const active = db.tutors.filter((t) => t.active !== false);
@@ -22,29 +21,15 @@ export function Tutors() {
     <div className="section" style={{ paddingTop: 'clamp(110px, 15vw, 150px)' }}>
       <div className="container">
         <div className="section-head">
-          <Reveal>
-            <span className="eyebrow">the founding crew</span>
-          </Reveal>
           <Reveal delay={0.05}>
             <h1 className="h2">
-              Students who <em className="em-ember">volunteer their time.</em>
+              Our teachers
             </h1>
           </Reveal>
           <Reveal delay={0.1}>
             <p className="lede">
-              Most of our teachers teach for free.{' '}
-              {stats.sessionsHosted > 0 ? (
-                <>
-                  So far that is <b>{stats.volunteerHours} hours</b> across{' '}
-                  <b>{stats.sessionsHosted} sessions</b>. A thank-you note is the only payment
-                  they get.
-                </>
-              ) : (
-                <>
-                  Once you have been to a session, leave a note. It is the only payment they
-                  get.
-                </>
-              )}
+              Every teacher is a high school student. Their group classes are free, and some
+              also offer 1-on-1 tutoring.
             </p>
           </Reveal>
         </div>

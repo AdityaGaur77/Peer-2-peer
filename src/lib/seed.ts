@@ -15,8 +15,8 @@ export function buildSeed(): RelayState {
     id: 'founder',
     name: FOUNDER_NAME,
     email: 'adityagaur12077@gmail.com',
-    grade: 'High school senior',
-    tagline: 'Started this after charging for tutoring stopped feeling right.',
+    grade: '10th grade',
+    tagline: '',
     subjects: ['python' as const, 'ai' as const],
     joinedISO: new Date().toISOString(),
     isFounder: true,
@@ -30,5 +30,6 @@ export function buildSeed(): RelayState {
     certifications: [],
     kudos: [],
     requests: [],
+    tutoringRequests: [],
   };
 }

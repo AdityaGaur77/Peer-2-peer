@@ -46,7 +46,7 @@ export function QuizEngine({ quiz, onExit }: { quiz: Quiz; onExit: () => void })
     if (score >= quiz.passNeeded && profile) {
       saveCertification({ email: profile.email, subject: quiz.subject, score, total });
       toast(
-        `Certified in ${quiz.subject === 'python' ? 'Python' : 'AI'} — ${score}/${total}. Now pass it on.`,
+        `You passed the ${quiz.subject === 'python' ? 'Python' : 'AI'} quiz (${score}/${total}). You can now teach it.`,
       );
     }
   };
@@ -69,8 +69,8 @@ export function QuizEngine({ quiz, onExit }: { quiz: Quiz; onExit: () => void })
             </div>
             <p className="mono small" style={{ color: passed ? 'var(--ember-deep)' : 'var(--hot-deep)' }}>
               {passed
-                ? '✓ certified — the baton is officially yours'
-                : `needs ${quiz.passNeeded}/${total} — review below and run it back`}
+                ? '✓ Passed! You can now teach this subject.'
+                : `You need ${quiz.passNeeded}/${total} to pass. Check the answers below and try again.`}
             </p>
           </div>
           <div className="row">
