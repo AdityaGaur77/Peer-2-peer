@@ -803,7 +803,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         students: prev.students?.map((x) => (x.email === email ? { ...x, blocked } : x)),
       }));
       sync((sb) => remote.setBlocked(sb, email, blocked));
-      toast(blocked ? 'Blocked. They can no longer save spots.' : 'Unblocked.');
+      toast(
+        blocked
+          ? "Blocked. They're out of their upcoming classes and can't post or message anyone."
+          : 'Unblocked.',
+      );
     },
     [sync, toast],
   );

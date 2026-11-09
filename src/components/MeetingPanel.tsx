@@ -11,6 +11,7 @@ function CopyChip({ label, value }: { label: string; value: string }) {
     <button
       type="button"
       className="meet-copy"
+      data-track={`Copy ${label.toLowerCase()}`}
       onClick={() =>
         navigator.clipboard.writeText(value).then(
           () => toast(`${label} copied.`),

@@ -98,7 +98,7 @@ function RequestRow({ r, asTeacher }: { r: TutoringRequest; asTeacher: boolean }
         </div>
         {asTeacher && (
           <div className="small">
-            <a href={`mailto:${r.studentEmail}`} style={{ color: 'var(--ember-deep)' }}>
+            <a href={`mailto:${r.studentEmail}`} data-track="Email student" style={{ color: 'var(--ember-deep)' }}>
               {r.studentEmail}
             </a>{' '}
             · sent {fmtDate(r.createdISO)}

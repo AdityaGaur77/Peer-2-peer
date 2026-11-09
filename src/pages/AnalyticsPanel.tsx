@@ -179,7 +179,11 @@ export function AnalyticsPanel() {
       'at', 'kind', 'path', 'label', 'href', 'source', 'medium', 'campaign', 'referrer', 'landing',
       'device', 'browser', 'os', 'screen', 'lang', 'tz', 'duration_ms', 'user_email', 'visitor_id', 'session_id',
     ];
-    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    // a cell starting with = + - @ would run as a formula in Excel or Sheets
+    const esc = (v: unknown) => {
+      const s = String(v ?? '');
+      return `"${(/^[=+\-@\t\r]/.test(s) ? `'${s}` : s).replace(/"/g, '""')}"`;
+    };
     downloadText(
       `peer2peer-analytics-${new Date().toISOString().slice(0, 10)}.csv`,
       [cols.join(','), ...events.map((e) => cols.map((c) => esc(e[c])).join(','))].join('\n'),
