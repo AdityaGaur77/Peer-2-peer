@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import type { Role } from '../lib/types';
 import { cx } from '../lib/util';
@@ -62,7 +63,10 @@ export function SignInModal() {
     const n = name.trim();
     const a = Number(age);
     if (n.length < 2) return setErr('We need a name so teachers know who is coming.'), null;
-    if (!Number.isInteger(a) || a < 5 || a > 120) return setErr('Enter your age in years.'), null;
+    if (!Number.isInteger(a) || a < 13 || a > 120) {
+      // Peer 2 Peer is for students 13 and older (COPPA)
+      return setErr('Peer 2 Peer is for ages 13 and up.'), null;
+    }
     setErr('');
     return { name: n, age: a, role };
   };
@@ -174,7 +178,7 @@ export function SignInModal() {
         <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Riya N" />
       </label>
       <label className="field">
-        <span className="label">Age</span>
+        <span className="label">Age <span className="muted">(13+)</span></span>
         <input
           className="input"
           inputMode="numeric"
@@ -206,6 +210,12 @@ export function SignInModal() {
           <button className="btn btn-primary" type="submit" disabled={busy}>
             {busy ? 'Saving…' : 'Save'}
           </button>
+          <p className="hint">
+            We only keep the minimum to run classes — name, age, email.{' '}
+            <Link to="/privacy" style={{ color: 'var(--ember-deep)', borderBottom: '1.5px dotted' }}>
+              Privacy &amp; terms
+            </Link>
+          </p>
         </form>
       </Modal>
     );
@@ -281,7 +291,10 @@ export function SignInModal() {
               placeholder="you@school.org"
               autoFocus
             />
-            <span className="hint">Teachers: use the email you gave the team.</span>
+            <span className="hint">
+              Teachers: use the email you gave the team. Many school accounts block outside mail — if
+              the code doesn't arrive, try a personal email.
+            </span>
           </label>
           {errLine}
           <button className="btn btn-primary" type="submit" disabled={busy}>

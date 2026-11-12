@@ -34,14 +34,17 @@ export function Footer() {
           <div className="footer-col">
             <h4>Contact</h4>
             <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+            <Link to="/privacy">Privacy &amp; terms</Link>
             <Link to="/admin">Team login</Link>
-            <span style={{ fontSize: 14.5 }}>Inspired by schoolhouse.world</span>
+            <a href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Report a problem on Peer 2 Peer')}`}>Report a problem</a>
           </div>
         </div>
 
         <div className="footer-base">
           <span>© 2026 Peer 2 Peer. Run by students.</span>
-          <span>No ads. Group classes are free.</span>
+          <span>
+            No ads. Group classes are free. <Link to="/privacy" style={{ color: 'inherit', borderBottom: '1.5px dotted' }}>Privacy &amp; terms</Link>
+          </span>
         </div>
       </div>
     </footer>

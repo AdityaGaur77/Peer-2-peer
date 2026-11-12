@@ -72,6 +72,28 @@ export function fmtTime(iso: string): string {
   });
 }
 
+/** Short time zone name for times shown on the site, e.g. "IST", "GMT+5:30". */
+export function fmtTz(date: Date | string | number = new Date()): string {
+  const d = date instanceof Date ? date : new Date(date);
+  try {
+    const part = new Intl.DateTimeFormat(undefined, { timeZoneName: 'short' })
+      .formatToParts(d)
+      .find((p) => p.type === 'timeZoneName');
+    return part?.value ?? '';
+  } catch {
+    return '';
+  }
+}
+
+/** The IANA name of the visitor's time zone, e.g. "Asia/Kolkata". */
+export function tzName(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone ?? '';
+  } catch {
+    return '';
+  }
+}
+
 /** "Today", "Tomorrow", or "Sat, Jul 11" */
 export function fmtRelativeDay(iso: string): string {
   const d = new Date(iso);

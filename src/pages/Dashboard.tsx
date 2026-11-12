@@ -28,6 +28,14 @@ export function Dashboard() {
   const tutor = profile ? tutorByEmail(db, profile.email) : undefined;
   const certs = profile ? certsFor(db, profile.email) : [];
   const stats = useMemo(() => (tutor ? tutorStats(db, tutor.id) : null), [db, tutor]);
+  // past classes with students whose attendance hasn't been ticked yet
+  const unmarked = useMemo(
+    () =>
+      stats
+        ? stats.past.filter((s) => s.attendees.some((a) => a.attended !== true)).length
+        : 0,
+    [stats],
+  );
 
   const myRsvps = useMemo(
     () =>
@@ -138,6 +146,14 @@ export function Dashboard() {
                   {stats.firstISO
                     ? `Teaching since ${fmtLongDate(stats.firstISO)}`
                     : 'Your hours start counting after your first class.'}
+                  {unmarked > 0 && (
+                    <>
+                      {' '}
+                      <Link to="/sessions?showPast=1" style={{ color: 'var(--ember-deep)', borderBottom: '1.5px dotted' }}>
+                        Mark who came in {unmarked === 1 ? '1 class' : `${unmarked} classes`} →
+                      </Link>
+                    </>
+                  )}
                 </span>
                 <div className="row">
                   <Link to="/guide/tutor" className="btn btn-primary btn-sm">
@@ -149,6 +165,12 @@ export function Dashboard() {
                 </div>
               </div>
             </div>
+          </Reveal>
+        )}
+
+        {tutor && (
+          <Reveal delay={0.07}>
+            <EditMyCard tutor={tutor} />
           </Reveal>
         )}
 
@@ -290,6 +312,92 @@ export function Dashboard() {
       </div>
 
       {thanking && <KudosModal tutor={thanking} onClose={() => setThanking(null)} />}
+    </div>
+  );
+}
+
+/** A teacher editing their own card: tagline, grade and availability. */
+function EditMyCard({ tutor }: { tutor: Tutor }) {
+  const { setMyProfile } = useStore();
+  const [editing, setEditing] = useState(false);
+  const [tagline, setTagline] = useState(tutor.tagline);
+  const [grade, setGrade] = useState(tutor.grade);
+  const [availability, setAvailability] = useState(tutor.availability ?? '');
+
+  if (!editing) {
+    return (
+      <div className="card card-pad" style={{ marginBottom: 24 }}>
+        <div className="row between" style={{ gap: 12, alignItems: 'flex-start' }}>
+          <div style={{ minWidth: 0 }}>
+            <h3 className="h3">Your teacher card</h3>
+            <p className="serif-i" style={{ fontSize: 15, color: 'var(--ink-2)', margin: '6px 0 0' }}>
+              “{tutor.tagline}”
+            </p>
+            <div className="small muted" style={{ marginTop: 6 }}>
+              {[tutor.grade, tutor.availability && `free ${tutor.availability}`].filter(Boolean).join(' · ')}
+            </div>
+          </div>
+          <button className="btn btn-ghost btn-sm" style={{ flex: 'none' }} onClick={() => setEditing(true)}>
+            Edit your card
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card card-pad stack" style={{ gap: 12, marginBottom: 24 }}>
+      <h3 className="h3">Your teacher card</h3>
+      <p className="muted small">
+        This is what students see on the Teachers page. Name and subjects are set by the team; the
+        rest is yours.
+      </p>
+      <label className="field">
+        <span className="label">Tagline</span>
+        <input
+          className="input"
+          value={tagline}
+          onChange={(e) => setTagline(e.target.value)}
+          maxLength={140}
+          placeholder="One line about you as a teacher"
+        />
+      </label>
+      <div className="grid-2">
+        <label className="field">
+          <span className="label">Grade</span>
+          <input
+            className="input"
+            value={grade}
+            onChange={(e) => setGrade(e.target.value)}
+            maxLength={40}
+            placeholder="11th grade"
+          />
+        </label>
+        <label className="field">
+          <span className="label">When you're free</span>
+          <input
+            className="input"
+            value={availability}
+            onChange={(e) => setAvailability(e.target.value)}
+            maxLength={80}
+            placeholder="Tue & Thu, 6–8pm"
+          />
+        </label>
+      </div>
+      <div className="row">
+        <button
+          className="btn btn-primary btn-sm"
+          onClick={() => {
+            setMyProfile(tagline, grade, availability);
+            setEditing(false);
+          }}
+        >
+          Save
+        </button>
+        <button className="btn btn-ghost btn-sm" onClick={() => setEditing(false)}>
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }

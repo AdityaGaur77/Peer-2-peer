@@ -16,7 +16,7 @@ export function Sessions() {
   const { db, profile, requireProfile, addRequest, voteRequest } = useStore();
   const [params, setParams] = useSearchParams();
   const [level, setLevel] = useState<'all' | Level>('all');
-  const [showPast, setShowPast] = useState(false);
+  const [showPast, setShowPast] = useState(() => !!params.get('showPast'));
   // a shared link may point past the first page — show everything in that case
   const [showAll, setShowAll] = useState(() => !!params.get('s'));
   const [query, setQuery] = useState('');
@@ -241,27 +241,33 @@ Teachers look at this list when they plan classes. Tap ▲ to vote for one.
               <h3 className="h3" style={{ marginBottom: 8 }}>
                 Most wanted
               </h3>
-              {requests.slice(0, 7).map((r) => {
-                const voted = !!profile && r.votedBy.includes(profile.email);
-                return (
-                  <div key={r.id} className="line-item" style={{ padding: '11px 0' }}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 14.5, fontWeight: 580 }}>{r.topic}</div>
-                      <div className="small muted">
-                        {r.subject === 'other' ? 'Other' : subjectMeta(r.subject).name} · asked by {r.by}
+              {requests.length === 0 ? (
+                <p className="muted small" style={{ padding: '8px 0 4px' }}>
+                  Nothing asked yet. Be the first — teachers build classes around this list.
+                </p>
+              ) : (
+                requests.slice(0, 7).map((r) => {
+                  const voted = !!profile && r.votedBy.includes(profile.email);
+                  return (
+                    <div key={r.id} className="line-item" style={{ padding: '11px 0' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 14.5, fontWeight: 580 }}>{r.topic}</div>
+                        <div className="small muted">
+                          {r.subject === 'other' ? 'Other' : subjectMeta(r.subject).name} · asked by {r.by}
+                        </div>
                       </div>
+                      <button
+                        className={cx('chip chip-btn', voted && 'on')}
+                        onClick={() => requireProfile((p) => voteRequest(r.id, p.email))}
+                        title={voted ? 'You voted for this' : 'Vote for this topic'}
+                        aria-label={`${voted ? 'You voted for' : 'Vote for'} ${r.topic}, ${r.votes} votes`}
+                      >
+                        ▲ {r.votes}
+                      </button>
                     </div>
-                    <button
-                      className={cx('chip chip-btn', voted && 'on')}
-                      onClick={() => requireProfile((p) => voteRequest(r.id, p.email))}
-                      title={voted ? 'You voted for this' : 'Vote for this topic'}
-                      aria-label={`${voted ? 'You voted for' : 'Vote for'} ${r.topic}, ${r.votes} votes`}
-                    >
-                      ▲ {r.votes}
-                    </button>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </aside>
         </div>

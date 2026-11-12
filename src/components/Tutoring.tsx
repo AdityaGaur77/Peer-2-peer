@@ -9,13 +9,20 @@ import { Modal } from './Modal';
  * 1-on-1 tutoring. Group classes are always free; a teacher can also offer
  * private sessions at a price they set (up to $20). Students send a request
  * here, and the teacher emails them to agree a time and how to pay.
+ *
+ * Students under 18 need a parent's email on the request: the teacher's
+ * emails and any payment happen off the site, so an adult is on the thread.
  */
 export function RequestTutoring({ tutor, onClose }: { tutor: Tutor; onClose: () => void }) {
-  const { requireProfile, requestTutoring } = useStore();
+  const { requireProfile, requestTutoring, profile } = useStore();
   const [message, setMessage] = useState('');
   const [times, setTimes] = useState('');
+  const [parentEmail, setParentEmail] = useState('');
   const [err, setErr] = useState('');
   const first = tutor.name.split(' ')[0];
+  const knownAdult = profile?.age != null && profile.age >= 18;
+  const parentRequired = !knownAdult;
+  const validEmail = (em: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em);
 
   const send = (e: FormEvent) => {
     e.preventDefault();
@@ -23,9 +30,18 @@ export function RequestTutoring({ tutor, onClose }: { tutor: Tutor; onClose: () 
       setErr('Tell them a little about what you need help with.');
       return;
     }
+    const pe = parentEmail.trim().toLowerCase();
+    if (parentRequired && !validEmail(pe)) {
+      setErr("We need a parent's email so they can be on the thread (students under 18).");
+      return;
+    }
+    if (pe && !validEmail(pe)) {
+      setErr("That parent email doesn't look right.");
+      return;
+    }
     // close first, so the sign-in box (if needed) isn't stacked on top of this one
     onClose();
-    requireProfile((p) => requestTutoring(tutor.id, message, times, p));
+    requireProfile((p) => requestTutoring(tutor.id, message, times, pe, p));
   };
 
   return (
@@ -35,8 +51,9 @@ export function RequestTutoring({ tutor, onClose }: { tutor: Tutor; onClose: () 
           Ask {first} for 1-on-1 tutoring
         </h2>
         <p className="muted" style={{ fontSize: 14.5 }}>
-          ${tutor.tutoringPrice} a lesson, paid to {first} directly. {first} will email you to
-          pick a time. Nothing is charged here.
+          ${tutor.tutoringPrice} a lesson, paid to {first} directly. {first} will email you to pick a
+          time. Nothing is charged here — and a parent or guardian is on the thread for students under
+          18.
         </p>
       </div>
       <form className="stack" style={{ gap: 14 }} onSubmit={send}>
@@ -62,6 +79,26 @@ export function RequestTutoring({ tutor, onClose }: { tutor: Tutor; onClose: () 
             maxLength={200}
           />
         </label>
+        <label className="field">
+          <span className="label">
+            Parent's email{' '}
+            {knownAdult ? (
+              <span className="muted">(only if you'd like them copied)</span>
+            ) : (
+              <span className="muted">(required under 18)</span>
+            )}
+          </span>
+          <input
+            className="input"
+            type="email"
+            value={parentEmail}
+            onChange={(e) => setParentEmail(e.target.value)}
+            placeholder="parent@example.com"
+            maxLength={200}
+            autoComplete="email"
+            required={parentRequired}
+          />
+        </label>
         {err && (
           <p className="small" style={{ color: 'var(--hot-deep)' }}>
             {err}
@@ -70,7 +107,11 @@ export function RequestTutoring({ tutor, onClose }: { tutor: Tutor; onClose: () 
         <button className="btn btn-primary" type="submit">
           Send request
         </button>
-        <p className="hint">If you're under 13, ask a parent to send this for you.</p>
+        <p className="hint">
+          {parentRequired
+            ? "The teacher emails your parent directly to set up the time and payment. 1-on-1 sessions are private arrangements between your family and the teacher — the site doesn't handle the money."
+            : "The teacher will email you to pick a time and how to pay. The site doesn't handle payments."}
+        </p>
       </form>
     </Modal>
   );
@@ -101,6 +142,19 @@ function RequestRow({ r, asTeacher }: { r: TutoringRequest; asTeacher: boolean }
               {r.studentEmail}
             </a>{' '}
             · sent {fmtDate(r.createdISO)}
+            {r.parentEmail && (
+              <>
+                {' '}
+                · parent:{' '}
+                <a
+                  href={`mailto:${r.parentEmail}`}
+                  data-track="Email parent"
+                  style={{ color: 'var(--ember-deep)', overflowWrap: 'anywhere' }}
+                >
+                  {r.parentEmail}
+                </a>
+              </>
+            )}
           </div>
         )}
         <p className="small" style={{ color: 'var(--ink-2)', marginTop: 4 }}>

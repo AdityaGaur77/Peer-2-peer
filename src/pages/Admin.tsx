@@ -5,7 +5,7 @@ import { MeetingFields } from '../components/MeetingPanel';
 import { AllTutoringRequests } from '../components/Tutoring';
 import { AnalyticsPanel } from './AnalyticsPanel';
 import { Reveal } from '../components/Reveal';
-import { DEFAULT_MIN_AGE, freshJitsiLink, meetingLinkError, weeklyStarts } from '../lib/meeting';
+import { DEFAULT_MIN_AGE, meetingLinkError, weeklyStarts } from '../lib/meeting';
 import {
   AttentionPanel, ClassesPanel, StatsPanel, StudentsPanel, TeacherTable,
 } from './AdminPanels';
@@ -22,7 +22,7 @@ import {
   SUBJECTS, subjectMeta, subjectShort, type Level, type RelayState, type Session, type SubjectId,
   type Tutor,
 } from '../lib/types';
-import { cx, downloadText, initials, plural } from '../lib/util';
+import { cx, downloadText, initials, plural, tzName } from '../lib/util';
 
 type Tab =
   | 'overview' | 'analytics' | 'applications' | 'sessions' | 'students' | 'tutoring' | 'schedule' | 'crew'
@@ -55,7 +55,7 @@ export function Admin() {
   const store = useStore();
   const {
     db, approveApplication, declineApplication, toast,
-    updateTutor, removeTutor, addTutor, importData, resetData,
+    updateTutor, removeTutor, addTutor, importData, resetData, removeKudos, removeRequest,
   } = store;
   const [authed, setAuthed] = useState(() => sessionStorage.getItem('relay.admin') === '1');
   const [code, setCode] = useState('');
@@ -254,8 +254,22 @@ export function Admin() {
                     .map((r) => (
                       <div key={r.id} className="line-item" style={{ padding: '10px 0' }}>
                         <span style={{ fontSize: 14.5 }}>{r.topic}</span>
-                        <span className="chip" style={{ flex: 'none' }}>
-                          ▲ {r.votes}
+                        <span className="row" style={{ flex: 'none', gap: 8 }}>
+                          <span className="chip">▲ {r.votes}</span>
+                          <a
+                            className="btn-quiet"
+                            href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Report a topic request on Peer 2 Peer')}&body=${encodeURIComponent(`Request: ${r.topic}\nBy: ${r.by}`)}`}
+                            aria-label={`Report request "${r.topic}"`}
+                          >
+                            report
+                          </a>
+                          <button
+                            className="btn-quiet"
+                            aria-label={`Remove request "${r.topic}"`}
+                            onClick={() => removeRequest(r.id)}
+                          >
+                            remove
+                          </button>
                         </span>
                       </div>
                     ))}
@@ -270,10 +284,26 @@ export function Admin() {
                   </p>
                   {db.kudos.slice(0, 4).map((k) => (
                     <div key={k.id} style={{ padding: '10px 0', borderBottom: '1.5px dashed var(--border)' }}>
-                      <p style={{ fontSize: 14, color: 'var(--ink-2)' }}>“{k.message}”</p>
-                      <span className="mono" style={{ fontSize: 11, color: 'var(--muted)' }}>
-                        {k.from} → {tutorById(db, k.tutorId)?.name ?? 'a former tutor'}
-                      </span>
+                      <div className="row between" style={{ alignItems: 'flex-start', gap: 10 }}>
+                        <div style={{ minWidth: 0 }}>
+                          <p style={{ fontSize: 14, color: 'var(--ink-2)' }}>“{k.message}”</p>
+                          <span className="mono" style={{ fontSize: 11, color: 'var(--muted)' }}>
+                            {k.from} → {tutorById(db, k.tutorId)?.name ?? 'a former tutor'}
+                          </span>
+                        </div>
+                        <div className="row" style={{ flex: 'none', gap: 8 }}>
+                          <a
+                            className="btn-quiet"
+                            href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Report a thank-you on Peer 2 Peer')}&body=${encodeURIComponent(`From: ${k.from}\nMessage: ${k.message}`)}`}
+                            aria-label="Report this thank-you"
+                          >
+                            report
+                          </a>
+                          <button className="btn-quiet" aria-label="Remove this thank-you" onClick={() => removeKudos(k.id)}>
+                            remove
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1005,25 +1035,30 @@ function ScheduleForm({
       toast('Pick a date and time in the future.');
       return;
     }
-    // one room for the whole series, so students keep the same link each week
-    const room = link.trim() || freshJitsiLink(title);
-    // same local time every week, for however many weeks were picked
-    for (const startISO of weeklyStarts(first, repeatWeeks)) {
-      onCreate({
-        title: title.trim(),
-        subject,
-        level,
-        description: description.trim() || 'A live session. Book a seat.',
-        tutorId,
-        startISO,
-        durationMin: duration,
-        capacity,
-        link: room,
-        meetingId: meetingId.trim() || undefined,
-        passcode: passcode.trim() || undefined,
-        minAge,
-      });
-    }
+    // teachers paste their own link — Jitsi stopped opening rooms without an account
+    const room = link.trim();
+    const starts = weeklyStarts(first, repeatWeeks);
+    const lastStart = starts.length - 1;
+    // one toast for the whole batch: the summary fires when the database accepts
+    starts.forEach((startISO, i) => {
+      onCreate(
+        {
+          title: title.trim(),
+          subject,
+          level,
+          description: description.trim() || 'A live session. Book a seat.',
+          tutorId,
+          startISO,
+          durationMin: duration,
+          capacity,
+          link: room,
+          meetingId: meetingId.trim() || undefined,
+          passcode: passcode.trim() || undefined,
+          minAge,
+        },
+        starts.length > 1 ? (i === lastStart ? `Posted ${starts.length} weekly classes.` : true) : false,
+      );
+    });
     setTitle('');
     setDescription('');
     setLink('');
@@ -1084,6 +1119,9 @@ function ScheduleForm({
             <input className="input" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
           </label>
         </div>
+        <span className="hint" style={{ marginTop: -8 }}>
+          You pick the time in your time zone ({tzName() || 'yours'}); students see it converted to theirs.
+        </span>
 
         <label className="field">
           <span className="label">How often</span>
@@ -1121,12 +1159,12 @@ function ScheduleForm({
           <input
             className="input"
             type="number"
-            min={5}
+            min={13}
             max={25}
             value={minAge}
-            onChange={(e) => setMinAge(Number(e.target.value) || DEFAULT_MIN_AGE)}
+            onChange={(e) => setMinAge(Math.max(13, Number(e.target.value) || DEFAULT_MIN_AGE))}
           />
-          <span className="hint">students younger than this can't save a spot</span>
+          <span className="hint">13 or older — sign-up is 13+ (COPPA)</span>
         </label>
 
 
@@ -1137,7 +1175,7 @@ function ScheduleForm({
         </label>
 
         <div className="row between">
-          <span className="hint">blank link = a free Jitsi room is generated</span>
+          <span className="hint">blank link = the class posts without one; add it later and we'll flag it</span>
           <button className="btn btn-primary" type="submit" disabled={title.trim().length < 4 || !date || !!linkErr}>
             Publish session
           </button>

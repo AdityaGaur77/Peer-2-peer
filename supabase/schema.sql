@@ -18,11 +18,17 @@ create table if not exists public.admins (
 create table if not exists public.profiles (
   email       text primary key check (email = lower(email)),
   name        text not null check (char_length(name) between 1 and 80),
-  age         int check (age between 5 and 120),
+  age         int check (age between 13 and 120),
   role        text not null default 'student' check (role in ('student', 'tutor')),
   blocked     boolean not null default false,
   created_at  timestamptz not null default now()
 );
+
+-- Existing databases still have the old 5..120 check: drop it and apply the
+-- 13+ floor to new and changed rows (rows already stored are left alone).
+alter table public.profiles drop constraint if exists profiles_age_check;
+alter table public.profiles add constraint profiles_age_min13
+  check (age is null or age between 13 and 120) not valid;
 
 create table if not exists public.tutors (
   id            text primary key,
@@ -58,6 +64,8 @@ create table if not exists public.tutoring_requests (
   student_name   text not null check (char_length(student_name) between 1 and 80),
   message        text not null default '' check (char_length(message) <= 1000),
   times          text not null default '' check (char_length(times) <= 200),
+  -- a parent or guardian's email; required under 18 (checked in the trigger)
+  parent_email   text,
   status         text not null default 'new' check (status in ('new', 'accepted', 'declined', 'done')),
   created_at     timestamptz not null default now()
 );
@@ -67,6 +75,11 @@ create table if not exists public.tutor_emails (
   tutor_id  text primary key references public.tutors (id) on delete cascade,
   email     text not null unique check (email = lower(email))
 );
+
+-- A parent or guardian's email, required for 1-on-1 requests from students
+-- under 18 (checked in the guard trigger). The teacher emails the family
+-- directly, so an adult has to be on the thread.
+alter table public.tutoring_requests add column if not exists parent_email text;
 
 create table if not exists public.sessions (
   id            text primary key,
@@ -78,12 +91,16 @@ create table if not exists public.sessions (
   start_at      timestamptz not null,
   duration_min  int not null check (duration_min between 10 and 300),
   capacity      int not null check (capacity between 1 and 500),
-  min_age       int not null default 13 check (min_age between 5 and 25),
+  min_age       int not null default 13 check (min_age between 13 and 25),
   -- dollars per student; 0 = free. The site shows it, it doesn't take payment.
   price         int not null default 0 check (price between 0 and 19),
   status        text not null default 'scheduled' check (status in ('scheduled', 'canceled')),
   created_at    timestamptz not null default now()
 );
+
+alter table public.sessions drop constraint if exists sessions_min_age_check;
+alter table public.sessions add constraint sessions_min_age_13
+  check (min_age between 13 and 25) not valid;
 
 alter table public.sessions add column if not exists price int not null default 0
   check (price between 0 and 19);
@@ -103,9 +120,14 @@ create table if not exists public.signups (
   email       text not null check (email = lower(email)),
   name        text not null,
   waitlist    boolean not null default false,
+  -- ticked by the teacher (or an admin) after the class happens; volunteer
+  -- hours only count students who were actually there
+  attended    boolean not null default false,
   created_at  timestamptz not null default now(),
   primary key (session_id, email)
 );
+
+alter table public.signups add column if not exists attended boolean not null default false;
 
 create table if not exists public.applications (
   id              text primary key,
@@ -236,6 +258,17 @@ language sql security definer set search_path = public as $$
      set votes = votes + 1, voted_by = array_append(voted_by, my_email())
    where id = rid and my_email() <> '' and not_blocked() and not (my_email() = any (voted_by))
 $$;
+
+-- A teacher (or an admin) marking whether a student actually came to a class.
+-- Only flips the attended flag; nobody's name or seat changes.
+create or replace function public.set_attendance(sid text, s_email text, a boolean) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not (is_admin() or teaches(sid)) then
+    raise exception 'Only the teacher running the class, or the team, can mark attendance.';
+  end if;
+  update signups set attended = a where session_id = sid and email = lower(s_email);
+end $$;
 
 -- ── rules on signups ─────────────────────────────────────────
 
@@ -471,6 +504,21 @@ begin
    where id = my_tutor_id();
 end $$;
 
+-- A teacher editing their own card: tagline, grade and availability.
+-- Everything else (name, subjects, active) stays with the team.
+create or replace function public.set_my_profile(t text, g text, a text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if my_tutor_id() is null then
+    raise exception 'Only teachers can edit a teacher card.';
+  end if;
+  update tutors
+     set tagline = left(btrim(coalesce(t, '')), 140),
+         grade = left(btrim(coalesce(g, '')), 40),
+         availability = nullif(left(btrim(coalesce(a, '')), 80), '')
+   where id = my_tutor_id();
+end $$;
+
 -- On a 1-on-1 request, a teacher may only change its status; the student's
 -- details stay as they sent them. New requests always start as 'new'.
 create or replace function public.guard_tutoring_request() returns trigger
@@ -485,6 +533,13 @@ begin
     select name into new.student_name from profiles where email = my_email();
     if not found then
       raise exception 'Finish your profile first.';
+    end if;
+    -- anyone under 18 needs a parent on the request: the teacher emails privately
+    if coalesce((select age from profiles where email = my_email()), 0) < 18 then
+      if new.parent_email is null or new.parent_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then
+        raise exception 'A parent email is required for students under 18.';
+      end if;
+      new.parent_email := lower(new.parent_email);
     end if;
     perform pg_advisory_xact_lock(hashtext('tutreq:' || new.student_email));
     if not exists (select 1 from tutors where id = new.tutor_id and tutoring_price is not null and active) then
@@ -508,6 +563,7 @@ begin
   new.student_name := old.student_name;
   new.message := old.message;
   new.times := old.times;
+  new.parent_email := old.parent_email;
   new.created_at := old.created_at;
   -- requests only move forward: new → accepted/declined, accepted → done/declined
   if new.status is distinct from old.status and not (
@@ -561,13 +617,15 @@ create trigger profile_block after update of blocked on public.profiles
 -- Analytics can't be used to fill the database: at most 50 events per
 -- request, and a ceiling on how many arrive in ten minutes. Hitting the
 -- ceiling only loses analytics for a while, never the rest of the site.
+-- Empty the table now and then (see SUPABASE.md): Supabase's free tier
+-- gives 500 MB and nobody wants to spend it on analytics.
 create or replace function public.cap_events() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
   if (select count(*) from new_rows) > 50 then
     raise exception 'Too many events at once.';
   end if;
-  if (select count(*) from events where at > now() - interval '10 minutes') > 5000 then
+  if (select count(*) from events where at > now() - interval '10 minutes') > 1000 then
     raise exception 'Analytics is busy.';
   end if;
   return null;
@@ -737,3 +795,9 @@ update public.tutors set grade = '10th grade'
    and grade <> '10th grade';
 update public.tutors set tagline = ''
  where tagline = 'Started this after charging for tutoring stopped feeling right.';
+
+-- ── under-13 accounts ─────────────────────────────────────────
+-- Sign-up is 13+ (COPPA). Profiles already stored with an age under 13
+-- stay until you choose to remove them — if you want them gone:
+--   delete from signups where email in (select email from profiles where age < 13);
+--   delete from profiles where age < 13;

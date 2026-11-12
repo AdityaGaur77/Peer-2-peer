@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { downloadSessionICS, googleCalUrl } from '../lib/ics';
 import { inviteUrl } from '../lib/invite';
@@ -8,7 +8,7 @@ import { levelLabel, tutorById, useStore } from '../lib/store';
 import type { Session } from '../lib/types';
 import { subjectMeta, subjectShort } from '../lib/types';
 import {
-  cx, fmtDayNum, fmtMonth, fmtRelativeDay, fmtTime, fmtWeekday, initials, isPastSession,
+  cx, fmtDayNum, fmtMonth, fmtRelativeDay, fmtTime, fmtTz, fmtWeekday, initials, isPastSession,
   sessionEnd,
 } from '../lib/util';
 
@@ -39,6 +39,19 @@ export function SessionCard({
   const isMine =
     !!profile && !!tutor && !!tutor.email && tutor.email.toLowerCase() === profile.email.toLowerCase();
   const canEditLink = isMine || isAdmin;
+  // a weekly series is one class posted per week, sharing a room: label it so
+  // eight identical cards read as one thing, and one signup covers them all
+  const weeklyCount = useMemo(
+    () =>
+      db.sessions.filter(
+        (s) =>
+          s.tutorId === session.tutorId &&
+          s.title === session.title &&
+          s.link === session.link &&
+          s.status === 'scheduled',
+      ).length,
+    [db.sessions, session.link, session.tutorId, session.title],
+  );
 
   // An invite link carries the whole class inside the URL, so it works even
   // for someone who has never opened Peer 2 Peer before (see lib/invite.ts).
@@ -88,6 +101,7 @@ export function SessionCard({
             <span className="chip chip-ghost">{levelLabel(session.level)}</span>
             {session.minAge ? <span className="chip chip-ghost">ages {session.minAge}+</span> : null}
             <span className="chip chip-ghost">Free</span>
+            {weeklyCount >= 3 && <span className="chip chip-ghost">weekly series</span>}
             {live && <span className="chip chip-live">Happening now</span>}
           </div>
           {going && !past && <span className="small going-tag">✓ You're going</span>}
@@ -99,8 +113,8 @@ export function SessionCard({
         <div className="ticket-meta">
           <span style={live ? { color: 'var(--hot-deep)', fontWeight: 700 } : undefined}>
             {live
-              ? `Happening now, until ${fmtTime(new Date(sessionEnd(session)).toISOString())}`
-              : `${fmtRelativeDay(session.startISO)} · ${fmtTime(session.startISO)} · ${session.durationMin} min`}
+              ? `Happening now, until ${fmtTime(new Date(sessionEnd(session)).toISOString())} ${fmtTz(sessionEnd(session))}`
+              : `${fmtRelativeDay(session.startISO)} · ${fmtTime(session.startISO)} ${fmtTz(session.startISO)} · ${session.durationMin} min`}
           </span>
           {tutor && (
             <span className="row" style={{ gap: 7 }}>
@@ -118,10 +132,13 @@ export function SessionCard({
               `Preview · ${session.capacity} spots`}
           </div>
         ) : past ? (
-          <div className="spots-label">
-            Finished · {session.attendees.length} {session.attendees.length === 1 ? 'student' : 'students'}
-            {countsForHours(session) ? ' · counts toward volunteer hours' : ''}
-          </div>
+          <>
+            <div className="spots-label">
+              Finished · {session.attendees.length} {session.attendees.length === 1 ? 'student' : 'students'}
+              {countsForHours(session) ? ' · counts toward volunteer hours' : ''}
+            </div>
+            {canEditLink && <Roster session={session} />}
+          </>
         ) : (
           <>
             <div className="spots">
@@ -213,6 +230,8 @@ export function SessionCard({
 
 /** For the class's teacher (and admins): who is coming and who is waiting. */
 function Roster({ session }: { session: Session }) {
+  const { markAttendance } = useStore();
+  const past = isPastSession(session);
   const people = [
     ...session.attendees.map((a) => ({ ...a, waiting: false })),
     ...session.waitlist.map((a) => ({ ...a, waiting: true })),
@@ -223,6 +242,11 @@ function Roster({ session }: { session: Session }) {
         Who's coming ({session.attendees.length}
         {session.waitlist.length ? `, ${session.waitlist.length} waiting` : ''})
       </summary>
+      {past && (
+        <p className="hint" style={{ marginTop: 6 }}>
+          Tick "came" for the students who showed up — volunteer hours only count them.
+        </p>
+      )}
       {people.length === 0 ? (
         <p className="small muted">Nobody yet. Share the class link to fill it.</p>
       ) : (
@@ -234,6 +258,19 @@ function Roster({ session }: { session: Session }) {
                 {a.email}
                 {a.waiting ? ' · waiting' : ''}
               </span>
+              {past && !a.waiting && (
+                <label
+                  style={{ display: 'inline-flex', gap: 6, alignItems: 'center', fontSize: 13, cursor: 'pointer' }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={a.attended === true}
+                    onChange={(e) => markAttendance(session.id, a.email, e.target.checked)}
+                    aria-label={`Mark ${a.name || a.email} as came`}
+                  />
+                  came
+                </label>
+              )}
             </li>
           ))}
         </ul>

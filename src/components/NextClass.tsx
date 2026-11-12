@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { joinWindow } from '../lib/meeting';
 import { tutorById, useStore } from '../lib/store';
 import type { Profile, RelayState, Session } from '../lib/types';
-import { fmtRelativeDay, fmtTime, initials, sessionEnd } from '../lib/util';
+import { fmtRelativeDay, fmtTime, fmtTz, initials, sessionEnd } from '../lib/util';
 import { MeetingPanel } from './MeetingPanel';
 
 /** Classes this person is in or teaches that haven't finished, soonest first. */
@@ -50,7 +50,7 @@ export function NextClass() {
         <span className="small muted">
           {state === 'open' && new Date(next.startISO).getTime() <= now
             ? 'happening now'
-            : `${fmtRelativeDay(next.startISO)} at ${fmtTime(next.startISO)}`}
+            : `${fmtRelativeDay(next.startISO)} at ${fmtTime(next.startISO)} ${fmtTz(next.startISO)}`}
         </span>
       </div>
       <div className="row" style={{ gap: 12 }}>

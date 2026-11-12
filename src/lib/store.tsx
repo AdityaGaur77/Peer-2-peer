@@ -66,7 +66,7 @@ interface StoreValue {
   voteRequest: (id: string, email: string) => void;
   approveApplication: (id: string) => void;
   declineApplication: (id: string) => void;
-  createSession: (s: Omit<Session, 'id' | 'attendees' | 'waitlist' | 'status'>, quiet?: boolean) => string;
+  createSession: (s: Omit<Session, 'id' | 'attendees' | 'waitlist' | 'status'>, quiet?: boolean | string) => string;
   cancelSession: (id: string) => void;
   updateTutor: (
     id: string,
@@ -96,8 +96,16 @@ interface StoreValue {
   setTutorEmail: (tutorId: string, email: string) => void;
   setStudentBlocked: (email: string, blocked: boolean) => void;
   removeFromClass: (sessionId: string, email: string) => void;
+  /** Teacher or admin ticks whether someone actually came to a class. */
+  markAttendance: (sessionId: string, email: string, attended: boolean) => void;
+  /** Admin takes a thank-you off the wall (spam, or someone being unkind). */
+  removeKudos: (id: string) => void;
+  /** Admin takes a topic request off the list. */
+  removeRequest: (id: string) => void;
+  /** A teacher editing the parts of their own card they can change. */
+  setMyProfile: (tagline: string, grade: string, availability: string) => void;
   /** A signed-in student asking a teacher for 1-on-1 tutoring. */
-  requestTutoring: (tutorId: string, message: string, times: string, p: Profile) => void;
+  requestTutoring: (tutorId: string, message: string, times: string, parentEmail: string, p: Profile) => void;
   setTutoringStatus: (id: string, status: TutoringStatus) => void;
   /** Turn a teacher's 1-on-1 tutoring on (price $1-$20) or off (null). */
   setTutoring: (tutorId: string, price: number | null, note: string) => void;
@@ -371,36 +379,86 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return;
       }
       const promoted = going ? session.waitlist[0] : undefined;
+      // A weekly series posts as separate classes sharing one room, so saving a
+      // spot adds the student to every week they can still make, not just this one.
+      const siblings =
+        !going
+          ? db.sessions.filter(
+              (s) =>
+                s.id !== sessionId &&
+                s.tutorId === session.tutorId &&
+                s.title === session.title &&
+                // same series = same room (a blank link means a roomless series)
+                s.link === session.link &&
+                s.status === 'scheduled' &&
+                !isPastSession(s),
+            )
+          : [];
+      const joinTargets = going
+        ? [session]
+        : [session, ...siblings].filter(
+            (s) => s.attendees.length < s.capacity && !(s.minAge && (p.age ?? 0) < s.minAge),
+          );
+      const skipped = going ? [] : [session, ...siblings].filter((s) => !joinTargets.includes(s));
+      let seriesFailed: typeof joinTargets = [];
+      const joinIds = new Set(joinTargets.map((s) => s.id));
       setDb((prev) => ({
         ...prev,
         sessions: prev.sessions.map((s) => {
-          if (s.id !== sessionId) return s;
-          const isGoing = s.attendees.some((a) => a.email === p.email);
-          if (!isGoing) {
-            return { ...s, attendees: [...s.attendees, { name: p.name, email: p.email }] };
+          if (!going && joinIds.has(s.id)) {
+            const isGoing = s.attendees.some((a) => a.email === p.email);
+            return isGoing
+              ? s
+              : { ...s, attendees: [...s.attendees, { name: p.name, email: p.email }] };
           }
-          // leaving: the first waitlisted learner inherits the spot
-          const [next, ...rest] = s.waitlist;
-          return {
-            ...s,
-            attendees: next
-              ? [...s.attendees.filter((a) => a.email !== p.email), next]
-              : s.attendees.filter((a) => a.email !== p.email),
-            waitlist: next ? rest : s.waitlist,
-          };
+          if (going && s.id === sessionId) {
+            // leaving one week at a time: the first learner waiting takes the seat
+            const [next, ...rest] = s.waitlist;
+            return {
+              ...s,
+              attendees: next
+                ? [...s.attendees.filter((a) => a.email !== p.email), next]
+                : s.attendees.filter((a) => a.email !== p.email),
+              waitlist: next ? rest : s.waitlist,
+            };
+          }
+          return s;
         }),
       }));
       sync(
-        (sb) => (going ? remote.leaveClass(sb, sessionId, p.email) : remote.joinClass(sb, sessionId, p)),
+        going
+          ? (sb) => remote.leaveClass(sb, sessionId, p.email)
+          : async (sb) => {
+              const results = await Promise.allSettled(
+                joinTargets.map((t) => remote.joinClass(sb, t.id, p)),
+              );
+              seriesFailed = joinTargets.filter((_, i) => results[i].status === 'rejected');
+              if (joinTargets.length > 0 && seriesFailed.length === joinTargets.length) {
+                const first = results[0];
+                throw first.status === 'rejected'
+                  ? (first.reason as Error)
+                  : new Error("Couldn't save a spot.");
+              }
+            },
         () => {
-          toast(
-            going
-              ? promoted?.name
+          if (going) {
+            toast(
+              promoted?.name
                 ? `Spot released. ${promoted.name.split(' ')[0]} moves up from the waitlist.`
-                : 'Spot released.'
+                : 'Spot released.',
+            );
+            return;
+          }
+          const missed = new Set([...skipped.map((s) => s.id), ...seriesFailed.map((s) => s.id)]).size;
+          const weeks = joinTargets.length;
+          toast(
+            weeks > 1
+              ? missed > 0
+                ? `You're going — ${weeks - missed} of ${weeks} weeks of "${session.title}". The rest ${missed === 1 ? 'is' : 'are'} full.`
+                : `You're going — all ${weeks} weeks of "${session.title}".`
               : `You're going: ${session.title}`,
           );
-          if (!going) track('rsvp', { label: session.title });
+          track('rsvp', { label: session.title });
         },
       );
     },
@@ -587,11 +645,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ),
       }));
       const exists = db.tutors.some((t) => t.email.toLowerCase() === app.email.toLowerCase());
-      sync(async (sb) => {
-        if (!exists) await remote.addTutor(sb, tutor);
-        await remote.setApplicationStatus(sb, id, 'approved');
-      });
-      toast("Approved. They can teach now.");
+      sync(
+        async (sb) => {
+          if (!exists) await remote.addTutor(sb, tutor);
+          await remote.setApplicationStatus(sb, id, 'approved');
+        },
+        () => toast("Approved. They can teach now."),
+      );
     },
     [db.applications, db.tutors, toast, sync],
   );
@@ -607,13 +667,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [sync]);
 
   const createSession = useCallback(
-    (s: Omit<Session, 'id' | 'attendees' | 'waitlist' | 'status'>, quiet = false) => {
+    (s: Omit<Session, 'id' | 'attendees' | 'waitlist' | 'status'>, quiet: boolean | string = false) => {
       const id = uid('session');
       const full: Session = { ...s, id, attendees: [], waitlist: [], status: 'scheduled' };
       setDb((prev) => ({ ...prev, sessions: [...prev.sessions, full] }));
       sync(
         (sb) => remote.createSession(sb, full),
-        quiet ? undefined : () => toast('Class posted.'),
+        quiet === true ? undefined : () => toast(typeof quiet === 'string' ? quiet : 'Class posted.'),
       );
       return id;
     },
@@ -626,8 +686,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...prev,
         sessions: prev.sessions.map((s) => (s.id === id ? { ...s, status: 'canceled' as const } : s)),
       }));
-      sync((sb) => remote.cancelSession(sb, id));
-      toast('Class canceled.');
+      sync((sb) => remote.cancelSession(sb, id), () => toast('Class canceled.'));
     },
     [toast, sync],
   );
@@ -638,8 +697,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...prev,
         tutors: prev.tutors.map((t) => (t.id === id ? { ...t, ...patch } : t)),
       }));
-      sync((sb) => remote.updateTutor(sb, id, patch));
-      toast('Teacher updated.');
+      sync((sb) => remote.updateTutor(sb, id, patch), () => toast('Teacher updated.'));
     },
     [toast, sync],
   );
@@ -667,8 +725,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ? prev
           : { ...prev, tutors: [...prev.tutors, tutor] },
       );
-      sync((sb) => remote.addTutor(sb, tutor));
-      toast(`${t.name.trim().split(' ')[0]} added as a teacher.`);
+      sync(
+        (sb) => remote.addTutor(sb, tutor),
+        () => toast(`${t.name.trim().split(' ')[0]} added as a teacher.`),
+      );
     },
     [db.tutors, toast, sync],
   );
@@ -678,8 +738,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const tutor = db.tutors.find((t) => t.id === id);
       if (!tutor) return;
       if (supabase) {
-        sync((sb) => remote.retireTutor(sb, id));
-        toast(`${tutor.name} removed. Their past classes and hours are kept.`);
+        sync((sb) => remote.retireTutor(sb, id), () => toast(`${tutor.name} removed. Their past classes and hours are kept.`));
         return;
       }
       // Same as the live database: hidden from the site and upcoming classes
@@ -801,11 +860,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             : s,
         ),
       }));
-      sync((sb) => remote.updateMeeting(sb, ids, m));
-      toast(
-        ids.length > 1
-          ? `Link updated for ${ids.length} classes. Students will see the change.`
-          : 'Link updated. Students will see the change.',
+      sync(
+        (sb) => remote.updateMeeting(sb, ids, m),
+        () =>
+          toast(
+            ids.length > 1
+              ? `Link updated for ${ids.length} classes. Students will see the change.`
+              : 'Link updated. Students will see the change.',
+          ),
       );
     },
     [db.sessions, sync, toast],
@@ -818,8 +880,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...prev,
         tutors: prev.tutors.map((t) => (t.id === tutorId ? { ...t, email: e } : t)),
       }));
-      sync((sb) => remote.setTutorEmail(sb, tutorId, e));
-      toast(e ? 'Login email saved. They can sign in with it now.' : 'Login email removed.');
+      sync(
+        (sb) => remote.setTutorEmail(sb, tutorId, e),
+        () => toast(e ? 'Login email saved. They can sign in with it now.' : 'Login email removed.'),
+      );
     },
     [sync, toast],
   );
@@ -830,18 +894,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...prev,
         students: prev.students?.map((x) => (x.email === email ? { ...x, blocked } : x)),
       }));
-      sync((sb) => remote.setBlocked(sb, email, blocked));
-      toast(
-        blocked
-          ? "Blocked. They're out of their upcoming classes and can't post or message anyone."
-          : 'Unblocked.',
+      sync(
+        (sb) => remote.setBlocked(sb, email, blocked),
+        () =>
+          toast(
+            blocked
+              ? "Blocked. They're out of their upcoming classes and can't post or message anyone."
+              : 'Unblocked.',
+          ),
       );
     },
     [sync, toast],
   );
 
   const requestTutoring = useCallback(
-    (tutorId: string, message: string, times: string, p: Profile) => {
+    (tutorId: string, message: string, times: string, parentEmail: string, p: Profile) => {
       const r: TutoringRequest = {
         id: uid('tutreq'),
         tutorId,
@@ -849,6 +916,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         studentName: p.name,
         message: message.trim().slice(0, 1000),
         times: times.trim().slice(0, 200),
+        parentEmail: parentEmail.trim().slice(0, 200) || undefined,
         status: 'new',
         createdISO: new Date().toISOString(),
       };
@@ -918,10 +986,75 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           return { ...s, attendees, waitlist };
         }),
       }));
-      sync((sb) => remote.leaveClass(sb, sessionId, email));
-      toast('Removed from the class.');
+      sync((sb) => remote.leaveClass(sb, sessionId, email), () => toast('Removed from the class.'));
     },
     [sync, toast],
+  );
+
+  /**
+   * A teacher or admin ticks whether someone actually came. This is what
+   * volunteer hours count now — saving a spot is not attendance.
+   */
+  const markAttendance = useCallback(
+    (sessionId: string, email: string, attended: boolean) => {
+      setDb((prev) => ({
+        ...prev,
+        sessions: prev.sessions.map((s) =>
+          s.id !== sessionId
+            ? s
+            : {
+                ...s,
+                attendees: s.attendees.map((a) => (a.email === email ? { ...a, attended } : a)),
+              },
+        ),
+      }));
+      sync((sb) => remote.markAttendance(sb, sessionId, email, attended));
+    },
+    [sync],
+  );
+
+  const removeKudos = useCallback(
+    (id: string) => {
+      setDb((prev) => ({ ...prev, kudos: prev.kudos.filter((k) => k.id !== id) }));
+      sync((sb) => remote.deleteKudos(sb, id), () => toast('Thank-you removed.'));
+    },
+    [toast, sync],
+  );
+
+  const removeRequest = useCallback(
+    (id: string) => {
+      setDb((prev) => ({ ...prev, requests: prev.requests.filter((r) => r.id !== id) }));
+      sync((sb) => remote.deleteRequest(sb, id), () => toast('Request removed.'));
+    },
+    [toast, sync],
+  );
+
+  const setMyProfile = useCallback(
+    (tagline: string, grade: string, availability: string) => {
+      const mine = profile ? tutorByEmail(db, profile.email) : undefined;
+      if (!mine) {
+        toast('Only teachers can edit a teacher card.');
+        return;
+      }
+      setDb((prev) => ({
+        ...prev,
+        tutors: prev.tutors.map((x) =>
+          x.id === mine.id
+            ? {
+                ...x,
+                tagline: tagline.trim() || x.tagline,
+                grade: grade.trim() || x.grade,
+                availability: availability.trim() || undefined,
+              }
+            : x,
+        ),
+      }));
+      sync(
+        (sb) => remote.setMyProfile(sb, tagline.trim(), grade.trim(), availability.trim()),
+        () => toast('Your card is updated.'),
+      );
+    },
+    [db, profile, sync, toast],
   );
 
   const value = useMemo<StoreValue>(
@@ -965,6 +1098,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setTutorEmail,
       setStudentBlocked,
       removeFromClass,
+      markAttendance,
+      removeKudos,
+      removeRequest,
+      setMyProfile,
       requestTutoring,
       setTutoringStatus,
       setTutoring,
@@ -977,6 +1114,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       cancelSession, updateTutor, removeTutor, addTutor, importData, resetData, acceptInvite, setRole,
       live, isAdmin, reload, sendSignInCode, verifySignInCode, saveProfile, updateMeeting,
       setTutorEmail, setStudentBlocked, removeFromClass, requestTutoring, setTutoringStatus,
+      markAttendance, removeKudos, removeRequest, setMyProfile,
       setTutoring,
     ],
   );

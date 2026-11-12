@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { GuideShell, type GuideStepDef } from '../components/GuideShell';
 import { MeetingFields } from '../components/MeetingPanel';
 import { SessionCard } from '../components/SessionCard';
-import { DEFAULT_MIN_AGE, freshJitsiLink, meetingLinkError, weeklyStarts } from '../lib/meeting';
+import { DEFAULT_MIN_AGE, meetingLinkError, weeklyStarts } from '../lib/meeting';
 import { MAX_PRICE } from '../lib/price';
 import {
   applicationFor, certsFor, tutorByEmail, upcomingSessions, useStore,
@@ -206,7 +206,7 @@ export function GuideTutor() {
     true,
     true,
     startMs !== null && startMs > Date.now(),
-    // a pasted link has to be a real meeting link; blank means a Jitsi room
+    // a pasted link has to be a real meeting link; blank posts the class without one
     !draft.link.trim() || !meetingLinkError(draft.link),
   ][step];
 
@@ -257,7 +257,7 @@ export function GuideTutor() {
       capacity: draft.capacity,
       attendees: [],
       waitlist: [],
-      link: draft.link || 'https://meet.jit.si/peer2peer-your-class',
+      link: draft.link || '',
       minAge: draft.minAge,
       status: 'scheduled',
     };
@@ -277,26 +277,32 @@ export function GuideTutor() {
       const weeks = Math.max(1, draft.repeatWeeks || 1);
       let id = '';
       // same slot every week; the first one is where we land afterwards
-      const room = draft.link.trim() || freshJitsiLink(draft.title);
+      const room = draft.link.trim();
       const starts = weeklyStarts(new Date(startMs), weeks);
       for (let w = 0; w < starts.length; w++) {
-        const made = createSession({
-          title: draft.title.trim(),
-          subject: draft.subject,
-          level: draft.level,
-          description: draft.description.trim(),
-          tutorId: me.id,
-          startISO: starts[w],
-          durationMin: draft.durationMin,
-          capacity: draft.capacity,
-          link: room,
-          meetingId: draft.meetingId.trim() || undefined,
-          passcode: draft.passcode.trim() || undefined,
-          minAge: draft.minAge,
-        }, true);
+        const made = createSession(
+          {
+            title: draft.title.trim(),
+            subject: draft.subject,
+            level: draft.level,
+            description: draft.description.trim(),
+            tutorId: me.id,
+            startISO: starts[w],
+            durationMin: draft.durationMin,
+            capacity: draft.capacity,
+            link: room,
+            meetingId: draft.meetingId.trim() || undefined,
+            passcode: draft.passcode.trim() || undefined,
+            minAge: draft.minAge,
+          },
+          w === starts.length - 1
+            ? starts.length > 1
+              ? `Posted ${starts.length} classes, one a week.`
+              : false
+            : true,
+        );
         if (w === 0) id = made;
       }
-      toast(starts.length > 1 ? `Posted ${starts.length} classes, one a week.` : 'Your class is posted.');
       localStorage.removeItem(DRAFT_KEY);
       navigate(`/sessions?s=${id}`);
     });
@@ -644,8 +650,9 @@ Good names say what students will be able to do after the class.
             onPasscode={(v) => patch({ passcode: v })}
           />
           <span className="hint">
-            No link yet? Leave it blank and we'll make a free Jitsi room. You can change the link
-            later from the class card.
+            No link yet? Leave it blank and add it later from the class card — the console will flag
+            the class until you do. Google Meet is easiest: a free Google account makes a room with no
+            account needed for people joining.
           </span>
 
           {tutor && problem ? (
