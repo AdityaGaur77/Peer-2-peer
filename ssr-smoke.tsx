@@ -20,6 +20,7 @@ const ROUTES: Array<[string, string[]]> = [
   ['/join', ['Loading']], // effects don't run in SSR, so the loading state
   ['/flyer/nope', ['Class not found']], // unknown id → graceful fallback
   ['/definitely-not-a-page', ['Page not found']],
+  ['/privacy', ['Privacy &amp; terms', 'Students under 13', 'What we collect']],
 ];
 
 export function runSmoke() {

@@ -19,6 +19,7 @@ import { GuideTutor } from './pages/GuideTutor';
 import { Home } from './pages/Home';
 import { Join } from './pages/Join';
 import { NotFound } from './pages/NotFound';
+import { Privacy } from './pages/Privacy';
 import { Sessions } from './pages/Sessions';
 import { Teach } from './pages/Teach';
 import { Tutors } from './pages/Tutors';
@@ -35,6 +36,7 @@ const TITLES: Record<string, string> = {
   '/guide/tutor': 'Set up your class — Peer 2 Peer',
   '/guide/student': 'How Peer 2 Peer works — Peer 2 Peer',
   '/join': "You're invited — Peer 2 Peer",
+  '/privacy': 'Privacy & terms — Peer 2 Peer',
 };
 
 const KNOWN = new Set(Object.keys(TITLES));
@@ -96,6 +98,7 @@ export default function App() {
             <Route path="/guide/tutor" element={<GuideTutor />} />
             <Route path="/guide/student" element={<GuideStudent />} />
             <Route path="/join" element={<Join />} />
+            <Route path="/privacy" element={<Privacy />} />
             <Route path="/flyer/:id" element={<Flyer />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

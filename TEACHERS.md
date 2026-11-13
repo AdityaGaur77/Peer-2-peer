@@ -5,11 +5,14 @@ written for whoever manages teachers, not only for whoever writes the code.
 
 ## Why it works this way
 
-Peer 2 Peer has no server. Everything a visitor does is saved in their own browser.
-That means:
-
-- An application someone fills in on their phone is **only on their phone**.
-- A tutor you approve in the console is **only in your browser**.
+With Supabase connected (see [SUPABASE.md](SUPABASE.md)), everything a
+teacher does lands in the shared database: applications appear in the console
+as soon as they're submitted, classes appear for everyone, and meeting links
+only reach students with a seat. Without it, the site keeps each visitor's
+data in their own browser, which is only useful for development. The steps
+below describe the offline path; with Supabase, the emailed application link
+and the roster paste both go away — approving in the console publishes the
+teacher directly.
 
 Two things get around that:
 
@@ -48,13 +51,29 @@ Teachers paste a Google Meet, Zoom, Teams, Jitsi or Discord link when they
 post a class, plus a meeting ID and passcode if the meeting has them. Only
 students with a seat see these.
 
+**Leave the link blank and the class posts without one** — there is no
+auto-generated room. (Jitsi needs an account to create a room now, so a
+blank link can't make one for you.) The console flags classes with no link;
+add it from the class card later. Google Meet is the easiest: a free Google
+account makes a room anyone can join without one.
+
+**Turn on the waiting room.** The link is the same every week, and students
+who were removed from a class keep it. A waiting room is the only reliable
+gate — it lets the teacher admit people (or reject the ones who shouldn't
+be there) instead of trusting the link.
+
+**If you take someone off your class, change the link.** The roster panel on
+the card lets you remove someone; afterwards, hit **update link** and paste a
+fresh one. Otherwise they kept the old link.
+
 If a free call cuts out (Zoom's free plan stops at 40 minutes, Google Meet's
 at 60 for group calls), the teacher starts a new call, opens the class card,
 hits **update link** and pastes the new one. Everyone in the class sees a
 "New link" notice on the card, on their dashboard and in the "class is
 starting" pill, within a few seconds.
 
-Each class also has a **minimum age** the teacher sets (default 13).
+Each class also has a **minimum age** the teacher sets (default 13, and
+sign-up is 13+ everywhere anyway).
 
 ## What we ask every teacher
 
@@ -67,6 +86,19 @@ Each class also has a **minimum age** the teacher sets (default 13).
    a recurring slot, not a single date. (One teacher asked "is this a one-time
    thing?", so the form now says so.)
 6. How long a class runs and how often (weekly, every other week)
+7. **Mark attendance after each class.** Open the class card → "Who's coming"
+   → tick "came" for the students who showed up. Volunteer hours and
+   certificates only count students marked there — signing up alone never
+   adds hours.
+8. **For 1-on-1 tutoring: a parent email.** Students under 18 have to include a
+   parent's email on their request, so you email the family directly to agree a
+   time and how they pay. Payment is arranged between the family and the
+   teacher — never through the site — and the site stores no card details.
+   Under-18 students never arrange 1-on-1 alone with nobody else on the thread.
+
+Peer 2 Peer is **13+ only**. We don't make accounts for under-13s, and if one
+slips through we delete it. If a student's parent calls you about anything,
+it's a yes from the parent or it doesn't happen.
 
 Keep emails and phone numbers in the team's private sheet, never in
 `roster.ts`. That file ships to every visitor.
@@ -91,5 +123,6 @@ Keep emails and phone numbers in the team's private sheet, never in
   certificate of hours from logged sessions (`/#/certificate`). Check what the
   school or club needs on it (an advisor signature? a specific form?) before
   promising hours.
-- **Rosters of who signed up** need a backend. Until then, ask students to
-  reply in the group chat or Instagram DMs.
+- **Rosters of who signed up** need Supabase (see [SUPABASE.md](SUPABASE.md)).
+  Once connected, the console shows every signup and teachers see their own
+  class rosters. Without it, ask students to reply in the group chat.

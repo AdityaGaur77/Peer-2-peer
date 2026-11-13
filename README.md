@@ -1,10 +1,12 @@
 # Peer 2 Peer — tutoring by students
 
-Live tutoring run by students. Most classes are free; a teacher can charge up
-to $19 a class, and only free classes count toward volunteer hours. Sessions cover Python, AI, web development,
+Live tutoring run by students. Group classes are always free; a teacher can offer
+1-on-1 tutoring for $1–$20 a lesson, and only free classes count toward volunteer hours. Sessions cover Python, AI, web development,
 math, physics, chemistry, biology, English, history, Spanish and test prep, and
 subjects are added as tutors turn up who can teach them.
 This replaced *Peer2Peer*, a paid tutoring app with the same tutors.
+
+Students are 13 and older (that's a hard rule, see the privacy page in the site). Teachers are high schoolers too — Peer 2 Peer is a volunteer program, not a company.
 
 **Concept:** knowledge as a relay baton, drawn on graph paper. Cool notebook
 surfaces, blue ink, and one green accent — the baton — that always means "go /
@@ -23,13 +25,20 @@ npm run preview  # serve the production build locally
 npm run smoke    # SSR-render every route and assert key content
 ```
 
+Build, lint and smoke also run on every push and pull request in GitHub Actions
+([`.github/workflows/ci.yml`](.github/workflows/ci.yml)), so a broken route or a
+type error can't reach `main` unnoticed.
+
 ## Ship it
 
 The build is a fully static site (hash routing, `base: './'`, self-hosted fonts),
-so `dist/` deploys to any static host with zero config:
+so `dist/` deploys to any static host — but the live database needs its env vars
+set on the host (see [SUPABASE.md](SUPABASE.md)):
 
 - **Netlify** — drag `dist/` onto [app.netlify.com/drop](https://app.netlify.com/drop). Done.
-- **Vercel** — `npx vercel` from the project root (framework auto-detects Vite).
+- **Vercel** — `npx vercel` from the project root, then add `VITE_SUPABASE_URL`,
+  `VITE_SUPABASE_ANON_KEY` and `VITE_ADMIN_CODE` under **Settings → Environment
+  Variables** and redeploy.
 - **GitHub Pages** — push the repo, then either upload `dist/` to a `gh-pages`
   branch (`npx gh-pages -d dist`) or enable Pages with a Vite build action.
 
@@ -52,7 +61,17 @@ See [LAUNCH.md](LAUNCH.md) for the rest.
   your spot and exports a calendar invite (.ics or Google Calendar). Full
   sessions take a waitlist, and releasing a spot auto-promotes the first person
   waiting. Live sessions get a pulsing "live now" state. Learners request +
-  upvote topics.
+  upvote topics. A class posted as a weekly series is one series: saving a spot
+  in one week saves you for all of them (they share one room).
+
+- **1-on-1 tutoring** — a teacher can offer private lessons for $1–$20. Students
+  under 18 need a parent's email on the request, so the family is on the thread;
+  the site never holds payment details.
+
+- **Privacy & terms** — the site collects the least it can (a name, an email, an
+  age, and first-party visit analytics). The plain-language version lives at
+  `/#/privacy`. Under-13s can't sign up, and the team can remove their data on
+  request.
 - **Invite links** — "copy invite" packs an entire session into the URL
   (deflate-compressed, ~350 chars), so a link works for someone who has never
   opened Peer 2 Peer: they land on `/#/join`, see the class, and add it to their board
@@ -73,20 +92,23 @@ See [LAUNCH.md](LAUNCH.md) for the rest.
 - **Dashboard** — saved sessions, certifications, and (for tutors) live volunteer
   stats.
 - **Certificate** — a printable certificate of service generated from the tutor's
-  logged sessions.
+  logged sessions. Hours count only classes that were free and had a student the
+  teacher marked **came** — not classes someone was signed up for.
 - **Meeting links** — teachers paste a Google Meet, Zoom, Teams, Jitsi or
   Discord link, plus a meeting ID and passcode if it has them. Only students
   with a seat see them. If a free call hits its time limit, the teacher pastes
   a new link from the class card and everyone in the class sees "New link".
+  Teachers are prompted to turn on a waiting room so they can screen who joins.
   Students find it on the class card, at the top of their dashboard, and in a
   "your class is starting" pill that appears 15 minutes before.
-- **Minimum age** — set per class by the teacher; students give their age when
-  they sign in and younger ones can't save a spot.
+- **Minimum age** — sign-up is 13+ (COPPA), enforced in the schema and the sign-in box. A teacher can also set a higher minimum age per class; younger students can't save a spot.
 - **Founder console** (`/#/admin`) — a live launch checklist, application review
   (with "copy roster entry" for approved tutors), an onboarding tracker showing
   what each roster teacher still needs, site statistics, a "needs attention"
-  list, every class with who signed up, a student list (block/unblock, take
-  someone off a class), teacher management including their private login email, session publishing, and data export/import. The passcode
+  list, every class with who signed up (including attendance marking), a student
+  list (block/unblock, take someone off a class), moderation of thank-yous and
+  topic requests (remove/report), teacher management including their private
+  login email, session publishing, and data export/import. The passcode
   comes from `VITE_ADMIN_CODE` (see above).
 - **Roles** — people pick student or tutor when they sign in. Students never see
   the Teach tab; either side can switch from their dashboard.
@@ -112,7 +134,8 @@ browser, which is handy for local development. Either way pages only talk to
 
 `npm run seed-sql` regenerates `supabase/seed.sql` from the roster.
 `live-e2e.mjs` runs the database code against a local Postgres + PostgREST
-loaded with the schema (37 checks covering every role's permissions).
+loaded with the schema (checks every role's permissions and the parent-email,
+attendance and 13+ rules).
 
 ### Making it your own
 
@@ -125,9 +148,9 @@ loaded with the schema (37 checks covering every role's permissions).
   automatically, and the colour is generated from the hue, so no CSS is needed.
   Set `hasQuiz: true` only if you also add a quiz in `src/lib/quiz-data.ts`.
 
-> ⚠️ The admin passcode is client-side: it ships in the JS bundle and lives in
-> this repo, so it is a latch rather than a lock. That is survivable here because
-> every visitor gets their own `localStorage` copy of the board — unlocking the
-> console elsewhere only ever exposes that person's own data, never yours. Never
-> reuse a password from anywhere else, and add real auth before Peer 2 Peer stores
-> anything genuinely sensitive.
+> ⚠️ The admin passcode is client-side: it ships in the JS bundle, so it is a
+> latch rather than a lock. On the live site that's survivable because the data
+> itself is locked behind Supabase auth and row-level security — the console
+> also needs a signed-in email from the `admins` table. When running offline,
+> unlocking it elsewhere only ever exposes that browser's own saved board.
+> Never reuse a password from anywhere else.

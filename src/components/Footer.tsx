@@ -1,7 +1,14 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { analyticsOff, optOutOfAnalytics } from '../lib/analytics';
 import { CONTACT_EMAIL } from '../lib/config';
 
 export function Footer() {
+  // Real switch, not just wording in the privacy page: this browser stops
+  // being counted from here on.
+  const [trackingOff, setTrackingOff] = useState(false);
+  useEffect(() => setTrackingOff(analyticsOff()), []);
+
   return (
     <footer className="footer">
       <div className="container footer-inner">
@@ -34,14 +41,31 @@ export function Footer() {
           <div className="footer-col">
             <h4>Contact</h4>
             <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+            <Link to="/privacy">Privacy &amp; terms</Link>
             <Link to="/admin">Team login</Link>
-            <span style={{ fontSize: 14.5 }}>Inspired by schoolhouse.world</span>
+            <a href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Report a problem on Peer 2 Peer')}`}>Report a problem</a>
+            {trackingOff ? (
+              <span style={{ fontSize: 14.5, color: 'var(--muted)' }}>Analytics off for this browser</span>
+            ) : (
+              <button
+                className="btn-quiet"
+                style={{ fontSize: 14.5, textAlign: 'left', padding: 0 }}
+                onClick={() => {
+                  optOutOfAnalytics();
+                  setTrackingOff(true);
+                }}
+              >
+                Turn off analytics
+              </button>
+            )}
           </div>
         </div>
 
         <div className="footer-base">
           <span>© 2026 Peer 2 Peer. Run by students.</span>
-          <span>No ads. Group classes are free.</span>
+          <span>
+            No ads. Group classes are free. <Link to="/privacy" style={{ color: 'inherit', borderBottom: '1.5px dotted' }}>Privacy &amp; terms</Link>
+          </span>
         </div>
       </div>
     </footer>

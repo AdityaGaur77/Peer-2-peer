@@ -121,7 +121,8 @@ export function LinkEditor({ session, onClose }: { session: Session; onClose: ()
         </h2>
         <p className="muted" style={{ fontSize: 14.5 }}>
           If the call hit its time limit, start a new one and paste its link here. Everyone in the
-          class sees it straight away, marked as a new link.
+          class sees it straight away, marked as a new link. Same link every week? If you locked
+          someone out of the class, change it — the old one still works for them.
         </p>
       </div>
       <form className="stack" style={{ gap: 14 }} onSubmit={save}>
@@ -174,6 +175,10 @@ export function MeetingFields({
         />
         <span className="hint" style={err ? { color: 'var(--hot-deep)' } : undefined}>
           {err ?? 'Google Meet, Zoom, Teams, Jitsi or Discord. Only students in the class see it.'}
+        </span>
+        <span className="hint">
+          Turn on a waiting room in the call so you can screen who joins — the meeting link is the
+          same every week, so anyone who kept it can walk in without one.
         </span>
       </label>
       <div className="grid-2">

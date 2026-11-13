@@ -21,8 +21,9 @@ export function isFree(s: { price?: number }): boolean {
 
 /**
  * A past class adds volunteer hours when it was free and somebody actually
- * came. Without the second part, posting empty classes would add hours.
+ * came. "Came" means the teacher marked them present on the class card —
+ * signing up is not attendance.
  */
-export function countsForHours(s: { price?: number; attendees: unknown[] }): boolean {
-  return isFree(s) && s.attendees.length > 0;
+export function countsForHours(s: { price?: number; attendees: Array<{ attended?: boolean }> }): boolean {
+  return isFree(s) && s.attendees.some((a) => a.attended === true);
 }

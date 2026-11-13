@@ -52,7 +52,7 @@ try {
   const session = {
     id: 'sess_e2e', title: 'Geometry help', subject: 'math', level: 'all', description: 'x',
     tutorId: 'roster-abhiram', startISO: start, durationMin: 60, capacity: 1,
-    link: 'https://meet.google.com/aaa-bbbb-ccc', meetingId: '123 456', passcode: 'pw1', minAge: 13, price: 15,
+    link: 'https://meet.google.com/aaa-bbbb-ccc', meetingId: '123 456', passcode: 'pw1', minAge: 15, price: 15,
     attendees: [], waitlist: [], status: 'scheduled',
   };
   check('a student cannot post a class', !!(await err(remote.createSession(s, session))));
@@ -64,12 +64,12 @@ try {
   check('a group class posted with a price is still free', !pub?.price);
   check('visitors do not see the meeting link', pub?.link === '' && pub?.passcode === undefined);
 
-  for (const [c, email, name, age] of [[s, 'sam@x.com', 'Sam', 15], [k, 'kid@x.com', 'Kid', 12], [o, 'olu@x.com', 'Olu', 16]]) {
+  for (const [c, email, name, age] of [[s, 'sam@x.com', 'Sam', 15], [k, 'kid@x.com', 'Kid', 13], [o, 'olu@x.com', 'Olu', 16]]) {
     await remote.saveProfile(c, { email, name, age, role: 'student' });
   }
   check('Sam (15) saves a spot', (await err(remote.joinClass(s, 'sess_e2e', { email: 'sam@x.com', name: 'Sam', age: 15 }))) === null);
-  const kidErr = await err(remote.joinClass(k, 'sess_e2e', { email: 'kid@x.com', name: 'Kid', age: 12 }));
-  check('Kid (12) is turned away by the age limit', /ages 13/.test(kidErr ?? ''), kidErr);
+  const kidErr = await err(remote.joinClass(k, 'sess_e2e', { email: 'kid@x.com', name: 'Kid', age: 13 }));
+  check('Kid (13) is turned away by a 15+ class', /ages 15/.test(kidErr ?? ''), kidErr);
   const fullErr = await err(remote.joinClass(o, 'sess_e2e', { email: 'olu@x.com', name: 'Olu', age: 16 }));
   check('Olu gets "full" when there is no seat', /full/.test(fullErr ?? ''), fullErr);
   check('Olu joins the waitlist', (await err(remote.joinClass(o, 'sess_e2e', { email: 'olu@x.com', name: 'Olu', age: 16 }, true))) === null);
@@ -182,7 +182,9 @@ try {
   await remote.setMyTutoring(teach, 15, 'Geometry and algebra');
   const t15 = (await fetchState(anon, null)).state.tutors.find((t) => t.id === 'roster-abhiram');
   check('a teacher sets their own 1-on-1 price', t15?.tutoringPrice === 15 && t15?.tutoringNote === 'Geometry and algebra');
-  const tr = { id: 'tr_1', tutorId: 'roster-abhiram', studentEmail: 'sam@x.com', studentName: 'Peer 2 Peer Team', message: 'Help with proofs please', times: 'Mon', status: 'new', createdISO: '' };
+  const tr = { id: 'tr_1', tutorId: 'roster-abhiram', studentEmail: 'sam@x.com', studentName: 'Peer 2 Peer Team', message: 'Help with proofs please', times: 'Mon', status: 'new', createdISO: '', parentEmail: 'sams-parent@x.com' };
+  check('a 1-on-1 request from an under-18 without a parent email is refused',
+    /parent email/i.test((await err(remote.requestTutoring(s, { ...tr, id: 'tr_0', parentEmail: '' }))) ?? ''));
   check('a student can ask for 1-on-1', (await err(remote.requestTutoring(s, tr))) === null);
   check('nobody can ask as someone else', !!(await err(remote.requestTutoring(o, { ...tr, id: 'tr_2' }))));
   check('cannot ask a teacher who offers no 1-on-1',
@@ -201,6 +203,18 @@ try {
   check('a teacher cannot ask themselves', !!(await err(remote.requestTutoring(teach, { ...tr, id: 'tr_6', studentEmail: 'abhiram@x.com' }))));
   check('the teacher can mark it finished', (await err(remote.setTutoringStatus(teach, 'tr_1', 'done'))) === null);
   check('a finished request cannot go back to new', !!(await err(remote.setTutoringStatus(teach, 'tr_1', 'new'))));
+
+  // ── attendance: hours come from who came, not who signed up ──
+  check('a student cannot mark attendance', !!(await err(remote.markAttendance(s, 'sess_e2e', 'olu@x.com', true))));
+  await remote.markAttendance(teach, 'sess_e2e', 'olu@x.com', true);
+  st = await fetchState(boss, 'boss@x.com');
+  check('the teacher marks who came', st.state.sessions.find((x) => x.id === 'sess_e2e')?.attendees.some((a) => a.email === 'olu@x.com' && a.attended));
+
+  // ── teachers editing their own card ──
+  await remote.setMyProfile(teach, 'Geometry, gently', '10th grade', 'Tues 6-8pm');
+  const card = (await fetchState(anon, null)).state.tutors.find((t) => t.id === 'roster-abhiram');
+  check('a teacher edits their own card', card?.tagline === 'Geometry, gently' && card?.availability === 'Tues 6-8pm');
+  check('a student cannot edit a teacher card', !!(await err(remote.setMyProfile(s, 'x', 'y', 'z'))));
 
   const ev = { visitor_id: 'visitor-12345', session_id: 'session-12345', kind: 'pageview', path: '/' };
   check('a visitor can record a page view', !(await anon.from('events').insert(ev)).error);

@@ -27,9 +27,9 @@ interface RoomRow {
   session_id: string; link: string; meeting_id: string | null; passcode: string | null;
   updated_at: string | null;
 }
-interface SignupRow { session_id: string; email: string; name: string; waitlist: boolean; created_at: string }
+interface SignupRow { session_id: string; email: string; name: string; waitlist: boolean; attended: boolean; created_at: string }
 interface CountRow {
-  session_id: string; going: number; waiting: number;
+  session_id: string; going: number; waiting: number; attended: number;
   my_status: 'going' | 'waiting' | null; my_wait_pos: number | null;
 }
 interface AppRow {
@@ -131,15 +131,28 @@ export async function fetchState(sb: SupabaseClient, myEmail: string | null): Pr
     let attendees: Attendee[];
     let waitlist: Attendee[];
     if (seesAll) {
-      attendees = rows.filter((r) => !r.waitlist).map(({ name, email }) => ({ name, email }));
-      waitlist = rows.filter((r) => r.waitlist).map(({ name, email }) => ({ name, email }));
+      attendees = rows
+        .filter((r) => !r.waitlist)
+        .map(({ name, email, attended }) => ({ name, email, attended }));
+      waitlist = rows
+        .filter((r) => r.waitlist)
+        .map(({ name, email, attended }) => ({ name, email, attended }));
     } else {
-      // A student only sees their own row, plus the counts.
-      const me = myEmail ? { name: '', email: myEmail } : null;
-      attendees = hidden(s.id, 'g', (c?.going ?? 0) - (c?.my_status === 'going' ? 1 : 0));
-      if (me && c?.my_status === 'going') attendees.push(me);
+      // A student only sees their own row, plus the counts. Placeholders carry
+      // the public "came" count so volunteer hours are not 0 for everyone
+      // outside the class (the count is public, the names are not).
+      const myRow = myEmail ? rows.find((r) => r.email === myEmail) : undefined;
+      const myAttended = myRow?.attended === true;
+      const others = Math.max(0, (c?.going ?? 0) - (c?.my_status === 'going' ? 1 : 0));
+      const othersAttended = Math.max(0, (c?.attended ?? 0) - (myAttended ? 1 : 0));
+      attendees = hidden(s.id, 'g', others).map((a, i) => ({ ...a, attended: i < othersAttended }));
+      if (myEmail && c?.my_status === 'going') {
+        attendees.push({ name: '', email: myEmail, attended: myAttended });
+      }
       waitlist = hidden(s.id, 'w', (c?.waiting ?? 0) - (c?.my_status === 'waiting' ? 1 : 0));
-      if (me && c?.my_status === 'waiting') waitlist.splice((c.my_wait_pos ?? 1) - 1, 0, me);
+      if (myEmail && c?.my_status === 'waiting') {
+        waitlist.splice((c.my_wait_pos ?? 1) - 1, 0, { name: '', email: myEmail });
+      }
     }
     return {
       id: s.id,
@@ -231,7 +244,7 @@ export async function fetchState(sb: SupabaseClient, myEmail: string | null): Pr
     tutoringRequests: (
       must(tutoring) as Array<{
         id: string; tutor_id: string; student_email: string; student_name: string; message: string;
-        times: string; status: TutoringRequest['status']; created_at: string;
+        times: string; parent_email: string | null; status: TutoringRequest['status']; created_at: string;
       }>
     ).map((r): TutoringRequest => ({
       id: r.id,
@@ -240,6 +253,7 @@ export async function fetchState(sb: SupabaseClient, myEmail: string | null): Pr
       studentName: r.student_name,
       message: r.message,
       times: r.times,
+      parentEmail: r.parent_email ?? undefined,
       status: r.status,
       createdISO: r.created_at,
     })),
@@ -450,8 +464,23 @@ export const remote = {
         student_name: r.studentName,
         message: r.message,
         times: r.times,
+        parent_email: r.parentEmail?.trim().toLowerCase() || null,
       }),
     ),
+
+  /** A teacher (or admin) marking whether a student actually came, for volunteer hours. */
+  markAttendance: (sb: SupabaseClient, sessionId: string, email: string, attended: boolean) =>
+    ok(sb.rpc('set_attendance', { sid: sessionId, s_email: email, a: attended })),
+
+  deleteKudos: (sb: SupabaseClient, id: string) =>
+    ok(sb.from('kudos').delete().eq('id', id)),
+
+  deleteRequest: (sb: SupabaseClient, id: string) =>
+    ok(sb.from('requests').delete().eq('id', id)),
+
+  /** A teacher editing their own card: tagline, grade and availability. */
+  setMyProfile: (sb: SupabaseClient, tagline: string, grade: string, availability: string) =>
+    ok(sb.rpc('set_my_profile', { t: tagline, g: grade, a: availability })),
 
   setTutoringStatus: (sb: SupabaseClient, id: string, status: TutoringRequest['status']) =>
     ok(sb.from('tutoring_requests').update({ status }).eq('id', id)),

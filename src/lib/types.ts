@@ -141,6 +141,8 @@ export interface Tutor {
 export interface Attendee {
   name: string;
   email: string;
+  /** Set by the class's teacher (or an admin) once the class has happened. */
+  attended?: boolean;
 }
 
 export interface Session {
@@ -230,6 +232,12 @@ export interface TutoringRequest {
   studentName: string;
   message: string;
   times: string;
+  /**
+   * A parent or guardian's email. Required for 1-on-1 requests from students
+   * under 18: the teacher emails privately and payment happens off the site,
+   * so an adult has to be on the thread.
+   */
+  parentEmail?: string;
   status: TutoringStatus;
   createdISO: string;
 }

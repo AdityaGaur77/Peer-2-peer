@@ -38,11 +38,34 @@ Takes about 20 minutes. Do it from the project email account.
    To check who is an admin: `select * from admins;`
    To remove one: `delete from admins where email = 'someone@gmail.com';`
 
-Both files are safe to run again later. **Whenever an update changes
+Both files are safe to run again later — every table, constraint, policy and
+trigger is dropped-and-recreated or created-if-missing, so a second run is a
+no-op rather than an error. **Whenever an update changes
 `schema.sql`, run it again, but only after Vercel has finished deploying
 that update.** The database rules and the website change together; new rules
 with the old website can stop pages loading. So: merge the PR, wait for the
 deploy to show "Ready", then run `schema.sql`.
+
+The current `schema.sql` adds, on top of the original tables:
+
+- **Attendance** (`signups.attended`) — teachers mark who actually came from
+  the class card; hours and certificates only count those students. The public
+  seat-count function returns an `attended` count too, so hours show correctly
+  on the home page and teacher cards without exposing names.
+- **13+ only** — profiles and class minimum ages now enforce 13+. Existing
+  rows are untouched (`not valid`); see the bottom of the file if you have
+  under-13 profiles to remove.
+- **Parent email for 1-on-1** (`tutoring_requests.parent_email`) — required
+  by the guard trigger for students under 18.
+- **Blank meeting links** — a class can be posted before its link exists
+  (`session_rooms.link` may be `''`); the console flags it until the teacher
+  pastes a real one.
+- **First names on thank-yous** — the public kudos table stores only a first
+  name. Older rows may still hold a full name; the bottom of the file has a
+  cleanup line if you want them trimmed.
+- **A tighter analytics ceiling** — 1,000 events per 10 minutes instead of
+  5,000.
+- **`set_my_profile` / `set_attendance`** — the teacher self-service functions.
 
 ## 3. Set up sign-in
 
@@ -152,19 +175,43 @@ That means Supabase couldn't hand the email to Gmail. Check, in order:
 To check sign-in itself works while you sort out email, turn **custom SMTP
 off** for a moment: Supabase's own sender works for a few emails an hour.
 
+## Optional: “Sign in with Google”
+
+School accounts often block outside mail, which is why school addresses are a
+jittery way to deliver codes. If enough students hit that, add Google as a
+provider and the whole code flow goes away:
+
+1. Google Cloud Console → **APIs & Services → Credentials → Create OAuth client ID**
+   (Web application). Add Supabase's callback URL from
+   **Authentication → Providers → Google** (it looks like
+   `https://<project>.supabase.co/auth/v1/callback`) as an Authorized redirect URI.
+2. Paste the client ID and secret into **Authentication → Providers → Google**,
+   turn it on.
+3. Site code: add a "Continue with Google" button next to the email field in
+   `src/components/SignInModal.tsx` that calls
+   `supabase.auth.signInWithOAuth({ provider: 'google' })`. The existing
+   first-time "welcome" step (name, age, role) still runs afterwards, and all
+   the database rules stay as they are — a Google email is just an email.
+
+This is optional and deliberately not wired up until you turn the provider on;
+a button that errors helps nobody.
+
 ## Analytics
 
 Visits are recorded in the `events` table and shown in the console's
-**Analytics** tab. To keep the table small, delete old rows now and then in
-the SQL Editor:
+**Analytics** tab. The database caps analytics writes (max 50 rows per request
+and 1,000 events per 10 minutes), but the table still grows forever unless you
+trim it. Run this in the SQL Editor now and then — every month is fine:
 
 ```sql
-delete from events where at < now() - interval '180 days';
+delete from events where at < now() - interval '30 days';
 ```
 
 Visitors who aren't signed in are anonymous (a random id per browser). Once
 someone signs in, their visits from that browser show their email, so mention
-that in your privacy note.
+that in your privacy note. Events from before someone signed in keep belonging
+to whoever was signed in then. The full data policy is in the site's
+**Privacy & terms** page (`/#/privacy`).
 
 ## Things to know
 

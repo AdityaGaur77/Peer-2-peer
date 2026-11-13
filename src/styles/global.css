@@ -2805,6 +2805,8 @@ details.faq .faq-a {
   padding: 10px 10px 10px 0;
   border-bottom: 1.5px dashed var(--border);
   vertical-align: top;
+  /* the wrapper scrolls sideways on phones — never let names wrap one letter per line */
+  white-space: nowrap;
 }
 
 .row-blocked td {
@@ -2846,7 +2848,7 @@ details.faq .faq-a {
 /* long words and pasted links wrap instead of widening the page */
 .ticket-title, .ticket-desc, .ticket-body, .flyer-title, .flyer-desc, .flyer-link,
 .class-card h3, .class-card p, .tutor-course-sum, .tutor-tagline, .meet-updated,
-.roster li, .admin-table td {
+.roster li {
   overflow-wrap: anywhere;
   min-width: 0;
 }

@@ -261,6 +261,9 @@ function session(path: string): SessionInfo {
 function ignored(path: string): boolean {
   try {
     if (path.startsWith('/admin')) return true;
+    // respect the browser-level signals people actually use
+    const nav = navigator as Navigator & { globalPrivacyControl?: boolean };
+    if (nav.doNotTrack === '1' || nav.globalPrivacyControl === true) return true;
     // automated test runs can opt back in with localStorage p2p.testtrack = 1
     const testing = store('local')?.getItem('p2p.testtrack') === '1';
     if (!testing && navigator.webdriver) return true;
@@ -278,6 +281,26 @@ export function excludeThisBrowser() {
     store('local')?.setItem(OPT_OUT, '1');
   } catch {
     /* nothing to do */
+  }
+}
+
+/**
+ * The footer switch: stop recording this browser's visits. Nothing already
+ * sent is recalled, but nothing new is queued either.
+ */
+export function optOutOfAnalytics() {
+  excludeThisBrowser();
+  queue = [];
+  window.clearTimeout(timer);
+  timer = undefined;
+}
+
+/** True when this browser has asked not to be counted. */
+export function analyticsOff(): boolean {
+  try {
+    return store('local')?.getItem(OPT_OUT) === '1';
+  } catch {
+    return false;
   }
 }
 

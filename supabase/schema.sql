@@ -18,11 +18,18 @@ create table if not exists public.admins (
 create table if not exists public.profiles (
   email       text primary key check (email = lower(email)),
   name        text not null check (char_length(name) between 1 and 80),
-  age         int check (age between 5 and 120),
+  age         int check (age between 13 and 120),
   role        text not null default 'student' check (role in ('student', 'tutor')),
   blocked     boolean not null default false,
   created_at  timestamptz not null default now()
 );
+
+-- Existing databases still have the old 5..120 check: drop it and apply the
+-- 13+ floor to new and changed rows (rows already stored are left alone).
+alter table public.profiles drop constraint if exists profiles_age_check;
+alter table public.profiles drop constraint if exists profiles_age_min13;
+alter table public.profiles add constraint profiles_age_min13
+  check (age is null or age between 13 and 120) not valid;
 
 create table if not exists public.tutors (
   id            text primary key,
@@ -58,6 +65,8 @@ create table if not exists public.tutoring_requests (
   student_name   text not null check (char_length(student_name) between 1 and 80),
   message        text not null default '' check (char_length(message) <= 1000),
   times          text not null default '' check (char_length(times) <= 200),
+  -- a parent or guardian's email; required under 18 (checked in the trigger)
+  parent_email   text,
   status         text not null default 'new' check (status in ('new', 'accepted', 'declined', 'done')),
   created_at     timestamptz not null default now()
 );
@@ -67,6 +76,11 @@ create table if not exists public.tutor_emails (
   tutor_id  text primary key references public.tutors (id) on delete cascade,
   email     text not null unique check (email = lower(email))
 );
+
+-- A parent or guardian's email, required for 1-on-1 requests from students
+-- under 18 (checked in the guard trigger). The teacher emails the family
+-- directly, so an adult has to be on the thread.
+alter table public.tutoring_requests add column if not exists parent_email text;
 
 create table if not exists public.sessions (
   id            text primary key,
@@ -78,12 +92,17 @@ create table if not exists public.sessions (
   start_at      timestamptz not null,
   duration_min  int not null check (duration_min between 10 and 300),
   capacity      int not null check (capacity between 1 and 500),
-  min_age       int not null default 13 check (min_age between 5 and 25),
+  min_age       int not null default 13 check (min_age between 13 and 25),
   -- dollars per student; 0 = free. The site shows it, it doesn't take payment.
   price         int not null default 0 check (price between 0 and 19),
   status        text not null default 'scheduled' check (status in ('scheduled', 'canceled')),
   created_at    timestamptz not null default now()
 );
+
+alter table public.sessions drop constraint if exists sessions_min_age_check;
+alter table public.sessions drop constraint if exists sessions_min_age_13;
+alter table public.sessions add constraint sessions_min_age_13
+  check (min_age between 13 and 25) not valid;
 
 alter table public.sessions add column if not exists price int not null default 0
   check (price between 0 and 19);
@@ -92,20 +111,31 @@ alter table public.sessions add column if not exists price int not null default 
 -- (plus the teacher and admins) can read them.
 create table if not exists public.session_rooms (
   session_id  text primary key references public.sessions (id) on delete cascade,
-  link        text not null check (link ~* '^https://'),
+  -- '' means the teacher hasn't pasted a link yet; the class is still posted
+  link        text not null check (link = '' or link ~* '^https://'),
   meeting_id  text,
   passcode    text,
   updated_at  timestamptz            -- null until the teacher changes the link
 );
+
+-- Databases created before blank links were allowed have the strict version.
+alter table public.session_rooms drop constraint if exists session_rooms_link_check;
+alter table public.session_rooms add constraint session_rooms_link_check
+  check (link = '' or link ~* '^https://') not valid;
 
 create table if not exists public.signups (
   session_id  text not null references public.sessions (id) on delete cascade,
   email       text not null check (email = lower(email)),
   name        text not null,
   waitlist    boolean not null default false,
+  -- ticked by the teacher (or an admin) after the class happens; volunteer
+  -- hours only count students who were actually there
+  attended    boolean not null default false,
   created_at  timestamptz not null default now(),
   primary key (session_id, email)
 );
+
+alter table public.signups add column if not exists attended boolean not null default false;
 
 create table if not exists public.applications (
   id              text primary key,
@@ -216,11 +246,13 @@ $$;
 -- Seat counts for everyone, plus where the caller stands, without
 -- exposing anyone else's name or email.
 create or replace function public.session_counts()
-returns table (session_id text, going int, waiting int, my_status text, my_wait_pos int)
+returns table (session_id text, going int, waiting int, attended int, my_status text, my_wait_pos int)
 language sql stable security definer set search_path = public as $$
   select s.id,
     (select count(*) from signups g where g.session_id = s.id and not g.waitlist)::int,
     (select count(*) from signups w where w.session_id = s.id and w.waitlist)::int,
+    -- how many of them the teacher marked as came (volunteer hours, shown publicly)
+    (select count(*) from signups a where a.session_id = s.id and not a.waitlist and a.attended)::int,
     (select case when m.waitlist then 'waiting' else 'going' end
        from signups m where m.session_id = s.id and m.email = my_email()),
     (select r.pos::int from (
@@ -237,6 +269,17 @@ language sql security definer set search_path = public as $$
    where id = rid and my_email() <> '' and not_blocked() and not (my_email() = any (voted_by))
 $$;
 
+-- A teacher (or an admin) marking whether a student actually came to a class.
+-- Only flips the attended flag; nobody's name or seat changes.
+create or replace function public.set_attendance(sid text, s_email text, a boolean) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not (is_admin() or teaches(sid)) then
+    raise exception 'Only the teacher running the class, or the team, can mark attendance.';
+  end if;
+  update signups set attended = a where session_id = sid and email = lower(s_email);
+end $$;
+
 -- ── rules on signups ─────────────────────────────────────────
 
 create or replace function public.check_signup() returns trigger
@@ -246,6 +289,8 @@ declare
   p profiles%rowtype;
   taken int;
 begin
+  -- attendance is set by the teacher afterwards, never by the person signing up
+  new.attended := false;
   -- Checked first, so the messages below never reveal anything about
   -- someone else's account (their age, or whether they're blocked).
   if not is_admin() and new.email <> my_email() then
@@ -351,7 +396,7 @@ create trigger room_stamp before insert or update on public.session_rooms
 -- changed rows without failing on anything already saved.
 alter table public.session_rooms drop constraint if exists session_rooms_provider;
 alter table public.session_rooms add constraint session_rooms_provider check (
-  link ~* '^https://(meet\.google\.com|([a-z0-9-]+\.)?zoom\.(us|com)|teams\.(microsoft|live)\.com|meet\.jit\.si|discord\.(gg|com))(/|$)'
+  link = '' or link ~* '^https://(meet\.google\.com|([a-z0-9-]+\.)?zoom\.(us|com)|teams\.(microsoft|live)\.com|meet\.jit\.si|discord\.(gg|com))(/|$)'
 ) not valid;
 
 -- ── rules on classes for teachers ────────────────────────────
@@ -423,7 +468,9 @@ begin
   end if;
   perform pg_advisory_xact_lock(hashtext(tg_table_name || ':' || my_email()));
   if tg_table_name = 'kudos' then
-    if (select count(*) from kudos where from_name = who and at > now() - interval '1 day') >= 10 then
+    -- first name only: the kudos table is public, and most of us are minors
+    if (select count(*) from kudos where from_name = split_part(who, ' ', 1)
+         and at > now() - interval '1 day') >= 10 then
       raise exception 'That''s a lot of thank-yous for one day. Try again tomorrow.';
     end if;
   elsif (select count(*) from requests where by_name = who and at > now() - interval '1 day') >= 10 then
@@ -431,7 +478,7 @@ begin
   end if;
   new.at := now();
   if tg_table_name = 'kudos' then
-    new.from_name := coalesce(who, new.from_name);
+    new.from_name := coalesce(split_part(who, ' ', 1), new.from_name);
   else
     new.by_name := coalesce(who, new.by_name);
   end if;
@@ -471,6 +518,21 @@ begin
    where id = my_tutor_id();
 end $$;
 
+-- A teacher editing their own card: tagline, grade and availability.
+-- Everything else (name, subjects, active) stays with the team.
+create or replace function public.set_my_profile(t text, g text, a text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if my_tutor_id() is null then
+    raise exception 'Only teachers can edit a teacher card.';
+  end if;
+  update tutors
+     set tagline = left(btrim(coalesce(t, '')), 140),
+         grade = left(btrim(coalesce(g, '')), 40),
+         availability = nullif(left(btrim(coalesce(a, '')), 80), '')
+   where id = my_tutor_id();
+end $$;
+
 -- On a 1-on-1 request, a teacher may only change its status; the student's
 -- details stay as they sent them. New requests always start as 'new'.
 create or replace function public.guard_tutoring_request() returns trigger
@@ -485,6 +547,13 @@ begin
     select name into new.student_name from profiles where email = my_email();
     if not found then
       raise exception 'Finish your profile first.';
+    end if;
+    -- anyone under 18 needs a parent on the request: the teacher emails privately
+    if coalesce((select age from profiles where email = my_email()), 0) < 18 then
+      if new.parent_email is null or new.parent_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then
+        raise exception 'A parent email is required for students under 18.';
+      end if;
+      new.parent_email := lower(new.parent_email);
     end if;
     perform pg_advisory_xact_lock(hashtext('tutreq:' || new.student_email));
     if not exists (select 1 from tutors where id = new.tutor_id and tutoring_price is not null and active) then
@@ -508,6 +577,7 @@ begin
   new.student_name := old.student_name;
   new.message := old.message;
   new.times := old.times;
+  new.parent_email := old.parent_email;
   new.created_at := old.created_at;
   -- requests only move forward: new → accepted/declined, accepted → done/declined
   if new.status is distinct from old.status and not (
@@ -561,13 +631,15 @@ create trigger profile_block after update of blocked on public.profiles
 -- Analytics can't be used to fill the database: at most 50 events per
 -- request, and a ceiling on how many arrive in ten minutes. Hitting the
 -- ceiling only loses analytics for a while, never the rest of the site.
+-- Empty the table now and then (see SUPABASE.md): Supabase's free tier
+-- gives 500 MB and nobody wants to spend it on analytics.
 create or replace function public.cap_events() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
   if (select count(*) from new_rows) > 50 then
     raise exception 'Too many events at once.';
   end if;
-  if (select count(*) from events where at > now() - interval '10 minutes') > 5000 then
+  if (select count(*) from events where at > now() - interval '10 minutes') > 1000 then
     raise exception 'Analytics is busy.';
   end if;
   return null;
@@ -623,81 +695,122 @@ begin
   end loop;
 end $$;
 
+drop policy if exists admins_self on public.admins;
 create policy admins_self on public.admins for select using (email = my_email() or is_admin());
 
+drop policy if exists profiles_read on public.profiles;
 create policy profiles_read  on public.profiles for select using (email = my_email() or is_admin());
+drop policy if exists profiles_new on public.profiles;
 create policy profiles_new   on public.profiles for insert
   with check (my_email() <> '' and email = my_email());
+drop policy if exists profiles_edit on public.profiles;
 create policy profiles_edit  on public.profiles for update
   using (email = my_email() or is_admin())
   with check (email = my_email() or is_admin());
+drop policy if exists profiles_admin on public.profiles;
 create policy profiles_admin on public.profiles for delete using (is_admin());
 
+drop policy if exists tutors_read on public.tutors;
 create policy tutors_read  on public.tutors for select using (true);
+drop policy if exists tutors_admin on public.tutors;
 create policy tutors_admin on public.tutors for all using (is_admin()) with check (is_admin());
 
+drop policy if exists temail_read on public.tutor_emails;
 create policy temail_read  on public.tutor_emails for select using (is_admin() or email = my_email());
+drop policy if exists temail_admin on public.tutor_emails;
 create policy temail_admin on public.tutor_emails for all using (is_admin()) with check (is_admin());
 
+drop policy if exists sessions_read on public.sessions;
 create policy sessions_read on public.sessions for select using (true);
+drop policy if exists sessions_new on public.sessions;
 create policy sessions_new on public.sessions for insert
   with check (is_admin() or tutor_id = my_tutor_id());
+drop policy if exists sessions_edit on public.sessions;
 create policy sessions_edit on public.sessions for update
   using (is_admin() or tutor_id = my_tutor_id())
   with check (is_admin() or tutor_id = my_tutor_id());
 -- teachers cancel instead; deleting would erase signups and hours
+drop policy if exists sessions_delete on public.sessions;
 create policy sessions_delete on public.sessions for delete using (is_admin());
 
+drop policy if exists rooms_read on public.session_rooms;
 create policy rooms_read on public.session_rooms for select
   using (is_admin() or teaches(session_id) or in_class(session_id));
+drop policy if exists rooms_add on public.session_rooms;
 create policy rooms_add  on public.session_rooms for insert with check (is_admin() or teaches(session_id));
+drop policy if exists rooms_edit on public.session_rooms;
 create policy rooms_edit on public.session_rooms for update
   using (is_admin() or teaches(session_id)) with check (is_admin() or teaches(session_id));
 -- deleting and re-adding would hide the "new link" notice from students
+drop policy if exists rooms_del on public.session_rooms;
 create policy rooms_del  on public.session_rooms for delete using (is_admin());
 
+drop policy if exists signups_read on public.signups;
 create policy signups_read on public.signups for select
   using (email = my_email() or is_admin() or teaches(session_id));
+drop policy if exists signups_join on public.signups;
 create policy signups_join on public.signups for insert
   with check ((my_email() <> '' and email = my_email()) or is_admin());
+drop policy if exists signups_leave on public.signups;
 create policy signups_leave on public.signups for delete
   using (email = my_email() or is_admin() or teaches(session_id));
+drop policy if exists signups_admin on public.signups;
 create policy signups_admin on public.signups for update using (is_admin()) with check (is_admin());
 
+drop policy if exists apps_read on public.applications;
 create policy apps_read  on public.applications for select using (email = my_email() or is_admin());
+drop policy if exists apps_new on public.applications;
 create policy apps_new   on public.applications for insert
   with check (my_email() <> '' and email = my_email() and status = 'pending' and not_blocked());
+drop policy if exists apps_mine on public.applications;
 create policy apps_mine  on public.applications for update
   using (email = my_email() and status = 'pending')
   with check (email = my_email() and status = 'pending');
+drop policy if exists apps_admin on public.applications;
 create policy apps_admin on public.applications for all using (is_admin()) with check (is_admin());
 
+drop policy if exists certs_read on public.certifications;
 create policy certs_read  on public.certifications for select using (email = my_email() or is_admin());
+drop policy if exists certs_write on public.certifications;
 create policy certs_write on public.certifications for insert
   with check (my_email() <> '' and email = my_email() and not_blocked());
+drop policy if exists certs_redo on public.certifications;
 create policy certs_redo  on public.certifications for update
   using (email = my_email()) with check (email = my_email() and not_blocked());
 
+drop policy if exists kudos_read on public.kudos;
 create policy kudos_read  on public.kudos for select using (true);
+drop policy if exists kudos_new on public.kudos;
 create policy kudos_new   on public.kudos for insert with check (my_email() <> '' and not_blocked());
+drop policy if exists kudos_admin on public.kudos;
 create policy kudos_admin on public.kudos for delete using (is_admin());
 
+drop policy if exists req_read on public.requests;
 create policy req_read  on public.requests for select using (true);
+drop policy if exists req_new on public.requests;
 create policy req_new   on public.requests for insert
   with check (my_email() <> '' and not_blocked() and votes = 1 and voted_by = array[my_email()]);
+drop policy if exists req_admin on public.requests;
 create policy req_admin on public.requests for all using (is_admin()) with check (is_admin());
 
+drop policy if exists tutreq_read on public.tutoring_requests;
 create policy tutreq_read on public.tutoring_requests for select
   using (student_email = my_email() or tutor_id = my_tutor_id() or is_admin());
+drop policy if exists tutreq_new on public.tutoring_requests;
 create policy tutreq_new on public.tutoring_requests for insert
   with check (my_email() <> '' and student_email = my_email() and not_blocked());
+drop policy if exists tutreq_status on public.tutoring_requests;
 create policy tutreq_status on public.tutoring_requests for update
   using (tutor_id = my_tutor_id() or is_admin())
   with check (tutor_id = my_tutor_id() or is_admin());
+drop policy if exists tutreq_admin on public.tutoring_requests;
 create policy tutreq_admin on public.tutoring_requests for delete using (is_admin());
 
+drop policy if exists events_add on public.events;
 create policy events_add  on public.events for insert with check (true);
+drop policy if exists events_read on public.events;
 create policy events_read on public.events for select using (is_admin());
+drop policy if exists events_drop on public.events;
 create policy events_drop on public.events for delete using (is_admin());
 
 grant usage on schema public to anon, authenticated;
@@ -737,3 +850,14 @@ update public.tutors set grade = '10th grade'
    and grade <> '10th grade';
 update public.tutors set tagline = ''
  where tagline = 'Started this after charging for tutoring stopped feeling right.';
+
+-- ── under-13 accounts ─────────────────────────────────────────
+-- Sign-up is 13+ (COPPA). Profiles already stored with an age under 13
+-- stay until you choose to remove them — if you want them gone:
+--   delete from signups where email in (select email from profiles where age < 13);
+--   delete from profiles where age < 13;
+
+-- ── thank-yous saved before first-name-only ───────────────────
+-- New thank-yous store a first name. To trim the ones saved before that:
+--   update public.kudos set from_name = split_part(from_name, ' ', 1)
+--    where position(' ' in from_name) > 0;
