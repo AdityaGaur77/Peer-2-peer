@@ -141,13 +141,18 @@ export async function fetchState(sb: SupabaseClient, myEmail: string | null): Pr
       // A student only sees their own row, plus the counts. Placeholders carry
       // the public "came" count so volunteer hours are not 0 for everyone
       // outside the class (the count is public, the names are not).
-      const attended = c?.attended ?? 0;
-      const me = myEmail ? { name: '', email: myEmail } : null;
+      const myRow = myEmail ? rows.find((r) => r.email === myEmail) : undefined;
+      const myAttended = myRow?.attended === true;
       const others = Math.max(0, (c?.going ?? 0) - (c?.my_status === 'going' ? 1 : 0));
-      attendees = hidden(s.id, 'g', others).map((a, i) => ({ ...a, attended: i < attended }));
-      if (me && c?.my_status === 'going') attendees.push(me);
+      const othersAttended = Math.max(0, (c?.attended ?? 0) - (myAttended ? 1 : 0));
+      attendees = hidden(s.id, 'g', others).map((a, i) => ({ ...a, attended: i < othersAttended }));
+      if (myEmail && c?.my_status === 'going') {
+        attendees.push({ name: '', email: myEmail, attended: myAttended });
+      }
       waitlist = hidden(s.id, 'w', (c?.waiting ?? 0) - (c?.my_status === 'waiting' ? 1 : 0));
-      if (me && c?.my_status === 'waiting') waitlist.splice((c.my_wait_pos ?? 1) - 1, 0, me);
+      if (myEmail && c?.my_status === 'waiting') {
+        waitlist.splice((c.my_wait_pos ?? 1) - 1, 0, { name: '', email: myEmail });
+      }
     }
     return {
       id: s.id,
