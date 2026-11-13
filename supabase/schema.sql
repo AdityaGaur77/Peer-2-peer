@@ -851,6 +851,91 @@ update public.tutors set grade = '10th grade'
 update public.tutors set tagline = ''
  where tagline = 'Started this after charging for tutoring stopped feeling right.';
 
+-- ── error reporting ───────────────────────────────────────
+-- A first-party crash log: without it, a broken page on a student's phone
+-- is invisible. Scrubbed of anything personal in the browser before it
+-- leaves (no emails, no numbers that look like phone numbers). Anyone may
+-- add a row — a crash can happen before sign-in — only the team can read.
+create table if not exists public.errors (
+  id           bigserial primary key,
+  at           timestamptz not null default now(),
+  message      text not null check (char_length(message) between 1 and 500),
+  stack        text check (char_length(stack) <= 2000),
+  path         text check (char_length(path) <= 300),
+  ua           text check (char_length(ua) <= 300),
+  user_email   text
+);
+
+create index if not exists errors_at on public.errors (at desc);
+
+-- Stamp the caller's email when signed in, the time always — unknown
+-- crashes still say which browser and page.
+create or replace function public.stamp_error() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  new.user_email := nullif(my_email(), '');
+  new.at := now();
+  return new;
+end $$;
+
+drop trigger if exists errors_stamp on public.errors;
+create trigger errors_stamp before insert on public.errors
+  for each row execute function public.stamp_error();
+
+-- Cap it like analytics: at most 50 rows per request, 300 per 10 minutes.
+create or replace function public.cap_errors() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if (select count(*) from new_rows) > 50 then
+    raise exception 'Too many errors at once.';
+  end if;
+  if (select count(*) from errors where at > now() - interval '10 minutes') > 300 then
+    raise exception 'Error reporting is busy.';
+  end if;
+  return null;
+end $$;
+
+drop trigger if exists errors_cap on public.errors;
+create trigger errors_cap after insert on public.errors
+  referencing new table as new_rows for each statement execute function public.cap_errors();
+
+alter table public.errors enable row level security;
+
+drop policy if exists errors_add on public.errors;
+create policy errors_add on public.errors for insert
+  with check (char_length(message) between 1 and 500);
+
+drop policy if exists errors_read on public.errors;
+create policy errors_read on public.errors for select using (is_admin());
+
+-- Trim now and then (see the comment above events):
+--   delete from errors where at < now() - interval '30 days';
+
+-- ── deleting your own account ────────────────────────────
+-- The privacy page promises self-service deletion: profile, signups,
+-- applications and 1-on-1 requests go; future volunteer-hour counts go with
+-- them (they come from the signups); class history other students sat in
+-- is kept; the events table keeps anonymous statistics with your email
+-- stripped; thank-yous stay (they hold a first name and can't be matched
+-- back to you); team accounts can't delete themselves from the site.
+create or replace function public.delete_my_account() returns void
+language plpgsql security definer set search_path = public as $$
+declare me text := my_email();
+begin
+  if me is null or me = '' then
+    raise exception 'Sign in first.';
+  end if;
+  if exists (select 1 from admins where email = me) then
+    raise exception 'Team accounts can''t delete themselves here. Ask another admin.';
+  end if;
+  delete from signups where email = me;
+  delete from tutoring_requests where student_email = me;
+  delete from applications where email = me;
+  delete from certifications where email = me;
+  update events set user_email = null where user_email = me;
+  delete from profiles where email = me;
+end $$;
+
 -- ── under-13 accounts ─────────────────────────────────────────
 -- Sign-up is 13+ (COPPA). Profiles already stored with an age under 13
 -- stay until you choose to remove them — if you want them gone:

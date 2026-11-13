@@ -50,6 +50,8 @@ interface StoreValue {
   closeSignIn: () => void;
   completeSignIn: (p: Profile) => void;
   signOut: () => void;
+  /** Self-service: delete your profile and everything the site stores about you. */
+  deleteMyAccount: () => void;
   requireProfile: (fn: (p: Profile) => void) => void;
   toast: (message: string) => void;
 
@@ -355,6 +357,35 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (supabase) void supabase.auth.signOut();
     toast('Signed out.');
   }, [toast]);
+
+  /**
+   * Self-service deletion promised on the privacy page. On the live site the
+   * database removes the profile, signups, 1-on-1 requests and applications,
+   * and strips the email from analytics. Offline, it wipes this browser's
+   * copy. Team accounts can't use it from the site.
+   */
+  const deleteMyAccount = useCallback(() => {
+    if (!supabase) {
+      try {
+        localStorage.removeItem(DB_KEY);
+        localStorage.removeItem(PROFILE_KEY);
+      } catch {
+        /* storage blocked */
+      }
+      setDb(normalizeState(buildSeed()));
+      setProfile(null);
+      toast('Your account is deleted.');
+      return;
+    }
+    sync(
+      (sb) => remote.deleteMyAccount(sb),
+      () => {
+        setProfile(null);
+        if (supabase) void supabase.auth.signOut();
+        toast('Your account is deleted. Your profile and signups are gone.');
+      },
+    );
+  }, [sync, toast]);
 
   // A profile from before ages were asked has none, so it gets finished first.
   const requireProfile = useCallback(
@@ -1136,6 +1167,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       closeSignIn,
       completeSignIn,
       signOut,
+      deleteMyAccount,
       requireProfile,
       toast,
       toggleRsvp,
@@ -1178,7 +1210,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }),
     [
       db, profile, toasts, signInOpen,
-      openSignIn, closeSignIn, completeSignIn, signOut, requireProfile, toast,
+      openSignIn, closeSignIn, completeSignIn, signOut, requireProfile, toast, deleteMyAccount,
       toggleRsvp, toggleWaitlist, leaveSeries, submitApplication, receiveApplication, saveCertification, addKudos, addRequest,
       voteRequest, approveApplication, declineApplication, createSession,
       cancelSession, updateTutor, removeTutor, addTutor, importData, resetData, acceptInvite, setRole,

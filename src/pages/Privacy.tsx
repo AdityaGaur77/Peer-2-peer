@@ -105,7 +105,7 @@ export function Privacy() {
               <h2 style={h3}>Your choices</h2>
               <ul style={{ ...p, paddingLeft: 18, display: 'grid', gap: 6 }}>
                 <li><b>See or export your data</b> — email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> and we'll send it to you.</li>
-                <li><b>Delete your account</b> — same email. We'll remove your profile, signups and 1-on-1 requests. Volunteer-hour records for classes already taught are kept de-identified.</li>
+                <li><b>Delete your account</b> — there's a <b>Delete my account</b> button on your dashboard. Your profile, signups, 1-on-1 requests and applications are removed; volunteer-hour records for classes already taught are kept de-identified. Can't sign in to delete it yourself? Email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</li>
                 <li><b>Stop analytics</b> — the footer has a <b>Turn off analytics</b> switch; it stops this browser being counted from that point on. We also honour Do Not Track and Global Privacy Control, and there's no tracking cookie to clear because we don't use one.</li>
                 <li><b>Corrections</b> — ages and names can be fixed by emailing us; teachers can edit their own card from their dashboard.</li>
               </ul>

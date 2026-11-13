@@ -60,6 +60,13 @@ The current `schema.sql` adds, on top of the original tables:
 - **Blank meeting links** — a class can be posted before its link exists
   (`session_rooms.link` may be `''`); the console flags it until the teacher
   pastes a real one.
+- **Error reporting (`public.errors`)** — the site records its own crashes,
+  scrubbed of emails and phone numbers; everyone may insert, only the team
+  reads, and the console's Analytics tab shows the latest ones.
+- **Self-service deletion (`delete_my_account()`)** — the button on the
+  dashboard calls this: profile, signups, applications, 1-on-1 requests are
+  removed and the email is scrubbed from analytics. Volunteer hours for
+  classes already taught are kept de-identified.
 - **First names on thank-yous** — the public kudos table stores only a first
   name. Older rows may still hold a full name; the bottom of the file has a
   cleanup line if you want them trimmed.
@@ -199,13 +206,18 @@ a button that errors helps nobody.
 ## Analytics
 
 Visits are recorded in the `events` table and shown in the console's
-**Analytics** tab. The database caps analytics writes (max 50 rows per request
-and 1,000 events per 10 minutes), but the table still grows forever unless you
-trim it. Run this in the SQL Editor now and then — every month is fine:
+**Analytics** tab. Crashes are recorded in the `errors` table and shown in the
+same tab. Both databases cap writes (50 rows per request; 1,000/300 events per
+10 minutes respectively), but the tables still grow forever unless you trim
+them. Run this in the SQL Editor now and then — every month is fine:
 
 ```sql
 delete from events where at < now() - interval '30 days';
+delete from errors where at < now() - interval '30 days';
 ```
+
+If you'd rather not think about it, `pg_cron` can run the same statements on a
+schedule — enable the extension and create one cron job per line.
 
 Visitors who aren't signed in are anonymous (a random id per browser). Once
 someone signs in, their visits from that browser show their email, so mention

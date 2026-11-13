@@ -309,6 +309,8 @@ export function Dashboard() {
             </div>
           </Reveal>
         )}
+
+        <DeleteMyAccount />
       </div>
 
       {thanking && <KudosModal tutor={thanking} onClose={() => setThanking(null)} />}
@@ -399,5 +401,46 @@ function EditMyCard({ tutor }: { tutor: Tutor }) {
         </button>
       </div>
     </div>
+  );
+}
+
+/** The self-service deletion the privacy page promises, one honest button. */
+function DeleteMyAccount() {
+  const { deleteMyAccount } = useStore();
+  const [confirm, setConfirm] = useState(false);
+  return (
+    <Reveal delay={0.22}>
+      <div className="card card-pad" style={{ marginBottom: 24, borderStyle: 'dashed' }}>
+        <h3 className="h3" style={{ color: 'var(--hot-deep)' }}>
+          Delete my account
+        </h3>
+        <p className="muted" style={{ fontSize: 14.5, margin: '8px 0 12px' }}>
+          Removes your profile, class signups, 1-on-1 requests and applications. Volunteer-hour
+          records for classes already taught are kept — without your name behind them — and
+          anonymous visit stats are kept with your email stripped. Thank-yous stay, they show only
+          a first name. This can't be undone.
+        </p>
+        {confirm ? (
+          <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => {
+                setConfirm(false);
+                deleteMyAccount();
+              }}
+            >
+              Yes, delete everything
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setConfirm(false)}>
+              Keep my account
+            </button>
+          </div>
+        ) : (
+          <button className="btn btn-ghost btn-sm" onClick={() => setConfirm(true)}>
+            Delete my account
+          </button>
+        )}
+      </div>
+    </Reveal>
   );
 }

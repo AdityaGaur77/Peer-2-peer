@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AnalyticsEvent } from './analytics';
+import type { ErrorReport } from './report';
 import type {
   Application, Attendee, Certification, Course, Kudos, Profile, RelayState, Session,
   StudentRecord, SubjectId, TopicRequest, Tutor, TutoringRequest,
@@ -506,4 +507,32 @@ export const remote = {
 
   setBlocked: (sb: SupabaseClient, email: string, blocked: boolean) =>
     ok(sb.from('profiles').update({ blocked }).eq('email', email)),
+
+  /** Recent crashes/errors the console should show, newest first. Admins only. */
+  fetchErrors: async (sb: SupabaseClient, sinceISO: string): Promise<ErrorReport[]> => {
+    const { data, error } = await sb
+      .from('errors')
+      .select('id, at, message, stack, path, ua, user_email')
+      .gte('at', sinceISO)
+      .order('at', { ascending: false })
+      .limit(25);
+    if (error) throw new Error(error.message);
+    return (
+      (data ?? []) as Array<{
+        id: number; at: string; message: string; stack: string | null;
+        path: string | null; ua: string | null; user_email: string | null;
+      }>
+    ).map(
+      (e): ErrorReport => ({
+        message: e.message,
+        stack: e.stack ?? undefined,
+        path: e.path ?? undefined,
+        ua: e.ua ?? undefined,
+        at: e.at,
+      }),
+    );
+  },
+
+  /** A signed-in person deleting their own account everywhere it matters. */
+  deleteMyAccount: (sb: SupabaseClient) => ok(sb.rpc('delete_my_account')),
 };
