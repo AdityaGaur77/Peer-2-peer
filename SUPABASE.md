@@ -60,6 +60,9 @@ The current `schema.sql` adds, on top of the original tables:
 - **Blank meeting links** — a class can be posted before its link exists
   (`session_rooms.link` may be `''`); the console flags it until the teacher
   pastes a real one.
+- **Class materials** (`session_rooms.materials` + `set_materials()`) — one
+  https link (notes, slides) per class, readable only by the teacher, the
+  team and the people in the class. Teachers post it from the class card.
 - **Error reporting (`public.errors`)** — the site records its own crashes,
   scrubbed of emails and phone numbers; everyone may insert, only the team
   reads, and the console's Analytics tab shows the latest ones.

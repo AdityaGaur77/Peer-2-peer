@@ -58,6 +58,8 @@ interface StoreValue {
   toggleRsvp: (sessionId: string, p: Profile) => void;
   /** Drop every remaining week of a weekly series at once. */
   leaveSeries: (sessionId: string, p: Profile) => void;
+  /** A teacher (or admin) posting the notes/slides for a class they run. */
+  setMaterials: (sessionId: string, materials: string) => void;
   toggleWaitlist: (sessionId: string, p: Profile) => void;
   submitApplication: (a: Omit<Application, 'id' | 'status' | 'submittedISO'>) => void;
   receiveApplication: (
@@ -563,6 +565,39 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
     },
     [db, sync, toast],
+  );
+
+  const setMaterials = useCallback(
+    (sessionId: string, materials: string) => {
+      const session = db.sessions.find((s) => s.id === sessionId);
+      const t = session ? tutorById(db, session.tutorId) : undefined;
+      const mine =
+        !!profile &&
+        !!t &&
+        !!t.email &&
+        t.email.toLowerCase() === profile.email.toLowerCase();
+      if (!mine && !isAdmin) {
+        toast('Only the teacher running the class, or the team, can add materials.');
+        return;
+      }
+      const m = materials.trim();
+      setDb((prev) => ({
+        ...prev,
+        sessions: prev.sessions.map((s) =>
+          s.id === sessionId ? { ...s, materials: m || undefined } : s,
+        ),
+      }));
+      sync(
+        (sb) => remote.setMaterials(sb, sessionId, m),
+        () =>
+          toast(
+            m
+              ? 'Class materials posted — everyone in the class sees them.'
+              : 'Class materials cleared.',
+          ),
+      );
+    },
+    [db, profile, isAdmin, sync, toast],
   );
 
   const toggleWaitlist = useCallback(
@@ -1204,6 +1239,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       removeKudos,
       removeRequest,
       setMyProfile,
+      setMaterials,
       requestTutoring,
       setTutoringStatus,
       setTutoring,
@@ -1216,7 +1252,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       cancelSession, updateTutor, removeTutor, addTutor, importData, resetData, acceptInvite, setRole,
       live, isAdmin, reload, sendSignInCode, verifySignInCode, saveProfile, updateMeeting,
       setTutorEmail, setStudentBlocked, removeFromClass, requestTutoring, setTutoringStatus,
-      markAttendance, removeKudos, removeRequest, setMyProfile,
+      markAttendance, removeKudos, removeRequest, setMyProfile, setMaterials,
       setTutoring,
     ],
   );

@@ -90,7 +90,11 @@ sign-up is 13+ everywhere anyway).
    → tick "came" for the students who showed up. Volunteer hours and
    certificates only count students marked there — signing up alone never
    adds hours.
-8. **For 1-on-1 tutoring: a parent email.** Students under 18 have to include a
+8. **Post class materials.** Once the class is up, open it and hit
+   **Add materials** under the meeting link. Paste your Google Doc, slides,
+   Notion page or worksheet. Everyone signed up for the class sees it — it's
+   private to the class, like the link.
+9. **For 1-on-1 tutoring: a parent email.** Students under 18 have to include a
    parent's email on their request, so you email the family directly to agree a
    time and how they pay. Payment is arranged between the family and the
    teacher — never through the site — and the site stores no card details.

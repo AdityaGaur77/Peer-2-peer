@@ -17,6 +17,10 @@ All dates are when the work was committed locally in the clone.
 - **Security headers** for Vercel (`vercel.json`) and Netlify
   (`public/_headers`): `X-Content-Type-Options`, `Referrer-Policy`,
   `X-Frame-Options: DENY`, `Permissions-Policy` (no camera/mic/geo).
+- **Class materials** — teachers can paste a Google Doc / slides link on a
+  class via "Add materials" on the class card. It's private to the class
+  (like the meeting link), validated as `https://`, and cleared by the
+  teacher at any time.
 - **schema.sql is re-runnable again** — every constraint, RLS policy and
   trigger has a matching `drop … if exists`, so the "run it after each update"
   instruction in `SUPABASE.md` is now trustworthy.

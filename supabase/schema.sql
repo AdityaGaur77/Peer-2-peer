@@ -115,8 +115,16 @@ create table if not exists public.session_rooms (
   link        text not null check (link = '' or link ~* '^https://'),
   meeting_id  text,
   passcode    text,
-  updated_at  timestamptz            -- null until the teacher changes the link
+  updated_at  timestamptz,            -- null until the teacher changes the link
+  -- notes/slides the teacher shares for the class, same visibility as the link
+  materials   text check (materials is null or materials = '' or materials ~* '^https://')
 );
+
+-- Databases created before materials existed get the column added here.
+alter table public.session_rooms add column if not exists materials text;
+alter table public.session_rooms drop constraint if exists session_rooms_materials;
+alter table public.session_rooms add constraint session_rooms_materials
+  check (materials is null or materials = '' or materials ~* '^https://') not valid;
 
 -- Databases created before blank links were allowed have the strict version.
 alter table public.session_rooms drop constraint if exists session_rooms_link_check;
@@ -278,6 +286,23 @@ begin
     raise exception 'Only the teacher running the class, or the team, can mark attendance.';
   end if;
   update signups set attended = a where session_id = sid and email = lower(s_email);
+end $$;
+
+-- The teacher (or the team) sharing notes or slides for a class: one link,
+-- shown to everyone in the class, same as the meeting link. Empty clears it.
+create or replace function public.set_materials(sid text, m text) returns void
+language plpgsql security definer set search_path = public as $$
+declare url text := left(btrim(coalesce(m, '')), 300);
+begin
+  if not (is_admin() or teaches(sid)) then
+    raise exception 'Only the teacher running the class, or the team, can add class materials.';
+  end if;
+  if url <> '' and url !~* '^https://' then
+    raise exception 'Paste an https link, e.g. to your Google Doc or slides.';
+  end if;
+  insert into session_rooms (session_id, link, materials)
+  values (sid, '', nullif(url, ''))
+  on conflict (session_id) do update set materials = excluded.materials;
 end $$;
 
 -- ── rules on signups ─────────────────────────────────────────
