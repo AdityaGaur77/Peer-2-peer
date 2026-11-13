@@ -25,6 +25,10 @@ npm run preview  # serve the production build locally
 npm run smoke    # SSR-render every route and assert key content
 ```
 
+Build, lint and smoke also run on every push and pull request in GitHub Actions
+([`.github/workflows/ci.yml`](.github/workflows/ci.yml)), so a broken route or a
+type error can't reach `main` unnoticed.
+
 ## Ship it
 
 The build is a fully static site (hash routing, `base: './'`, self-hosted fonts),

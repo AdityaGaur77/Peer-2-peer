@@ -29,7 +29,7 @@ interface RoomRow {
 }
 interface SignupRow { session_id: string; email: string; name: string; waitlist: boolean; attended: boolean; created_at: string }
 interface CountRow {
-  session_id: string; going: number; waiting: number;
+  session_id: string; going: number; waiting: number; attended: number;
   my_status: 'going' | 'waiting' | null; my_wait_pos: number | null;
 }
 interface AppRow {
@@ -138,9 +138,13 @@ export async function fetchState(sb: SupabaseClient, myEmail: string | null): Pr
         .filter((r) => r.waitlist)
         .map(({ name, email, attended }) => ({ name, email, attended }));
     } else {
-      // A student only sees their own row, plus the counts.
+      // A student only sees their own row, plus the counts. Placeholders carry
+      // the public "came" count so volunteer hours are not 0 for everyone
+      // outside the class (the count is public, the names are not).
+      const attended = c?.attended ?? 0;
       const me = myEmail ? { name: '', email: myEmail } : null;
-      attendees = hidden(s.id, 'g', (c?.going ?? 0) - (c?.my_status === 'going' ? 1 : 0));
+      const others = Math.max(0, (c?.going ?? 0) - (c?.my_status === 'going' ? 1 : 0));
+      attendees = hidden(s.id, 'g', others).map((a, i) => ({ ...a, attended: i < attended }));
       if (me && c?.my_status === 'going') attendees.push(me);
       waitlist = hidden(s.id, 'w', (c?.waiting ?? 0) - (c?.my_status === 'waiting' ? 1 : 0));
       if (me && c?.my_status === 'waiting') waitlist.splice((c.my_wait_pos ?? 1) - 1, 0, me);

@@ -1,7 +1,14 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { analyticsOff, optOutOfAnalytics } from '../lib/analytics';
 import { CONTACT_EMAIL } from '../lib/config';
 
 export function Footer() {
+  // Real switch, not just wording in the privacy page: this browser stops
+  // being counted from here on.
+  const [trackingOff, setTrackingOff] = useState(false);
+  useEffect(() => setTrackingOff(analyticsOff()), []);
+
   return (
     <footer className="footer">
       <div className="container footer-inner">
@@ -37,6 +44,20 @@ export function Footer() {
             <Link to="/privacy">Privacy &amp; terms</Link>
             <Link to="/admin">Team login</Link>
             <a href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Report a problem on Peer 2 Peer')}`}>Report a problem</a>
+            {trackingOff ? (
+              <span style={{ fontSize: 14.5, color: 'var(--muted)' }}>Analytics off for this browser</span>
+            ) : (
+              <button
+                className="btn-quiet"
+                style={{ fontSize: 14.5, textAlign: 'left', padding: 0 }}
+                onClick={() => {
+                  optOutOfAnalytics();
+                  setTrackingOff(true);
+                }}
+              >
+                Turn off analytics
+              </button>
+            )}
           </div>
         </div>
 

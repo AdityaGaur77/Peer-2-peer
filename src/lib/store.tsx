@@ -54,6 +54,8 @@ interface StoreValue {
   toast: (message: string) => void;
 
   toggleRsvp: (sessionId: string, p: Profile) => void;
+  /** Drop every remaining week of a weekly series at once. */
+  leaveSeries: (sessionId: string, p: Profile) => void;
   toggleWaitlist: (sessionId: string, p: Profile) => void;
   submitApplication: (a: Omit<Application, 'id' | 'status' | 'submittedISO'>) => void;
   receiveApplication: (
@@ -394,6 +396,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 !isPastSession(s),
             )
           : [];
+      // leaving is one week at a time, so say what they're still in
+      const otherWeeks = going
+        ? db.sessions.filter(
+            (s) =>
+              s.id !== sessionId &&
+              s.tutorId === session.tutorId &&
+              s.title === session.title &&
+              s.link === session.link &&
+              s.status === 'scheduled' &&
+              !isPastSession(s) &&
+              s.attendees.some((a) => a.email === p.email),
+          ).length
+        : 0;
       const joinTargets = going
         ? [session]
         : [session, ...siblings].filter(
@@ -442,20 +457,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             },
         () => {
           if (going) {
+            const still = otherWeeks > 0
+              ? ` You're still in ${otherWeeks} more ${otherWeeks === 1 ? 'week' : 'weeks'} of this series.`
+              : '';
             toast(
               promoted?.name
-                ? `Spot released. ${promoted.name.split(' ')[0]} moves up from the waitlist.`
-                : 'Spot released.',
+                ? `Spot released. ${promoted.name.split(' ')[0]} moves up from the waitlist.${still}`
+                : `Spot released.${still}`,
             );
             return;
           }
-          const missed = new Set([...skipped.map((s) => s.id), ...seriesFailed.map((s) => s.id)]).size;
-          const weeks = joinTargets.length;
+          const total = joinTargets.length + skipped.length;
+          const got = joinTargets.length - seriesFailed.length;
           toast(
-            weeks > 1
-              ? missed > 0
-                ? `You're going — ${weeks - missed} of ${weeks} weeks of "${session.title}". The rest ${missed === 1 ? 'is' : 'are'} full.`
-                : `You're going — all ${weeks} weeks of "${session.title}".`
+            total > 1
+              ? got < total
+                ? `You're going — ${got} of ${total} weeks of "${session.title}". ${got === 1 ? 'The other week is' : 'The rest are'} full.`
+                : `You're going — all ${total} weeks of "${session.title}".`
               : `You're going: ${session.title}`,
           );
           track('rsvp', { label: session.title });
@@ -463,6 +481,57 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
     },
     [db, toast, sync],
+  );
+
+  /**
+   * One signup covers a whole weekly series, so leaving should be able to
+   * cover it too — otherwise a student who quits in week one holds a seat in
+   * every later week they never attend.
+   */
+  const leaveSeries = useCallback(
+    (sessionId: string, p: Profile) => {
+      const session = db.sessions.find((s) => s.id === sessionId);
+      if (!session) return;
+      const ids = db.sessions
+        .filter(
+          (s) =>
+            (s.id === session.id ||
+              (s.tutorId === session.tutorId &&
+                s.title === session.title &&
+                s.link === session.link)) &&
+            s.status === 'scheduled' &&
+            !isPastSession(s) &&
+            s.attendees.some((a) => a.email === p.email),
+        )
+        .map((s) => s.id);
+      if (ids.length === 0) return;
+      const inSeries = new Set(ids);
+      setDb((prev) => ({
+        ...prev,
+        sessions: prev.sessions.map((s) =>
+          inSeries.has(s.id)
+            ? { ...s, attendees: s.attendees.filter((a) => a.email !== p.email) }
+            : s,
+        ),
+      }));
+      sync(
+        async (sb) => {
+          const results = await Promise.allSettled(
+            ids.map((id) => remote.leaveClass(sb, id, p.email)),
+          );
+          if (results.every((r) => r.status === 'rejected')) {
+            throw new Error("Couldn't leave the series. Try again.");
+          }
+        },
+        () =>
+          toast(
+            ids.length > 1
+              ? `You're out of all ${ids.length} remaining weeks of "${session.title}".`
+              : 'Spot released.',
+          ),
+      );
+    },
+    [db, sync, toast],
   );
 
   const toggleWaitlist = useCallback(
@@ -1070,6 +1139,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       requireProfile,
       toast,
       toggleRsvp,
+      leaveSeries,
       toggleWaitlist,
       submitApplication,
       receiveApplication,
@@ -1109,7 +1179,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [
       db, profile, toasts, signInOpen,
       openSignIn, closeSignIn, completeSignIn, signOut, requireProfile, toast,
-      toggleRsvp, toggleWaitlist, submitApplication, receiveApplication, saveCertification, addKudos, addRequest,
+      toggleRsvp, toggleWaitlist, leaveSeries, submitApplication, receiveApplication, saveCertification, addKudos, addRequest,
       voteRequest, approveApplication, declineApplication, createSession,
       cancelSession, updateTutor, removeTutor, addTutor, importData, resetData, acceptInvite, setRole,
       live, isAdmin, reload, sendSignInCode, verifySignInCode, saveProfile, updateMeeting,

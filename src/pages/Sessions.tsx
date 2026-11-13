@@ -4,6 +4,7 @@ import { Reveal } from '../components/Reveal';
 import { SessionCard } from '../components/SessionCard';
 import { pastSessions, tutorById, upcomingSessions, useStore } from '../lib/store';
 import { SUBJECTS, subjectMeta, type Level, type Session, type SubjectId } from '../lib/types';
+import { CONTACT_EMAIL } from '../lib/config';
 import { cx } from '../lib/util';
 
 const LEVEL_FILTERS: Array<{ id: 'all' | Level; label: string }> = [
@@ -254,6 +255,14 @@ Teachers look at this list when they plan classes. Tap ▲ to vote for one.
                         <div style={{ fontSize: 14.5, fontWeight: 580 }}>{r.topic}</div>
                         <div className="small muted">
                           {r.subject === 'other' ? 'Other' : subjectMeta(r.subject).name} · asked by {r.by}
+                          {' · '}
+                          <a
+                            href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Report a topic request on Peer 2 Peer')}&body=${encodeURIComponent(`Request: ${r.topic}\nAsked by: ${r.by}`)}`}
+                            style={{ color: 'var(--ember-deep)' }}
+                            aria-label={`Report the request "${r.topic}"`}
+                          >
+                            report
+                          </a>
                         </div>
                       </div>
                       <button

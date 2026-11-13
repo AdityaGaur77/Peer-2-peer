@@ -42,7 +42,7 @@ export function Privacy() {
               <ul style={{ ...p, paddingLeft: 18, display: 'grid', gap: 6 }}>
                 <li>Sign-up asks for your name, email and age. We need the email to send you the class link, and the age because classes have minimum ages (and we're 13+ only).</li>
                 <li>We don't run ads, sell data, or share it with anyone outside the Peer 2 Peer team.</li>
-                <li>Visits to the site are counted in a private analytics table (pages you saw, clicks, device type). No IP addresses, and it's kept only for as long as it's useful.</li>
+                <li>Visits to the site — signed in or not — are counted in a private analytics table (pages you saw, clicks, device type). No IP addresses, no ad networks, and it's kept only for as long as it's useful. You can turn it off in the footer.</li>
                 <li>Under 13s can't sign up. Parents: if you'd like your under-13's data removed, email us.</li>
                 <li>You can ask us to export or delete your data any time at <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</li>
               </ul>
@@ -70,8 +70,11 @@ export function Privacy() {
                 group chat). Only the Peer 2 Peer team can read this table.
               </p>
               <p style={p}>
-                <b>If you use the app without an account</b> (no sign-in), everything stays in your
-                own browser's storage and nothing is sent anywhere.
+                <b>Without an account</b>, nothing you type is stored on our side: joining a
+                class, posting a thank-you or requesting a topic asks you to sign in first. The one
+                thing that is sent while signed out is an anonymous page view — a random browser id,
+                the page, and basic device details, with no email attached. In offline mode (no
+                database connected) even those stay in your browser.
               </p>
             </section>
 
@@ -103,7 +106,7 @@ export function Privacy() {
               <ul style={{ ...p, paddingLeft: 18, display: 'grid', gap: 6 }}>
                 <li><b>See or export your data</b> — email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> and we'll send it to you.</li>
                 <li><b>Delete your account</b> — same email. We'll remove your profile, signups and 1-on-1 requests. Volunteer-hour records for classes already taught are kept de-identified.</li>
-                <li><b>Stop analytics</b> — browser privacy modes block our storage and the events never land. There's no tracking cookie to clear because we don't use one.</li>
+                <li><b>Stop analytics</b> — the footer has a <b>Turn off analytics</b> switch; it stops this browser being counted from that point on. We also honour Do Not Track and Global Privacy Control, and there's no tracking cookie to clear because we don't use one.</li>
                 <li><b>Corrections</b> — ages and names can be fixed by emailing us; teachers can edit their own card from their dashboard.</li>
               </ul>
             </section>

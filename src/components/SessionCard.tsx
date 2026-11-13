@@ -22,7 +22,7 @@ export function SessionCard({
   /** Overrides the preview footer — an invite recipient isn't drafting. */
   previewNote?: string;
 }) {
-  const { db, profile, requireProfile, toggleRsvp, toggleWaitlist, toast, live: liveDb, isAdmin } = useStore();
+  const { db, profile, requireProfile, toggleRsvp, leaveSeries, toggleWaitlist, toast, live: liveDb, isAdmin } = useStore();
   const tutor = tutorById(db, session.tutorId);
   const past = isPastSession(session);
   const now = Date.now();
@@ -48,9 +48,26 @@ export function SessionCard({
           s.tutorId === session.tutorId &&
           s.title === session.title &&
           s.link === session.link &&
-          s.status === 'scheduled',
+          s.status === 'scheduled' &&
+          !isPastSession(s),
       ).length,
     [db.sessions, session.link, session.tutorId, session.title],
+  );
+  // weeks of this series the signed-in student actually holds a seat in
+  const myWeeks = useMemo(
+    () =>
+      profile
+        ? db.sessions.filter(
+            (s) =>
+              s.tutorId === session.tutorId &&
+              s.title === session.title &&
+              s.link === session.link &&
+              s.status === 'scheduled' &&
+              !isPastSession(s) &&
+              s.attendees.some((a) => a.email === profile.email),
+          ).length
+        : 0,
+    [db.sessions, profile, session.link, session.tutorId, session.title],
   );
 
   // An invite link carries the whole class inside the URL, so it works even
@@ -179,8 +196,17 @@ export function SessionCard({
                     className="btn-quiet"
                     onClick={() => requireProfile((p) => toggleRsvp(session.id, p))}
                   >
-                    Can't make it?
+                    {weeklyCount > 1 ? "Can't make this week?" : "Can't make it?"}
                   </button>
+                  {myWeeks > 1 && (
+                    <button
+                      className="btn-quiet"
+                      onClick={() => requireProfile((p) => leaveSeries(session.id, p))}
+                      title="Releases your seat in every remaining week of this series"
+                    >
+                      Leave all {myWeeks} weeks
+                    </button>
+                  )}
                 </>
               ) : full ? (
                 waitPos > 0 ? (
@@ -207,9 +233,15 @@ export function SessionCard({
                     className="btn btn-primary btn-sm"
                     onClick={() => requireProfile((p) => toggleRsvp(session.id, p))}
                   >
-                    Save my spot
+                    {weeklyCount > 1 ? `Save my spot for all ${weeklyCount} weeks` : 'Save my spot'}
                   </button>
-                  {!canEditLink && <span className="hint">You get the class link after you save a spot.</span>}
+                  {!canEditLink && (
+                    <span className="hint">
+                      {weeklyCount > 1
+                        ? `One signup covers every week of this series. You get the class link after you save a spot.`
+                        : 'You get the class link after you save a spot.'}
+                    </span>
+                  )}
                 </>
               )}
               <button className="btn-quiet" onClick={share} title="Copies a link to this class">

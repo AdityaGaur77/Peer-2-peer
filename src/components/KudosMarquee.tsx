@@ -1,4 +1,5 @@
 import { tutorById, useStore } from '../lib/store';
+import { CONTACT_EMAIL } from '../lib/config';
 
 export function KudosMarquee() {
   const { db } = useStore();
@@ -23,7 +24,15 @@ export function KudosMarquee() {
           “{k.message}”
         </blockquote>
         <figcaption className="kudos-meta">
-          {k.from} → {k.tutorName}
+          {k.from} → {k.tutorName}{' · '}
+          <a
+            href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Report a thank-you on Peer 2 Peer')}&body=${encodeURIComponent(`From: ${k.from}\nTo: ${k.tutorName}\nMessage: ${k.message}`)}`}
+            style={{ color: 'inherit', textDecoration: 'underline' }}
+            tabIndex={hidden ? -1 : undefined}
+            aria-label={`Report this thank-you from ${k.from}`}
+          >
+            report
+          </a>
         </figcaption>
       </figure>
     ));
