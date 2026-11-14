@@ -73,8 +73,9 @@ The current `schema.sql` adds, on top of the original tables:
 - **First names on thank-yous** — the public kudos table stores only a first
   name. Older rows may still hold a full name; the bottom of the file has a
   cleanup line if you want them trimmed.
-- **A tighter analytics ceiling** — 1,000 events per 10 minutes instead of
-  5,000.
+- **A tighter analytics ceiling** — 2,000 events per 10 minutes instead of
+  5,000 (the per-request 50-row limit is unchanged, so a runaway tab still
+  can't fill the database).
 - **`set_my_profile` / `set_attendance`** — the teacher self-service functions.
 
 ## 3. Set up sign-in
@@ -169,6 +170,28 @@ something like 100.
    a student and save a spot. It should show up under **Classes → Who signed
    up** on your computer within a few seconds.
 
+## Protect the sign-in form from abuse (CAPTCHA)
+
+As it stands, anyone can type any address into the sign-in box and your
+project's Gmail will send that address a code. A few bad actors can burn your
+SMTP quota or get Google to flag the account. hCaptcha stops this for free.
+
+1. Go to [hcaptcha.com](https://hcaptcha.com) → create a free account →
+   **Add a site**. Use your production domain (e.g. `peer-2-peer.vercel.app`),
+   plus `localhost` for local dev. Save the site key and the secret.
+2. Supabase → **Authentication → Bot protection** (some dashboard versions
+   call this "Attack Protection") → enable CAPTCHA protection → pick
+   hCaptcha → paste the **secret**.
+3. Vercel → **Settings → Environment Variables** → add
+   `VITE_HCAPTCHA_SITE_KEY` with the **site key** → **redeploy**.
+4. The sign-in box now shows a human-check before the email is sent. If you
+   forget this, the site works exactly as it does now — no hCaptcha, no
+   change in behavior.
+
+Until this is done: the default Supabase sender only sends a few emails an
+hour; a custom Gmail SMTP raises it to ~100 an hour but Google still notices
+abuse. The CAPTCHA is the cheap fix.
+
 ## If sign-in says "Error sending confirmation email"
 
 That means Supabase couldn't hand the email to Gmail. Check, in order:
@@ -210,7 +233,7 @@ a button that errors helps nobody.
 
 Visits are recorded in the `events` table and shown in the console's
 **Analytics** tab. Crashes are recorded in the `errors` table and shown in the
-same tab. Both databases cap writes (50 rows per request; 1,000/300 events per
+same tab. Both databases cap writes (50 rows per request; 2,000/300 events per
 10 minutes respectively), but the tables still grow forever unless you trim
 them. Run this in the SQL Editor now and then — every month is fine:
 

@@ -135,9 +135,10 @@ browser, which is handy for local development. Either way pages only talk to
 [`src/lib/remote.ts`](src/lib/remote.ts).
 
 `npm run seed-sql` regenerates `supabase/seed.sql` from the roster.
-`live-e2e.mjs` runs the database code against a local Postgres + PostgREST
+`live-e2e.mjs` drives the database code against a real Postgres + PostgREST
 loaded with the schema (checks every role's permissions and the parent-email,
-attendance and 13+ rules).
+attendance and 13+ rules). [scripts/local-verify/](scripts/local-verify/README.md)
+sets up that whole environment for you — no Docker, no admin rights.
 
 ### Making it your own
 

@@ -1,5 +1,6 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { captchaEnabled, captchaSiteKey, ensureHCaptcha } from '../lib/captcha';
 import { useStore } from '../lib/store';
 import type { Role } from '../lib/types';
 import { cx } from '../lib/util';
@@ -28,8 +29,33 @@ export function SignInModal() {
   const [codeSentTo, setCodeSentTo] = useState<string | null>(null);
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
+  // hCaptcha: only rendered when a site key is configured
+  const captchaRef = useRef<HTMLDivElement>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaWidget, setCaptchaWidget] = useState<number | null>(null);
+  const [captchaUnavailable, setCaptchaUnavailable] = useState(false);
 
   const finishing = !!profile && profile.age == null;
+
+  // render the hCaptcha widget once the modal's email step is on screen
+  useEffect(() => {
+    if (!captchaEnabled || !signInOpen || captchaWidget != null) return;
+    let cancelled = false;
+    void ensureHCaptcha().then((hc) => {
+      if (cancelled || !hc || !captchaRef.current) return;
+      const id = hc.render(captchaRef.current, {
+        sitekey: captchaSiteKey,
+        theme: 'light',
+        callback: (token: string) => setCaptchaToken(token),
+        'expired-callback': () => setCaptchaToken(null),
+        'error-callback': () => setCaptchaToken(null),
+      });
+      if (!cancelled) setCaptchaWidget(id);
+    }).catch(() => setCaptchaUnavailable(true));
+    return () => {
+      cancelled = true;
+    };
+  }, [signInOpen, codeSentTo, finishing, live, captchaWidget]);
 
   useEffect(() => {
     if (!signInOpen) return;
@@ -96,13 +122,24 @@ export function SignInModal() {
       setErr("That email doesn't look right.");
       return;
     }
+    if (captchaEnabled && !captchaToken) {
+      setErr(
+        captchaUnavailable
+          ? "Couldn't load the human-check. Check your connection and refresh the page."
+          : "Check the box so we know you're a person, not a script.",
+      );
+      return;
+    }
     setErr('');
     setBusy(true);
     try {
-      await sendSignInCode(em);
+      await sendSignInCode(em, captchaEnabled && !captchaUnavailable ? (captchaToken ?? undefined) : undefined);
       setCodeSentTo(em);
+      setCaptchaToken(null);
     } catch (x) {
       setErr((x as Error).message || "Couldn't send the code. Try again in a minute.");
+      setCaptchaToken(null);
+      if (captchaWidget != null) window.hcaptcha?.reset(captchaWidget);
     } finally {
       setBusy(false);
     }
@@ -296,8 +333,9 @@ export function SignInModal() {
               the code doesn't arrive, try a personal email.
             </span>
           </label>
+          {captchaEnabled && <div ref={captchaRef} style={{ minHeight: 65 }} />}
           {errLine}
-          <button className="btn btn-primary" type="submit" disabled={busy}>
+          <button className="btn btn-primary" type="submit" disabled={busy || (captchaEnabled && !captchaToken)}>
             {busy ? 'Sending…' : 'Email me a code'}
           </button>
         </form>

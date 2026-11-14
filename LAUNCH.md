@@ -9,6 +9,9 @@ live site. This file covers the rest.
       `VITE_ADMIN_CODE`. On Vercel: **Settings → Environment Variables**, add
       `VITE_ADMIN_CODE`, then **redeploy** (Vite bakes env vars in at build time).
       Without it the deployed console stays locked.
+- [ ] **Protect sign-in from abuse** (optional but recommended): add the
+      CAPTCHA key described in [SUPABASE.md](SUPABASE.md) so nobody can make
+      your Gmail send sign-in codes to addresses it doesn't own.
 - [ ] **Connect Supabase** by following [SUPABASE.md](SUPABASE.md), so classes,
       signups and meeting links are shared instead of living in one browser.
 - [ ] **Publish one class** at `/#/guide/tutor`, then hit **copy invite** on its

@@ -11,6 +11,11 @@ node_modules
 dist
 dist-ssr
 *.local
+scripts/local-verify/pgdata
+scripts/local-verify/postgrest.exe
+scripts/local-verify/postgrest
+scripts/local-verify/postgrest.conf
+scripts/local-verify/*.dll
 
 # Editor directories and files
 .vscode/*

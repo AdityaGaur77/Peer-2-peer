@@ -664,7 +664,7 @@ begin
   if (select count(*) from new_rows) > 50 then
     raise exception 'Too many events at once.';
   end if;
-  if (select count(*) from events where at > now() - interval '10 minutes') > 1000 then
+  if (select count(*) from events where at > now() - interval '10 minutes') > 2000 then
     raise exception 'Analytics is busy.';
   end if;
   return null;

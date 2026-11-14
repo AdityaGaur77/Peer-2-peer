@@ -91,7 +91,8 @@ interface StoreValue {
   isAdmin: boolean;
   refresh: () => void;
   /** Live mode: email a sign-in code. Name and age are asked after, first time only. */
-  sendSignInCode: (email: string) => Promise<void>;
+  /** Send a 6-digit code. If hCaptcha is configured, it must be solved first. */
+  sendSignInCode: (email: string, captchaToken?: string) => Promise<void>;
   verifySignInCode: (email: string, code: string) => Promise<void>;
   saveProfile: (p: Profile) => Promise<void>;
   updateMeeting: (
@@ -297,11 +298,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
   }, [reload, toast]);
 
-  const sendSignInCode = useCallback(async (email: string) => {
+  const sendSignInCode = useCallback(async (email: string, captchaToken?: string) => {
     if (!supabase) return;
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}${window.location.pathname}` },
+      options: {
+        emailRedirectTo: `${window.location.origin}${window.location.pathname}`,
+        captchaToken,
+      },
     });
     if (error) throw new Error(error.message);
   }, []);

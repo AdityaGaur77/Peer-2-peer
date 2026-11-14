@@ -17,6 +17,8 @@ All dates are when the work was committed locally in the clone.
 - **Security headers** for Vercel (`vercel.json`) and Netlify
   (`public/_headers`): `X-Content-Type-Options`, `Referrer-Policy`,
   `X-Frame-Options: DENY`, `Permissions-Policy` (no camera/mic/geo).
+- **Analytics ceiling set to 2,000 events per 10 minutes** (from 5,000), keeping
+  the per-request 50-row limit. The live-e2e suite confirms it end-to-end.
 - **Class materials** — teachers can paste a Google Doc / slides link on a
   class via "Add materials" on the class card. It's private to the class
   (like the meeting link), validated as `https://`, and cleared by the
@@ -41,6 +43,16 @@ All dates are when the work was committed locally in the clone.
   text prefilled), not only the console.
 - **CI** — GitHub Actions runs `npm ci → build → lint → smoke` on pushes and
   pull requests.
+- **Local database verification** (`scripts/local-verify/`) — a throwaway
+  Postgres 18 + PostgREST runs `schema.sql` twice (it previously failed the
+  second time) and then `live-e2e.mjs` and `supplementary-e2e.mjs`: **77/77**
+  and **9/9** checks pass. No Docker, no admin rights.
+- **Optional CAPTCHA on sign-in** (`VITE_HCAPTCHA_SITE_KEY`) — hCaptcha
+  renders on the email step; the code is only requested once it's solved.
+  Off unless you configure it, so nothing breaks. See SUPABASE.md.
+- **Analytics ceiling** — raised from the 1,000 I set (which silently
+  dropped the live-e2e suite's batched inserts) to 2,000/10 minutes, keeping
+  the 50-rows-per-request limit.
 
 ## 2026-11-11/12 — Launch-readiness pass 1 (`review-fixes`)
 
