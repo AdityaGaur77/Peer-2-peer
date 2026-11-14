@@ -163,6 +163,8 @@ export interface Session {
   passcode?: string;
   /** Set when the teacher changes the link after posting, so students notice. */
   linkUpdatedISO?: string;
+  /** The teacher's Google Doc/slides/Notion link, shown only to the class. */
+  materials?: string;
   /** Set by the teacher. Students younger than this can't save a spot. */
   minAge?: number;
   /** Dollars per student, 0 or missing = free. Capped at MAX_PRICE (lib/price.ts). */

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AnalyticsEvent } from './analytics';
+import type { ErrorReport } from './report';
 import type {
   Application, Attendee, Certification, Course, Kudos, Profile, RelayState, Session,
   StudentRecord, SubjectId, TopicRequest, Tutor, TutoringRequest,
@@ -25,7 +26,7 @@ interface SessionRow {
 }
 interface RoomRow {
   session_id: string; link: string; meeting_id: string | null; passcode: string | null;
-  updated_at: string | null;
+  updated_at: string | null; materials: string | null;
 }
 interface SignupRow { session_id: string; email: string; name: string; waitlist: boolean; attended: boolean; created_at: string }
 interface CountRow {
@@ -171,6 +172,7 @@ export async function fetchState(sb: SupabaseClient, myEmail: string | null): Pr
       waitlist,
       // only filled in for people allowed to see it
       link: room?.link ?? '',
+      materials: room?.materials || undefined,
       meetingId: room?.meeting_id ?? undefined,
       passcode: room?.passcode ?? undefined,
       linkUpdatedISO: room?.updated_at ?? undefined,
@@ -506,4 +508,36 @@ export const remote = {
 
   setBlocked: (sb: SupabaseClient, email: string, blocked: boolean) =>
     ok(sb.from('profiles').update({ blocked }).eq('email', email)),
+
+  /** Recent crashes/errors the console should show, newest first. Admins only. */
+  fetchErrors: async (sb: SupabaseClient, sinceISO: string): Promise<ErrorReport[]> => {
+    const { data, error } = await sb
+      .from('errors')
+      .select('id, at, message, stack, path, ua, user_email')
+      .gte('at', sinceISO)
+      .order('at', { ascending: false })
+      .limit(25);
+    if (error) throw new Error(error.message);
+    return (
+      (data ?? []) as Array<{
+        id: number; at: string; message: string; stack: string | null;
+        path: string | null; ua: string | null; user_email: string | null;
+      }>
+    ).map(
+      (e): ErrorReport => ({
+        message: e.message,
+        stack: e.stack ?? undefined,
+        path: e.path ?? undefined,
+        ua: e.ua ?? undefined,
+        at: e.at,
+      }),
+    );
+  },
+
+  /** A teacher (or the team) posting the notes/slides for a class. Empty clears it. */
+  setMaterials: (sb: SupabaseClient, sessionId: string, materials: string) =>
+    ok(sb.rpc('set_materials', { sid: sessionId, m: materials })),
+
+  /** A signed-in person deleting their own account everywhere it matters. */
+  deleteMyAccount: (sb: SupabaseClient) => ok(sb.rpc('delete_my_account')),
 };

@@ -9,6 +9,11 @@ import './styles/global.css';
 
 import App from './App.tsx';
 import { StoreProvider } from './lib/store.tsx';
+import { startErrorReporting } from './lib/report';
+
+// Before the first render: a crash while painting the first page is still
+// worth knowing about.
+startErrorReporting();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

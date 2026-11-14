@@ -35,19 +35,78 @@ function CopyChip({ label, value }: { label: string; value: string }) {
  * when the teacher changed the link.
  */
 export function MeetingPanel({ session, canEdit }: { session: Session; canEdit: boolean }) {
+  const { setMaterials } = useStore();
   const [editing, setEditing] = useState(false);
-  if (!session.link) {
-    if (!canEdit) return null;
-    return (
-      <div className="meet meet-fresh">
-        <div className="meet-row">
-          <span className="small">This class has no meeting link yet.</span>
-          <button className="btn btn-soft btn-sm" onClick={() => setEditing(true)}>
-            Add the meeting link
+  const [materialsEditing, setMaterialsEditing] = useState(false);
+  const [materialsValue, setMaterialsValue] = useState(session.materials ?? '');
+
+  // notes/slides for the class: one link everyone in the class sees
+  const materialsBlock = (
+    <div className="materials-row">
+      <div className="row" style={{ flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+        {session.materials && (
+          <a
+            className="btn btn-soft btn-sm"
+            href={session.materials}
+            target="_blank"
+            rel="noreferrer"
+            data-track="Open class materials"
+          >
+            Class materials
+          </a>
+        )}
+        {canEdit && !materialsEditing && (
+          <button className="btn-quiet" onClick={() => setMaterialsEditing(true)}>
+            {session.materials ? 'Change materials' : 'Add materials'}
           </button>
-        </div>
-        {editing && <LinkEditor session={session} onClose={() => setEditing(false)} />}
+        )}
       </div>
+      {canEdit && materialsEditing && (
+        <form
+          className="row"
+          style={{ gap: 8, marginTop: 8, flexWrap: 'wrap' }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            setMaterials(session.id, materialsValue);
+            setMaterialsEditing(false);
+          }}
+        >
+          <input
+            className="input"
+            type="url"
+            maxLength={300}
+            value={materialsValue}
+            onChange={(e) => setMaterialsValue(e.target.value)}
+            placeholder="https://docs.google.com/…"
+            aria-label="Class materials link"
+            style={{ flex: '1 1 220px' }}
+          />
+          <button className="btn btn-primary btn-sm" type="submit">
+            Save
+          </button>
+          <button className="btn-quiet" type="button" onClick={() => setMaterialsEditing(false)}>
+            Cancel
+          </button>
+        </form>
+      )}
+    </div>
+  );
+
+  if (!session.link) {
+    if (!canEdit) return session.materials ? materialsBlock : null;
+    return (
+      <>
+        <div className="meet meet-fresh">
+          <div className="meet-row">
+            <span className="small">This class has no meeting link yet.</span>
+            <button className="btn btn-soft btn-sm" onClick={() => setEditing(true)}>
+              Add the meeting link
+            </button>
+          </div>
+          {editing && <LinkEditor session={session} onClose={() => setEditing(false)} />}
+        </div>
+        {materialsBlock}
+      </>
     );
   }
   const state = joinWindow(session);
@@ -55,34 +114,37 @@ export function MeetingPanel({ session, canEdit }: { session: Session; canEdit: 
   const fresh = linkRecentlyUpdated(session);
 
   return (
-    <div className={cx('meet', state === 'open' && 'meet-open', fresh && 'meet-fresh')}>
-      {fresh && session.linkUpdatedISO && (
-        <div className="meet-updated" role="status">
-          <b>New link.</b> The teacher changed it {ago(session.linkUpdatedISO)}. Use this one.
-        </div>
-      )}
-      <div className="meet-row">
-        <a
-          className={cx('btn btn-sm', state === 'open' ? 'btn-primary' : 'btn-soft')}
-          href={session.link}
-          target="_blank"
-          rel="noreferrer"
-        >
-          {state === 'open' ? `Join now on ${provider} ↗` : `Join on ${provider} ↗`}
-        </a>
-        {session.meetingId && <CopyChip label="Meeting ID" value={session.meetingId} />}
-        {session.passcode && <CopyChip label="Passcode" value={session.passcode} />}
-        {canEdit && (
-          <button className="btn-quiet" onClick={() => setEditing(true)}>
-            update link
-          </button>
+    <>
+      <div className={cx('meet', state === 'open' && 'meet-open', fresh && 'meet-fresh')}>
+        {fresh && session.linkUpdatedISO && (
+          <div className="meet-updated" role="status">
+            <b>New link.</b> The teacher changed it {ago(session.linkUpdatedISO)}. Use this one.
+          </div>
         )}
+        <div className="meet-row">
+          <a
+            className={cx('btn btn-sm', state === 'open' ? 'btn-primary' : 'btn-soft')}
+            href={session.link}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {state === 'open' ? `Join now on ${provider} ↗` : `Join on ${provider} ↗`}
+          </a>
+          {session.meetingId && <CopyChip label="Meeting ID" value={session.meetingId} />}
+          {session.passcode && <CopyChip label="Passcode" value={session.passcode} />}
+          {canEdit && (
+            <button className="btn-quiet" onClick={() => setEditing(true)}>
+              update link
+            </button>
+          )}
+        </div>
+        {state === 'before' && (
+          <span className="hint">The Join button works from 15 minutes before class.</span>
+        )}
+        {editing && <LinkEditor session={session} onClose={() => setEditing(false)} />}
       </div>
-      {state === 'before' && (
-        <span className="hint">The Join button works from 15 minutes before class.</span>
-      )}
-      {editing && <LinkEditor session={session} onClose={() => setEditing(false)} />}
-    </div>
+      {materialsBlock}
+    </>
   );
 }
 

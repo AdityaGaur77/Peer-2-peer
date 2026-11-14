@@ -99,6 +99,8 @@ See [LAUNCH.md](LAUNCH.md) for the rest.
   with a seat see them. If a free call hits its time limit, the teacher pastes
   a new link from the class card and everyone in the class sees "New link".
   Teachers are prompted to turn on a waiting room so they can screen who joins.
+  Teachers can also share class materials (notes, slides, worksheets) on a class
+  card — one link visible only to the class, just like the meeting link.
   Students find it on the class card, at the top of their dashboard, and in a
   "your class is starting" pill that appears 15 minutes before.
 - **Minimum age** — sign-up is 13+ (COPPA), enforced in the schema and the sign-in box. A teacher can also set a higher minimum age per class; younger students can't save a spot.

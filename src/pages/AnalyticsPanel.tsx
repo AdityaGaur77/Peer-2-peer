@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { localEvents, type AnalyticsEvent } from '../lib/analytics';
+import { localErrors, type ErrorReport } from '../lib/report';
 import { supabase } from '../lib/backend';
 import { remote } from '../lib/remote';
 import { cx, downloadText, fmtDate, fmtTime, plural } from '../lib/util';
@@ -69,6 +70,72 @@ function Table({ title, rows, unit, limit = 10 }: { title: string; rows: Array<[
                 {n} <span className="muted">{n === 1 ? unit.replace(/s$/, '') : unit}</span>
               </span>
             </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Newest-first crash log; only visible to the team in the console. */
+function ErrorsCard({ days, reload }: { days: number; reload: number }) {
+  const [rows, setRows] = useState<ErrorReport[] | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    setRows(null);
+    const since = new Date(Date.now() - days * 86_400_000);
+    if (days === 1) since.setHours(0, 0, 0, 0);
+    const load = supabase
+      ? remote.fetchErrors(supabase, since.toISOString())
+      : Promise.resolve(localErrors());
+    load
+      .then((e) => alive && setRows(e))
+      .catch(() => alive && setRows([]));
+    return () => {
+      alive = false;
+    };
+  }, [days, reload]);
+
+  return (
+    <div className="card card-pad">
+      <h3 className="h3" style={{ marginBottom: 10, fontSize: '1.05rem' }}>
+        Errors in this period{rows ? ` (${rows.length})` : ''}
+      </h3>
+      {rows === null ? (
+        <p className="small muted">Loading…</p>
+      ) : rows.length === 0 ? (
+        <p className="small muted">None — the site held up.</p>
+      ) : (
+        <div className="stack" style={{ gap: 4 }}>
+          {rows.slice(0, 10).map((e, i) => (
+            <details key={i} className="roster">
+              <summary style={{ display: 'flex', gap: 10, alignItems: 'baseline', flexWrap: 'wrap' }}>
+                <span className="mono" style={{ fontSize: 11 }}>
+                  {e.at ? fmtDate(e.at) : ''} {e.at ? fmtTime(e.at) : ''}
+                </span>
+                <span style={{ fontSize: 14 }}>{e.message}</span>
+                {e.path && <span className="small muted">on {e.path}</span>}
+              </summary>
+              {e.stack && (
+                <pre
+                  style={{
+                    fontSize: 11,
+                    lineHeight: 1.5,
+                    overflowX: 'auto',
+                    background: 'var(--wash)',
+                    padding: 10,
+                    borderRadius: 8,
+                  }}
+                >
+                  {e.stack}
+                </pre>
+              )}
+              <p className="small muted" style={{ marginTop: 6 }}>
+                Fix these as a batch once a week — a page crashing on a student's phone is why the
+                board sometimes looks empty.
+              </p>
+            </details>
           ))}
         </div>
       )}
@@ -237,6 +304,8 @@ export function AnalyticsPanel() {
       )}
       {err && <p className="small" style={{ color: 'var(--hot-deep)' }}>Couldn't load analytics: {err}</p>}
       {!raw && !err && <p className="small muted">Loading…</p>}
+
+      <ErrorsCard days={days} reload={reloads} />
 
       {r && (
         <>

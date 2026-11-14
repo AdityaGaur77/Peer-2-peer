@@ -50,12 +50,16 @@ interface StoreValue {
   closeSignIn: () => void;
   completeSignIn: (p: Profile) => void;
   signOut: () => void;
+  /** Self-service: delete your profile and everything the site stores about you. */
+  deleteMyAccount: () => void;
   requireProfile: (fn: (p: Profile) => void) => void;
   toast: (message: string) => void;
 
   toggleRsvp: (sessionId: string, p: Profile) => void;
   /** Drop every remaining week of a weekly series at once. */
   leaveSeries: (sessionId: string, p: Profile) => void;
+  /** A teacher (or admin) posting the notes/slides for a class they run. */
+  setMaterials: (sessionId: string, materials: string) => void;
   toggleWaitlist: (sessionId: string, p: Profile) => void;
   submitApplication: (a: Omit<Application, 'id' | 'status' | 'submittedISO'>) => void;
   receiveApplication: (
@@ -356,6 +360,35 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     toast('Signed out.');
   }, [toast]);
 
+  /**
+   * Self-service deletion promised on the privacy page. On the live site the
+   * database removes the profile, signups, 1-on-1 requests and applications,
+   * and strips the email from analytics. Offline, it wipes this browser's
+   * copy. Team accounts can't use it from the site.
+   */
+  const deleteMyAccount = useCallback(() => {
+    if (!supabase) {
+      try {
+        localStorage.removeItem(DB_KEY);
+        localStorage.removeItem(PROFILE_KEY);
+      } catch {
+        /* storage blocked */
+      }
+      setDb(normalizeState(buildSeed()));
+      setProfile(null);
+      toast('Your account is deleted.');
+      return;
+    }
+    sync(
+      (sb) => remote.deleteMyAccount(sb),
+      () => {
+        setProfile(null);
+        if (supabase) void supabase.auth.signOut();
+        toast('Your account is deleted. Your profile and signups are gone.');
+      },
+    );
+  }, [sync, toast]);
+
   // A profile from before ages were asked has none, so it gets finished first.
   const requireProfile = useCallback(
     (fn: (p: Profile) => void) => {
@@ -532,6 +565,39 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
     },
     [db, sync, toast],
+  );
+
+  const setMaterials = useCallback(
+    (sessionId: string, materials: string) => {
+      const session = db.sessions.find((s) => s.id === sessionId);
+      const t = session ? tutorById(db, session.tutorId) : undefined;
+      const mine =
+        !!profile &&
+        !!t &&
+        !!t.email &&
+        t.email.toLowerCase() === profile.email.toLowerCase();
+      if (!mine && !isAdmin) {
+        toast('Only the teacher running the class, or the team, can add materials.');
+        return;
+      }
+      const m = materials.trim();
+      setDb((prev) => ({
+        ...prev,
+        sessions: prev.sessions.map((s) =>
+          s.id === sessionId ? { ...s, materials: m || undefined } : s,
+        ),
+      }));
+      sync(
+        (sb) => remote.setMaterials(sb, sessionId, m),
+        () =>
+          toast(
+            m
+              ? 'Class materials posted — everyone in the class sees them.'
+              : 'Class materials cleared.',
+          ),
+      );
+    },
+    [db, profile, isAdmin, sync, toast],
   );
 
   const toggleWaitlist = useCallback(
@@ -1136,6 +1202,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       closeSignIn,
       completeSignIn,
       signOut,
+      deleteMyAccount,
       requireProfile,
       toast,
       toggleRsvp,
@@ -1172,19 +1239,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       removeKudos,
       removeRequest,
       setMyProfile,
+      setMaterials,
       requestTutoring,
       setTutoringStatus,
       setTutoring,
     }),
     [
       db, profile, toasts, signInOpen,
-      openSignIn, closeSignIn, completeSignIn, signOut, requireProfile, toast,
+      openSignIn, closeSignIn, completeSignIn, signOut, requireProfile, toast, deleteMyAccount,
       toggleRsvp, toggleWaitlist, leaveSeries, submitApplication, receiveApplication, saveCertification, addKudos, addRequest,
       voteRequest, approveApplication, declineApplication, createSession,
       cancelSession, updateTutor, removeTutor, addTutor, importData, resetData, acceptInvite, setRole,
       live, isAdmin, reload, sendSignInCode, verifySignInCode, saveProfile, updateMeeting,
       setTutorEmail, setStudentBlocked, removeFromClass, requestTutoring, setTutoringStatus,
-      markAttendance, removeKudos, removeRequest, setMyProfile,
+      markAttendance, removeKudos, removeRequest, setMyProfile, setMaterials,
       setTutoring,
     ],
   );
